@@ -123,6 +123,8 @@ const DEFAULTS = {
   potVehicleSaved: 0,
   potSavingsSaved: 0,
   seStartDate: '',
+  traderName: '',                // optional, shown on the Self Assessment report
+  utr: '',                       // optional Unique Taxpayer Reference
   apiKey: '',
   claudeModel: 'claude-haiku-4-5',
   theme: 'system',

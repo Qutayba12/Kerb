@@ -17,8 +17,9 @@ import * as pots from './ui/pots.js';
 import * as insights from './ui/insights.js';
 import * as settings from './ui/settings.js';
 import * as shift from './ui/shift.js';
+import * as report from './ui/report.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
