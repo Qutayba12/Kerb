@@ -367,6 +367,14 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .callout--brand { background: var(--brand-tint); color: var(--brand-700); }
 .callout b { font-weight: 800; }
 
+/* grouped add / action menu */
+.menu-group { margin: 4px 2px 6px; }
+.menu-group + .menu-group { margin-top: 16px; }
+.menu-group__label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin: 0 4px 8px; }
+
+/* bank-import review rows that the user chose to skip */
+.card.is-skipped { opacity: .5; }
+
 /* chat bubbles (assistant) */
 .bubble { display: flex; margin-bottom: 10px; }
 .bubble--user { justify-content: flex-end; }

@@ -25,8 +25,9 @@ import * as assistant from './ui/assistant.js';
 import * as importCsv from './ui/import.js';
 import * as payslips from './ui/payslips.js';
 import * as scanearn from './ui/scan-earnings.js';
+import * as bankimport from './ui/bank-import.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn, bankimport };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
@@ -96,17 +97,32 @@ function openAddMenu() {
     b.onclick = () => { closeSheet(); onClick(); };
     return b;
   };
+  const group = (label, items) => el('div', { class: 'menu-group' }, [
+    el('div', { class: 'menu-group__label', text: label }),
+    ...items,
+  ]);
+
   const body = el('div', {}, [
-    mk('spark', 'Ask Kerb (AI)', 'Add by text, or ask about your money', () => navigate('assistant')),
-    mk('clock', 'Start live shift', 'Track time & miles live, see £/hour', () => navigate('shift')),
-    mk('spark', 'Scan earnings statement', 'Photo/PDF of your Flex or Uber summary', () => navigate('scanearn')),
-    mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
-    mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
-    mk('note', 'Add payslip', 'Scan / upload your PAYE payslip', () => navigate('payslips')),
-    mk('note', 'Add expense manually', 'Type in an expense', () => openExpenseForm()),
-    mk('upload', 'Import CSV', 'Bulk import a platform statement', () => navigate('import')),
-    mk('route', 'Log mileage only', 'Record business miles with no earnings', () => openEarningsForm()),
-    mk('clock', 'Add recurring bill', 'Track a repeating outgoing & its due date', () => openBillForm()),
+    // Scan or upload — the fastest way to add anything (Claude reads it for you)
+    group('Scan or upload', [
+      mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
+      mk('spark', 'Scan earnings statement', 'Photo / PDF of a Flex or Uber summary', () => navigate('scanearn')),
+      mk('wallet', 'Import bank statement', 'Photo / PDF — Claude sorts income & costs', () => navigate('bankimport')),
+      mk('note', 'Add payslip', 'Scan / upload your PAYE payslip', () => navigate('payslips')),
+      mk('upload', 'Import CSV', 'Bulk import a platform statement', () => navigate('import')),
+    ]),
+    // Add by hand
+    group('Add manually', [
+      mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
+      mk('edit', 'Add an expense', 'Type in a business cost', () => openExpenseForm()),
+      mk('route', 'Log mileage only', 'Record business miles with no earnings', () => openEarningsForm()),
+      mk('clock', 'Add recurring bill', 'Track a repeating outgoing & its due date', () => openBillForm()),
+    ]),
+    // Track & ask
+    group('Track & ask', [
+      mk('clock', 'Start live shift', 'Track time & miles live, see £/hour', () => navigate('shift')),
+      mk('spark', 'Ask Kerb (AI)', 'Add by text, or ask about your money', () => navigate('assistant')),
+    ]),
   ]);
   openSheet({ title: 'Add', node: body });
 }
