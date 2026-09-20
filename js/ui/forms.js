@@ -2,7 +2,7 @@
 // ui/forms.js — add/edit sheets for earnings, expenses, bills.
 // Shared by the Add screen and the list edit actions.
 // ============================================================
-import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP } from '../util.js';
+import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog } from './shared.js';
@@ -70,7 +70,7 @@ export function openExpenseForm(existing = null, opts = {}) {
     image: b.image || '', source: b.source || 'manual',
     time: b.time || '', address: b.address || '', area: b.area || '', postcode: b.postcode || '',
     paymentMethod: b.paymentMethod || '', receiptNo: b.receiptNo || '', vatNumber: b.vatNumber || '',
-    subtotal: b.subtotal ?? '', items: b.items || '',
+    subtotal: b.subtotal ?? '', items: b.items || '', lineItems: Array.isArray(b.lineItems) ? b.lineItems : [],
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
@@ -100,15 +100,30 @@ export function openExpenseForm(existing = null, opts = {}) {
   const receiptNo = el('input', { class: 'input', type: 'text', value: x.receiptNo, placeholder: 'receipt / invoice no.' });
   const vatNumber = el('input', { class: 'input', type: 'text', value: x.vatNumber, placeholder: 'VAT reg no.' });
   const items = el('input', { class: 'input', type: 'text', value: x.items, placeholder: 'items summary' });
+  const lineItemsBox = el('div', { class: 'lineitems' });
+  const renderLineItems = () => {
+    lineItemsBox.replaceChildren();
+    const lis = x.lineItems || [];
+    if (!lis.length) return;
+    lineItemsBox.append(el('div', { class: 'field > label', style: 'font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px', text: `Itemised lines (${lis.length})` }));
+    const listEl = el('div', { class: 'card card--flush', style: 'margin:0' });
+    lis.forEach(li => listEl.append(el('div', { class: 'lineitem' }, [
+      el('span', { class: 'lineitem__name', text: (li.qty && li.qty !== 1 ? `${fmtNum(li.qty, li.qty % 1 ? 2 : 0)}× ` : '') + (li.name || 'Item') }),
+      el('span', { class: 'lineitem__price', text: fmtGBP(li.price) }),
+    ])));
+    lineItemsBox.append(listEl);
+  };
   const detailsWrap = el('details', { class: 'kdetails' }, [
     el('summary', { text: 'Full details' }),
     el('div', { class: 'grid-2' }, [field('Time', time), field('Subtotal (before VAT)', subtotal)]),
     field('Address', address),
     el('div', { class: 'grid-2' }, [field('Area / town', area), field('Postcode', postcode)]),
     field('Items', items),
+    lineItemsBox,
     el('div', { class: 'grid-2' }, [field('Payment method', paymentMethod), field('Receipt no.', receiptNo)]),
     field('VAT reg number', vatNumber),
   ]);
+  renderLineItems();
 
   // note about vehicle costs under mileage method
   const vehNote = el('div', { class: 'hint' });
@@ -153,7 +168,8 @@ export function openExpenseForm(existing = null, opts = {}) {
       if (r.receiptNo) receiptNo.value = r.receiptNo;
       if (r.vatNumber) vatNumber.value = r.vatNumber;
       if (r.items) items.value = r.items;
-      if (r.address || r.postcode || r.time || r.items) detailsWrap.open = true;
+      if (r.lineItems && r.lineItems.length) { x.lineItems = r.lineItems; renderLineItems(); }
+      if (r.address || r.postcode || r.time || r.items || (r.lineItems && r.lineItems.length)) detailsWrap.open = true;
       x.source = 'claude';
       const conf = Math.round((r.confidence || 0) * 100);
       scanStatus.innerHTML = `${icon('check')} Read it${conf ? ` (${conf}% confident)` : ''} — please double-check the amount.`;
@@ -193,7 +209,7 @@ export function openExpenseForm(existing = null, opts = {}) {
       time: time.value || '', subtotal: parseMoney(subtotal.input.value),
       address: address.value.trim(), area: area.value.trim(), postcode: postcode.value.trim().toUpperCase(),
       paymentMethod: paymentMethod.value.trim(), receiptNo: receiptNo.value.trim(), vatNumber: vatNumber.value.trim(),
-      items: items.value.trim(),
+      items: items.value.trim(), lineItems: x.lineItems || [],
     };
     if (!rec.amount) { toast('Enter the amount', 'err'); return; }
     await expenses.save(rec);
