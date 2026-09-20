@@ -68,6 +68,9 @@ export function openExpenseForm(existing = null, opts = {}) {
     id: isEdit ? b.id : uid(), date: b.date || todayISO(), category: b.category || 'fuel',
     amount: b.amount ?? '', vendor: b.vendor || '', bizPct: b.bizPct ?? null, vat: b.vat ?? '', notes: b.notes || '',
     image: b.image || '', source: b.source || 'manual',
+    time: b.time || '', address: b.address || '', area: b.area || '', postcode: b.postcode || '',
+    paymentMethod: b.paymentMethod || '', receiptNo: b.receiptNo || '', vatNumber: b.vatNumber || '',
+    subtotal: b.subtotal ?? '', items: b.items || '',
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
@@ -86,6 +89,26 @@ export function openExpenseForm(existing = null, opts = {}) {
   const bizPct = el('input', { class: 'input', type: 'number', min: '0', max: '100', step: '1', inputMode: 'numeric', value: x.bizPct != null ? x.bizPct : categoryById(x.category).defaultBizPct });
   const vat = moneyInput({ value: x.vat, placeholder: '0.00' });
   const notes = el('input', { class: 'input', type: 'text', value: x.notes, placeholder: 'optional' });
+
+  // full-detail fields (captured by the scanner; also editable)
+  const time = el('input', { class: 'input', type: 'time', value: x.time });
+  const subtotal = moneyInput({ value: x.subtotal, placeholder: '0.00' });
+  const address = el('input', { class: 'input', type: 'text', value: x.address, placeholder: 'street address' });
+  const area = el('input', { class: 'input', type: 'text', value: x.area, placeholder: 'town / city / area' });
+  const postcode = el('input', { class: 'input', type: 'text', value: x.postcode, placeholder: 'postcode', autocapitalize: 'characters' });
+  const paymentMethod = el('input', { class: 'input', type: 'text', value: x.paymentMethod, placeholder: 'e.g. Visa ****1234' });
+  const receiptNo = el('input', { class: 'input', type: 'text', value: x.receiptNo, placeholder: 'receipt / invoice no.' });
+  const vatNumber = el('input', { class: 'input', type: 'text', value: x.vatNumber, placeholder: 'VAT reg no.' });
+  const items = el('input', { class: 'input', type: 'text', value: x.items, placeholder: 'items summary' });
+  const detailsWrap = el('details', { class: 'kdetails' }, [
+    el('summary', { text: 'Full details' }),
+    el('div', { class: 'grid-2' }, [field('Time', time), field('Subtotal (before VAT)', subtotal)]),
+    field('Address', address),
+    el('div', { class: 'grid-2' }, [field('Area / town', area), field('Postcode', postcode)]),
+    field('Items', items),
+    el('div', { class: 'grid-2' }, [field('Payment method', paymentMethod), field('Receipt no.', receiptNo)]),
+    field('VAT reg number', vatNumber),
+  ]);
 
   // note about vehicle costs under mileage method
   const vehNote = el('div', { class: 'hint' });
@@ -121,6 +144,16 @@ export function openExpenseForm(existing = null, opts = {}) {
       if (r.category) { catSel.value = r.category; bizPct.value = categoryById(r.category).defaultBizPct; updateVehNote(); }
       if (r.vat) vat.input.value = r.vat.toFixed(2);
       if (r.notes) notes.value = r.notes;
+      if (r.time) time.value = r.time;
+      if (r.subtotal) subtotal.input.value = r.subtotal.toFixed(2);
+      if (r.address) address.value = r.address;
+      if (r.area) area.value = r.area;
+      if (r.postcode) postcode.value = r.postcode;
+      if (r.paymentMethod) paymentMethod.value = r.paymentMethod;
+      if (r.receiptNo) receiptNo.value = r.receiptNo;
+      if (r.vatNumber) vatNumber.value = r.vatNumber;
+      if (r.items) items.value = r.items;
+      if (r.address || r.postcode || r.time || r.items) detailsWrap.open = true;
       x.source = 'claude';
       const conf = Math.round((r.confidence || 0) * 100);
       scanStatus.innerHTML = `${icon('check')} Read it${conf ? ` (${conf}% confident)` : ''} — please double-check the amount.`;
@@ -147,6 +180,7 @@ export function openExpenseForm(existing = null, opts = {}) {
       field('VAT (optional)', vat),
     ]),
     field('Note', notes),
+    detailsWrap,
   );
 
   const save = async () => {
@@ -156,6 +190,10 @@ export function openExpenseForm(existing = null, opts = {}) {
       bizPct: Math.max(0, Math.min(100, parseInt(bizPct.value) || 0)),
       vat: parseMoney(vat.input.value), notes: notes.value.trim(),
       image: x.image || '', source: x.source || 'manual',
+      time: time.value || '', subtotal: parseMoney(subtotal.input.value),
+      address: address.value.trim(), area: area.value.trim(), postcode: postcode.value.trim().toUpperCase(),
+      paymentMethod: paymentMethod.value.trim(), receiptNo: receiptNo.value.trim(), vatNumber: vatNumber.value.trim(),
+      items: items.value.trim(),
     };
     if (!rec.amount) { toast('Enter the amount', 'err'); return; }
     await expenses.save(rec);

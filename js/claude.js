@@ -12,22 +12,34 @@ const CATEGORY_IDS = EXPENSE_CATEGORIES.map(c => c.id).join(', ');
 
 function buildPrompt() {
   return `You are a receipt/invoice reader for a UK self-employed delivery driver's bookkeeping app.
-Extract the expense from the attached image and reply with ONLY a JSON object (no prose, no markdown fences):
+Read EVERYTHING on the attached receipt/invoice and reply with ONLY a JSON object (no prose, no markdown fences):
 {
-  "amount": <total paid in GBP as a number, e.g. 42.50>,
-  "date": "<YYYY-MM-DD, the transaction date; if unknown use empty string>",
-  "vendor": "<shop/merchant name>",
+  "amount": <grand total actually paid in GBP, incl. VAT, as a number>,
+  "subtotal": <net/subtotal before VAT if shown, else 0>,
+  "vat": <VAT amount in GBP if shown, else 0>,
+  "vatRate": <VAT rate % if shown, e.g. 20, else 0>,
+  "date": "<YYYY-MM-DD transaction date; empty string if truly not shown>",
+  "time": "<HH:MM 24h if shown, else empty>",
+  "vendor": "<merchant/shop name>",
+  "address": "<full street address line(s) as printed, comma-separated; empty if none>",
+  "area": "<town/city/area>",
+  "postcode": "<UK postcode, uppercased, e.g. SW1A 1AA; empty if none>",
   "category": "<one of: ${CATEGORY_IDS}>",
-  "vat": <VAT amount in GBP as a number if shown, else 0>,
-  "notes": "<short note, e.g. '30L unleaded' — keep under 60 chars>",
-  "confidence": <0..1 how confident you are>
+  "paymentMethod": "<e.g. Visa ****1234, Cash, Contactless; empty if none>",
+  "receiptNo": "<receipt/invoice/transaction number if shown, else empty>",
+  "vatNumber": "<merchant VAT reg number if shown, else empty>",
+  "items": "<short summary of items/qty, e.g. '38.2L diesel @ 149.9p'; under 80 chars>",
+  "notes": "<anything else useful, under 60 chars>",
+  "confidence": <0..1 how confident you are overall>
 }
 Rules:
-- amount is the grand total actually paid (include VAT).
-- Pick the closest category. Fuel/diesel/petrol -> "fuel". Phone/mobile/broadband -> "phone".
-  Car insurance -> "insurance". Repairs/MOT/tyres/service -> "repairs" or "roadtax". Parking/toll/congestion -> "parking".
-  Delivery bag/thermal bag/phone mount -> "bags". If unsure -> "other".
-- Use numbers, not strings, for amount/vat/confidence. Never invent a total you cannot see.`;
+- amount = the grand total paid (include VAT). Read numbers exactly; never invent values you cannot see — use empty/0 instead.
+- Parse the date/time carefully (UK format is usually DD/MM/YYYY). Output date strictly as YYYY-MM-DD.
+- Capture the FULL address and postcode exactly as printed.
+- Pick the closest category: fuel/diesel/petrol -> "fuel"; phone/mobile/broadband -> "phone"; car insurance -> "insurance";
+  repairs/MOT/tyres/service -> "repairs"; road tax -> "roadtax"; parking/toll/congestion -> "parking";
+  delivery/thermal bag, phone mount -> "bags"; car wash -> "cleaning"; if unsure -> "other".
+- Numbers (amount/subtotal/vat/vatRate/confidence) must be JSON numbers, not strings.`;
 }
 
 export function hasApiKey(settings) {
@@ -48,7 +60,7 @@ export async function extractReceipt(dataUrl, settings) {
 
   const body = {
     model,
-    max_tokens: 400,
+    max_tokens: 700,
     messages: [{
       role: 'user',
       content: [
@@ -88,16 +100,34 @@ export async function extractReceipt(dataUrl, settings) {
   const parsed = parseJson(text);
   if (!parsed) throw new Error('Could not read the receipt. Try a clearer photo or enter it manually.');
 
+  const str = (v, n = 120) => (v == null ? '' : String(v)).trim().slice(0, n);
   return {
     amount: toNum(parsed.amount),
-    date: cleanDate(parsed.date),
-    vendor: (parsed.vendor || '').toString().slice(0, 80),
-    category: normaliseCategory(parsed.category),
+    subtotal: toNum(parsed.subtotal),
     vat: toNum(parsed.vat),
-    notes: (parsed.notes || '').toString().slice(0, 120),
+    vatRate: toNum(parsed.vatRate),
+    date: cleanDate(parsed.date),
+    time: cleanTime(parsed.time),
+    vendor: str(parsed.vendor, 80),
+    address: str(parsed.address, 200),
+    area: str(parsed.area, 80),
+    postcode: str(parsed.postcode, 12).toUpperCase(),
+    category: normaliseCategory(parsed.category),
+    paymentMethod: str(parsed.paymentMethod, 40),
+    receiptNo: str(parsed.receiptNo, 40),
+    vatNumber: str(parsed.vatNumber, 30),
+    items: str(parsed.items, 120),
+    notes: str(parsed.notes, 120),
     confidence: toNum(parsed.confidence),
     usage: data.usage || null,
   };
+}
+function cleanTime(v) {
+  const s = String(v || '').trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return '';
+  const h = String(Math.min(23, parseInt(m[1], 10))).padStart(2, '0');
+  return `${h}:${m[2]}`;
 }
 
 function parseJson(text) {
