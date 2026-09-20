@@ -99,6 +99,13 @@ export function saDeadlines(startYear) {
   };
 }
 
+// HMRC registration deadline: 5 October after the tax year you started trading.
+export function registrationDeadline(seStartDate) {
+  if (!seStartDate) return null;
+  const ty = taxYearOf(seStartDate);
+  return `${ty.startYear + 1}-10-05`;
+}
+
 // ---------- ids ----------
 export function uid() {
   return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

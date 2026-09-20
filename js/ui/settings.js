@@ -268,7 +268,9 @@ function dataCard() {
     try {
       const data = JSON.parse(await file.text());
       await importAll(data, { replace: true });
-      toast('Backup imported', 'ok'); bus.refresh();
+      toast('Backup imported', 'ok');
+      // reload so imported settings (held in memory) take effect cleanly
+      setTimeout(() => location.reload(), 600);
     } catch (e) { toast('Import failed: ' + e.message, 'err'); }
   });
 

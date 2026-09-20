@@ -2,7 +2,7 @@
 // ui/dashboard.js — the Home screen: take-home, tax reserve,
 // this week, upcoming dues, income mix, recent activity.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, todayISO, addDays, humanUntil, fmtDate, daysBetween } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, todayISO, addDays, humanUntil, fmtDate, daysBetween, registrationDeadline } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings } from '../store.js';
 import { computeTaxYear, summariseRange, taxReserve } from '../tax.js';
@@ -45,7 +45,7 @@ export async function render() {
 
   // ---- Hero: take-home this tax year ----
   const hero = el('div', { class: 'hero' }, [
-    el('div', { class: 'hero__label', text: `Estimated take-home · ${sum.taxYear}` }),
+    el('div', { class: 'hero__label', text: `Self-employment take-home · ${sum.taxYear}` }),
     el('div', { class: 'hero__value', text: fmtGBP(Math.max(0, sum.netTakeHome)) }),
     el('div', { class: 'hero__sub', text: `Net profit ${fmtGBP(sum.netProfit)} after ${fmtGBP(sum.totalSETax)} tax & NIC` }),
     el('div', { class: 'hero__split' }, [
@@ -172,8 +172,9 @@ function buildUpcoming(sum, allB) {
   const items = [];
   const d = sum.deadlines;
   const today = todayISO();
+  const regBy = registrationDeadline(getSettings().seStartDate) || d.registerBy;
   const deadlineList = [
-    { label: 'Register with HMRC as self-employed', date: d.registerBy },
+    { label: 'Register with HMRC as self-employed', date: regBy },
     { label: 'File & pay Self Assessment (online)', date: d.onlineFileAndPay },
     { label: '2nd payment on account', date: d.secondPOA, only: sum.poa.applies },
   ].filter(x => x.date >= today && x.only !== false).sort((a, b) => a.date < b.date ? -1 : 1);
