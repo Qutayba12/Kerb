@@ -88,7 +88,15 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; padding: 0; }
+html, body {
+  margin: 0; padding: 0;
+  max-width: 100%;
+  overflow-x: hidden;               /* no left/right movement */
+  overscroll-behavior: none;        /* no bounce / pull-to-refresh */
+  touch-action: pan-y;              /* allow only vertical scroll; blocks pinch-zoom & horizontal pan */
+  -webkit-text-size-adjust: 100%;   /* stop iOS auto text-zoom */
+  text-size-adjust: 100%;
+}
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -96,7 +104,8 @@ body {
   font-size: 15px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior-y: none;
+  width: 100%;
+  position: relative;
 }
 button { font-family: inherit; }
 a { color: var(--brand); }

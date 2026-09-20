@@ -107,6 +107,22 @@ function wire() {
   window.addEventListener('hashchange', onHashChange);
 }
 
+// ---------- lock zoom (iOS pinch + double-tap) ----------
+function lockZoom() {
+  // iOS Safari ignores user-scalable=no; block its gesture events explicitly.
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) =>
+    document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+  // Block double-tap-to-zoom.
+  let lastTouch = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouch <= 300) e.preventDefault();
+    lastTouch = now;
+  }, { passive: false });
+  // Block ctrl/⌘ + wheel zoom on desktop.
+  document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+}
+
 // ---------- service worker ----------
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
@@ -124,6 +140,7 @@ function boot() {
   });
   applyTheme();
   wire();
+  lockZoom();
   registerSW();
   resumeIfActive();   // resume GPS tracking if a shift was in progress
 
