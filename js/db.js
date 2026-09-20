@@ -5,10 +5,11 @@
 //   earnings : { id, date, platform, amount, tips, hours, deliveries, miles, notes }
 //   expenses : { id, date, category, amount, vendor, bizPct, vat, notes, source, image }
 //   bills    : { id, name, amount, freq, category, bizPct, business, nextDue }
+//   payslips : { id, payDate, frequency, gross, net, incomeTax, ... employer/employee }
 // ============================================================
 const DB_NAME = 'kerb';
-const DB_VERSION = 1;
-const STORES = ['earnings', 'expenses', 'bills'];
+const DB_VERSION = 2;
+const STORES = ['earnings', 'expenses', 'bills', 'payslips'];
 
 let _dbP = null;
 function open() {
@@ -69,15 +70,21 @@ export const bills = {
   save: (o) => put('bills', o),
   remove: (id) => del('bills', id),
 };
+export const payslips = {
+  all: async () => (await getAll('payslips')).sort((a, b) => (a.payDate < b.payDate ? 1 : a.payDate > b.payDate ? -1 : 0)),
+  get: (id) => get('payslips', id),
+  save: (o) => put('payslips', o),
+  remove: (id) => del('payslips', id),
+};
 
 // ---------- backup / restore ----------
 export async function exportAll() {
-  const [e, x, b] = await Promise.all([getAll('earnings'), getAll('expenses'), getAll('bills')]);
+  const [e, x, b, ps] = await Promise.all([getAll('earnings'), getAll('expenses'), getAll('bills'), getAll('payslips')]);
   let settings = {};
   try { settings = JSON.parse(localStorage.getItem('kerb.settings.v1') || '{}'); } catch {}
   // Never include the API key in an exported backup file.
   if (settings.apiKey) settings = { ...settings, apiKey: '' };
-  return { app: 'kerb', version: 1, exportedAt: new Date().toISOString(), settings, earnings: e, expenses: x, bills: b };
+  return { app: 'kerb', version: 2, exportedAt: new Date().toISOString(), settings, earnings: e, expenses: x, bills: b, payslips: ps };
 }
 
 export async function importAll(data, { replace = true } = {}) {
@@ -86,6 +93,7 @@ export async function importAll(data, { replace = true } = {}) {
   for (const o of (data.earnings || [])) await put('earnings', o);
   for (const o of (data.expenses || [])) await put('expenses', o);
   for (const o of (data.bills || [])) await put('bills', o);
+  for (const o of (data.payslips || [])) await put('payslips', o);
   if (data.settings) {
     // Preserve the existing on-device API key; backups never carry it.
     let cur = {};

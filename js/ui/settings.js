@@ -42,8 +42,13 @@ export async function render() {
 
   // ---------- Income context ----------
   root.append(sec('Your income context'));
+  const payslipsBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-bottom:6px' });
+  payslipsBtn.innerHTML = icon('note') + '<span>Manage payslips (scan / PDF)</span>';
+  payslipsBtn.onclick = () => bus.navigate('payslips');
   root.append(card([
-    field('PAYE salary (annual, gross)', bindMoney('payeSalary', true), 'Your employed job\'s yearly pay before tax. Delivery profit is taxed on top of this.'),
+    field('PAYE figures from', bindSelect('payeSource', [{ value: 'manual', label: 'A manual salary' }, { value: 'payslips', label: 'My scanned payslips' }], true), 'Choose “scanned payslips” to auto-fill your PAYE salary & tax from uploaded payslips.'),
+    payslipsBtn,
+    field(s.payeSource === 'payslips' ? 'PAYE salary (auto from payslips)' : 'PAYE salary (annual, gross)', bindMoney('payeSalary', true), s.payeSource === 'payslips' ? 'Derived from your payslips — edit them to change this.' : 'Your employed job\'s yearly pay before tax. Delivery profit is taxed on top of this.'),
     field('Income tax already paid via PAYE', bindMoney('payeTaxPaid', true), 'Optional — improves the payments-on-account estimate.'),
     field('Other taxable income (annual)', bindMoney('otherIncome', true), 'Rent, other self-employment, etc.'),
     field('Student loan plan', bindSelect('studentLoanPlan', SL_PLANS, true)),
