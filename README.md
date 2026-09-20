@@ -10,8 +10,13 @@ Kerb works out — to the penny — your income, expenses, allowable deductions,
 
 ## ✨ Features
 
-- **Dashboard** — estimated take-home for the tax year, tax to set aside, "safe to spend", last-7-days performance, income mix and recent activity.
-- **Smart receipt scanning** — photograph a receipt and Claude extracts the amount, date, vendor, category and VAT, ready to save. (Uses **your own** Anthropic API key.)
+- **Dashboard** — estimated take-home for the tax year, tax to set aside, "safe to spend", last-7-days performance, income mix and recent activity, with employment (PAYE) kept clearly separate from self-employment.
+- **Scan or upload anything** — Claude reads it for you (uses **your own** Anthropic API key):
+  - **Receipts** → amount, date, vendor, category, VAT and every itemised line.
+  - **Earnings statements** (Amazon Flex, Uber Eats…) → every shift, from a photo or PDF.
+  - **Bank / card statements** → every transaction, auto-sorted into delivery income vs. business expenses for you to confirm.
+  - **Payslips** → your PAYE salary, tax and NI, from a photo or PDF.
+- **Organised Add menu** — one **+** button grouped into *Scan or upload*, *Add manually* and *Track & ask* so every way to add money is one tap away.
 - **Tax engine (2026/27)** — Income Tax, Class 4 & Class 2 NIC, the £1,000 trading allowance, personal-allowance interaction with a **PAYE job**, and **Payments on Account** — all computed the way Self Assessment does it.
 - **Mileage or actual costs** — simplified per-mile relief (car 55p/25p, motorcycle 24p, bicycle 20p) with the vehicle-cost rule handled correctly, or actual costs.
 - **Pots** — a weekly plan (how much to keep for tax / vehicle / savings vs. spend) and saved-so-far trackers.
@@ -31,13 +36,13 @@ Kerb is a Progressive Web App — no app store needed.
 
 > The camera, install and offline features need HTTPS (or `localhost`). Opening `index.html` directly from disk won't work — serve it.
 
-## 🤖 Turn on receipt scanning (Claude)
+## 🤖 Turn on scanning (Claude)
 
 1. Create an API key at **console.anthropic.com → API keys** and add a small amount of credit.
 2. In Kerb: **Settings → Receipt scanning** → paste the key → *Save key* → *Test*.
-3. Now **Add → Scan a receipt**: take a photo and Claude fills in the expense.
+3. Now the **+** menu's *Scan or upload* group can read receipts, earnings statements, **bank statements** and payslips — from a photo or a PDF — and fill everything in.
 
-Your key is stored **only on your device** and is sent **only to Anthropic** (never to any Kerb server — there isn't one). A scan costs a fraction of a penny.
+Your key is stored **only on your device**, is sent **only to Anthropic** (never to any Kerb server — there isn't one), and is **never** included in a backup file. Each scan costs a fraction of a penny.
 
 ## 🚀 Deploy (free options)
 
@@ -70,11 +75,12 @@ js/
   store.js              settings + UK tax rate tables (editable)
   tax.js                the calculation engine
   db.js                 IndexedDB (local storage of entries)
-  claude.js             Anthropic receipt extraction
+  claude.js             Anthropic extraction (receipts, earnings, bank, payslips)
   charts.js             dependency-free SVG charts
   util.js               formatting, dates, UK tax-year math
   ui/                   screens: dashboard, income, expenses, tax, pots,
-                        insights, settings, onboarding, forms, shared
+                        insights, settings, onboarding, forms, shared,
+                        scan-earnings, bank-import, payslips, assistant
 icons/                  app icon (scalable SVG)
 scripts/                dev tooling (server, tests, optional PNG icon generator)
 ```

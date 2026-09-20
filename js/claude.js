@@ -371,6 +371,89 @@ export async function extractEarnings(source, context, settings) {
   })).filter(e => e.amount > 0 || e.tips > 0 || e.miles > 0);
 }
 
+// ---------- bank statement extraction (image or PDF) ----------
+function bankPrompt(context) {
+  return `You are reading a UK bank/card statement for a self-employed delivery driver who also has an employed (PAYE) job.
+Extract EVERY transaction line and pre-classify each one. Reply with ONLY a JSON object (no prose, no fences):
+{
+  "account":"<bank / account name or last 4 digits if shown, else empty>",
+  "periodStart":"<YYYY-MM-DD or empty>","periodEnd":"<YYYY-MM-DD or empty>",
+  "transactions": [
+    { "date":"<YYYY-MM-DD>", "description":"<merchant / reference exactly as printed>",
+      "amount": <absolute value in GBP, always a positive number>,
+      "direction":"in"|"out",
+      "suggestion":"income"|"expense"|"ignore",
+      "platform":"<one platform id if this looks like delivery income, else empty>",
+      "category":"<one expense category id if this looks like a business cost, else empty>",
+      "balance": <running balance if shown, number, else 0> }
+  ]
+}
+Rules:
+- amount is ALWAYS a positive number. Use "direction":"in" for money received/credits, "out" for money spent/debits.
+- Parse UK dates (DD/MM/YYYY) → output strictly YYYY-MM-DD. If only day+month are shown, infer the year from the statement period.
+- Pre-classify with "suggestion":
+  - "income": money IN that looks like delivery/gig pay (Amazon, Uber, Deliveroo, Just Eat, "FLEX", driver payouts). Set "platform" to the matching id.
+  - "expense": money OUT that looks like a business running cost (fuel/petrol/diesel, car insurance/repairs/MOT, parking/tolls, phone/mobile, delivery bags/kit). Set "category" to the matching id.
+  - "ignore": anything personal or unclear (groceries, salary from an employer, transfers, ATM, rent, subscriptions) — the user will decide.
+- Platform ids: ${JSON.stringify(context.platforms)}
+- Expense category ids: ${JSON.stringify(context.categories)}
+- Money as plain numbers (no symbols). Never invent transactions or values you cannot see.`;
+}
+
+export async function extractBankTransactions(source, context, settings) {
+  if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
+  let contentBlock;
+  if (source.kind === 'pdf') contentBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: source.base64 } };
+  else { const { media_type, base64 } = splitDataUrl(source.dataUrl); contentBlock = { type: 'image', source: { type: 'base64', media_type, data: base64 } }; }
+  const body = {
+    model: settings.claudeModel || 'claude-haiku-4-5',
+    max_tokens: 2500,
+    messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: bankPrompt(context) }] }],
+  };
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': settings.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify(body),
+    });
+  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
+  if (!res.ok) {
+    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
+    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
+    if (res.status === 429) throw new Error('Rate limited (429). Wait a moment and try again.');
+    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
+    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
+  }
+  const data = await res.json();
+  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+  const parsed = parseJson(text);
+  const rows = parsed && Array.isArray(parsed.transactions) ? parsed.transactions : (Array.isArray(parsed) ? parsed : null);
+  if (!rows) throw new Error('Could not read the statement. Try a clearer photo/PDF.');
+  const platformIds = new Set((context.platforms || []).map(p => p.id));
+  const catIds = new Set(context.categories || []);
+  const suggestions = new Set(['income', 'expense', 'ignore']);
+  const out = rows.slice(0, 300).map(t => {
+    const direction = String(t.direction || '').toLowerCase() === 'in' ? 'in' : 'out';
+    let suggestion = String(t.suggestion || '').toLowerCase();
+    if (!suggestions.has(suggestion)) suggestion = direction === 'in' ? 'income' : 'ignore';
+    // A "money out" line can never be income; a "money in" line can never be a cost.
+    if (direction === 'out' && suggestion === 'income') suggestion = 'ignore';
+    if (direction === 'in' && suggestion === 'expense') suggestion = 'ignore';
+    return {
+      date: cleanDate(t.date) || context.today,
+      description: String(t.description || '').trim().slice(0, 120),
+      amount: Math.abs(toNum(t.amount)),
+      direction,
+      suggestion,
+      platform: platformIds.has(t.platform) ? t.platform : '',
+      category: catIds.has(t.category) ? t.category : '',
+      balance: toNum(t.balance),
+    };
+  }).filter(t => t.amount > 0);
+  return { account: String((parsed && parsed.account) || '').trim().slice(0, 60), transactions: out };
+}
+
 // Validate an API key with a tiny, cheap request.
 export async function testKey(settings) {
   if (!hasApiKey(settings)) throw new Error('Enter your API key first.');
