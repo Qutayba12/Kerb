@@ -367,6 +367,15 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .callout--brand { background: var(--brand-tint); color: var(--brand-700); }
 .callout b { font-weight: 800; }
 
+/* chat bubbles (assistant) */
+.bubble { display: flex; margin-bottom: 10px; }
+.bubble--user { justify-content: flex-end; }
+.bubble__body { max-width: 85%; padding: 10px 13px; border-radius: 16px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.bubble--user .bubble__body { background: var(--brand); color: #fff; border-bottom-right-radius: 5px; }
+.bubble--assistant .bubble__body { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 5px; }
+.bubble.is-loading .bubble__body { color: var(--faint); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+
 /* live shift indicator */
 .live-pill { align-items: center; }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 4px; animation: livepulse 1.2s ease-in-out infinite; }

@@ -20,8 +20,9 @@ import * as settings from './ui/settings.js';
 import * as shift from './ui/shift.js';
 import * as report from './ui/report.js';
 import * as goals from './ui/goals.js';
+import * as assistant from './ui/assistant.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
@@ -59,6 +60,7 @@ async function renderRoute(route) {
 
 function updateNav(route) {
   $$('#tabbar .tab').forEach(t => t.classList.toggle('is-active', t.dataset.route === route));
+  $('#nav-assistant')?.classList.toggle('is-active', route === 'assistant');
   $('#nav-insights')?.classList.toggle('is-active', route === 'insights');
   $('#nav-pots')?.classList.toggle('is-active', route === 'pots');
   $('#nav-settings')?.classList.toggle('is-active', route === 'settings');
@@ -90,6 +92,7 @@ function openAddMenu() {
     return b;
   };
   const body = el('div', {}, [
+    mk('spark', 'Ask Kerb (AI)', 'Add by text, or ask about your money', () => navigate('assistant')),
     mk('clock', 'Start live shift', 'Track time & miles live, see £/hour', () => navigate('shift')),
     mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
     mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
@@ -103,6 +106,7 @@ function openAddMenu() {
 // ---------- wiring ----------
 function wire() {
   $$('#tabbar .tab').forEach(tab => tab.addEventListener('click', () => navigate(tab.dataset.route)));
+  $('#nav-assistant')?.addEventListener('click', () => navigate('assistant'));
   $('#nav-insights')?.addEventListener('click', () => navigate('insights'));
   $('#nav-pots')?.addEventListener('click', () => navigate('pots'));
   $('#nav-settings')?.addEventListener('click', () => navigate('settings'));

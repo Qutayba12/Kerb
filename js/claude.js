@@ -121,6 +121,58 @@ function normaliseCategory(v) {
   return 'other';
 }
 
+// Generic text call to Claude. Returns the reply text.
+export async function claudeText({ system, user, settings, maxTokens = 600 }) {
+  if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
+  const body = {
+    model: settings.claudeModel || 'claude-haiku-4-5',
+    max_tokens: maxTokens,
+    messages: [{ role: 'user', content: user }],
+  };
+  if (system) body.system = system;
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': settings.apiKey.trim(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
+  if (!res.ok) {
+    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
+    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
+    if (res.status === 429) throw new Error('Rate limited — try again in a moment.');
+    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
+    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
+  }
+  const data = await res.json();
+  return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+}
+
+// Parse a free-text line into a structured earning/expense.
+export async function parseEntry(text, context, settings) {
+  const system = `You convert a UK delivery driver's short note into ONE bookkeeping entry.
+Reply with ONLY a JSON object, no prose. Shape:
+{"kind":"earning"|"expense"|"unknown",
+ "platform":"<one of the platform ids>","amount":<number>,"tips":<number>,"hours":<number>,"deliveries":<int>,"miles":<number>,
+ "category":"<one of the expense category ids>","vendor":"<string>","date":"YYYY-MM-DD","notes":"<short>"}
+Rules:
+- "earning" for money earned delivering; "expense" for money spent; "unknown" if unclear.
+- Use only ids from the provided lists. Money as plain numbers (GBP). Omit/zero fields that don't apply.
+- Default date to today (${context.today}) unless the note clearly says otherwise.
+Platforms: ${JSON.stringify(context.platforms)}
+Expense categories: ${JSON.stringify(context.categories)}`;
+  const out = await claudeText({ system, user: text, settings, maxTokens: 300 });
+  const parsed = parseJson(out);
+  if (!parsed) throw new Error('Could not understand that — try e.g. "Amazon Flex £52, 4 hours, 40 miles".');
+  return parsed;
+}
+
 // Validate an API key with a tiny, cheap request.
 export async function testKey(settings) {
   if (!hasApiKey(settings)) throw new Error('Enter your API key first.');
