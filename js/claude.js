@@ -29,11 +29,14 @@ Read EVERYTHING on the attached receipt/invoice and reply with ONLY a JSON objec
   "receiptNo": "<receipt/invoice/transaction number if shown, else empty>",
   "vatNumber": "<merchant VAT reg number if shown, else empty>",
   "items": "<short summary of items/qty, e.g. '38.2L diesel @ 149.9p'; under 80 chars>",
+  "lineItems": [{"name":"<item description>","qty":<number, default 1>,"price":<line total in GBP>}],
   "notes": "<anything else useful, under 60 chars>",
   "confidence": <0..1 how confident you are overall>
 }
 Rules:
 - amount = the grand total paid (include VAT). Read numbers exactly; never invent values you cannot see — use empty/0 instead.
+- lineItems: list EVERY purchased line exactly as printed (description, quantity, line price). If the receipt shows no itemised lines, use an empty array [].
+- The sum of lineItems prices should be close to the subtotal/total; do not fabricate lines to force a match.
 - Parse the date/time carefully (UK format is usually DD/MM/YYYY). Output date strictly as YYYY-MM-DD.
 - Capture the FULL address and postcode exactly as printed.
 - Pick the closest category: fuel/diesel/petrol -> "fuel"; phone/mobile/broadband -> "phone"; car insurance -> "insurance";
@@ -117,10 +120,19 @@ export async function extractReceipt(dataUrl, settings) {
     receiptNo: str(parsed.receiptNo, 40),
     vatNumber: str(parsed.vatNumber, 30),
     items: str(parsed.items, 120),
+    lineItems: cleanLineItems(parsed.lineItems),
     notes: str(parsed.notes, 120),
     confidence: toNum(parsed.confidence),
     usage: data.usage || null,
   };
+}
+function cleanLineItems(v) {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 60).map(li => ({
+    name: String(li && li.name != null ? li.name : '').trim().slice(0, 80),
+    qty: (() => { const n = parseFloat(li && li.qty); return isFinite(n) && n > 0 ? n : 1; })(),
+    price: (() => { const n = parseFloat(String(li && li.price).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : 0; })(),
+  })).filter(li => li.name || li.price);
 }
 function cleanTime(v) {
   const s = String(v || '').trim();

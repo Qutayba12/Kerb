@@ -381,6 +381,13 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 4px; animation: livepulse 1.2s ease-in-out infinite; }
 @keyframes livepulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
 
+/* itemised receipt lines */
+.lineitems { margin-bottom: 13px; }
+.lineitem { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.lineitem:last-child { border-bottom: none; }
+.lineitem__name { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lineitem__price { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* collapsible details (e.g. full receipt fields) */
 .kdetails { border: 1px solid var(--border); border-radius: 12px; padding: 4px 12px; margin-bottom: 13px; background: var(--surface-2); }
 .kdetails > summary { cursor: pointer; font-weight: 700; font-size: 13px; color: var(--muted); padding: 9px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
