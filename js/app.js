@@ -24,8 +24,9 @@ import * as goals from './ui/goals.js';
 import * as assistant from './ui/assistant.js';
 import * as importCsv from './ui/import.js';
 import * as payslips from './ui/payslips.js';
+import * as scanearn from './ui/scan-earnings.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
@@ -98,6 +99,7 @@ function openAddMenu() {
   const body = el('div', {}, [
     mk('spark', 'Ask Kerb (AI)', 'Add by text, or ask about your money', () => navigate('assistant')),
     mk('clock', 'Start live shift', 'Track time & miles live, see £/hour', () => navigate('shift')),
+    mk('spark', 'Scan earnings statement', 'Photo/PDF of your Flex or Uber summary', () => navigate('scanearn')),
     mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
     mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
     mk('note', 'Add payslip', 'Scan / upload your PAYE payslip', () => navigate('payslips')),
