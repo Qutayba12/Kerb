@@ -35,7 +35,9 @@ export function expenseItem(x) {
   const ded = deductibleAmount(x, s);
   const nonDeductible = s.expenseMethod === 'mileage' && cat.vehicle;
   const subBits = [fmtDate(x.date, { weekday: true })];
+  if (x.time) subBits[0] += ' ' + x.time;
   if (x.vendor) subBits.push(x.vendor);
+  if (x.area) subBits.push(x.area);
   if (x.bizPct != null && x.bizPct < 100 && !nonDeductible) subBits.push(`${x.bizPct}% biz`);
   if (nonDeductible) subBits.push('not deductible');
   else if (ded < (x.amount || 0)) subBits.push(`${fmtGBP(ded)} claimable`);

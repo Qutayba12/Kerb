@@ -381,6 +381,14 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 4px; animation: livepulse 1.2s ease-in-out infinite; }
 @keyframes livepulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
 
+/* collapsible details (e.g. full receipt fields) */
+.kdetails { border: 1px solid var(--border); border-radius: 12px; padding: 4px 12px; margin-bottom: 13px; background: var(--surface-2); }
+.kdetails > summary { cursor: pointer; font-weight: 700; font-size: 13px; color: var(--muted); padding: 9px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
+.kdetails > summary::-webkit-details-marker { display: none; }
+.kdetails > summary::before { content: "▸"; color: var(--faint); }
+.kdetails[open] > summary::before { content: "▾"; }
+.kdetails[open] > summary { margin-bottom: 4px; }
+
 .link { color: var(--brand); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; font: inherit; }
 .divider { height: 1px; background: var(--border); margin: 14px 0; border: none; }
 hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
