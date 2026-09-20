@@ -89,6 +89,28 @@ export async function render() {
   reserveCard.onclick = () => bus.navigate('pots');
   root.append(reserveCard);
 
+  // ---- Employment (PAYE) — shown separately from self-employment ----
+  if (sum.base > 0) {
+    root.append(sectionTitle('Employment (PAYE) — separate'));
+    const empCard = el('div', { class: 'card', style: 'cursor:pointer' }, [
+      el('div', { class: 'row row--between' }, [
+        el('div', {}, [
+          el('div', { class: 'tile__k', html: icon('wallet') + '<span>Salary</span>' }),
+          el('div', { class: 'tile__v', text: fmtGBP(sum.base, { round: true }) }),
+          el('div', { class: 'tile__s', text: 'from your job' }),
+        ]),
+        el('div', {}, [
+          el('div', { class: 'tile__k', html: '<span>Tax deducted</span>' }),
+          el('div', { class: 'tile__v', text: fmtGBP(sum.incomeTaxBase, { round: true }) }),
+          el('div', { class: 'tile__s', text: 'at source' }),
+        ]),
+      ]),
+      el('div', { class: 'callout callout--brand', style: 'margin:12px 0 0', html: `${icon('check')}<div>Handled automatically by your employer — nothing to set aside. Kept separate from your delivery figures above.</div>` }),
+    ]);
+    empCard.onclick = () => bus.navigate('tax');
+    root.append(empCard);
+  }
+
   // ---- Goal ----
   if (s.goalEnabled && s.goalAmount > 0) {
     const g = computeGoal(allE, allX, s);
