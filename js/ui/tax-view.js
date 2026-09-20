@@ -1,17 +1,19 @@
 // ============================================================
 // ui/tax-view.js — full Self Assessment breakdown for the year.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline } from '../util.js';
-import { earnings, expenses } from '../db.js';
+import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline, round2 } from '../util.js';
+import { earnings, expenses, payslips } from '../db.js';
 import { getSettings, saveSettings, availableYears, VEHICLE_LABELS, REGION_LABELS } from '../store.js';
 import { computeTaxYear } from '../tax.js';
+import { derivePaye } from '../payslips.js';
 import { icon } from './shared.js';
 import { bus } from '../bus.js';
 
 export async function render() {
   const s = getSettings();
-  const [allE, allX] = await Promise.all([earnings.all(), expenses.all()]);
+  const [allE, allX, allPS] = await Promise.all([earnings.all(), expenses.all(), payslips.all()]);
   const sum = computeTaxYear(allE, allX, s);
+  const paye = derivePaye(allPS, s.taxYear);
   const root = el('div');
 
   root.append(el('div', { class: 'row row--between', style: 'margin:4px 2px 12px' }, [
@@ -57,11 +59,6 @@ export async function render() {
     if (sum.homeDed) trow('Less: use of home', '−' + fmtGBP(sum.homeDed));
   }
   trow('Taxable profit', fmtGBP(sum.netProfit), 'total');
-
-  if (sum.base > 0) {
-    trow('Other income (PAYE etc.)', fmtGBP(sum.base), 'sub');
-    trow('Total income', fmtGBP(sum.totalIncome), 'sub');
-  }
   t.append(spacer());
 
   trow('Income tax on profit', fmtGBP(sum.incomeTaxSE));
@@ -70,15 +67,42 @@ export async function render() {
   if (sum.studentLoanSE) trow('Student loan', fmtGBP(sum.studentLoanSE));
   trow('Total to set aside', fmtGBP(saBill), 'total');
 
+  root.append(sectionTitle('① Self-employment (delivery)'));
   root.append(el('div', { class: 'card' }, [t]));
-
-  // PAYE clarity — the set-aside figure is self-employment only
-  if (sum.base > 0) {
-    root.append(el('div', { class: 'callout callout--brand', html: `${icon('info')}<div><b>Your PAYE job is separate.</b> Income tax (≈${fmtGBP(sum.incomeTaxBase)}) and NI on your ${fmtGBP(sum.base, { round: true })} salary are already deducted by your employer. The <b>“Total to set aside”</b> above is only what you'll owe on your <b>self-employment</b> via Self Assessment.</div>` }));
-  }
 
   // class 2 note
   root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div><b>Class 2 NIC:</b> ${sum.class2.status}. ${sum.class2.credited ? 'Your profit is above the Small Profits Threshold, so you get National Insurance credits toward your State Pension at no cost.' : `You can pay voluntarily (£${sum.class2.voluntaryWeekly.toFixed(2)}/week) to protect your State Pension.`}</div>` }));
+
+  // ---- Employment (PAYE) — kept clearly separate from self-employment ----
+  const hasPaye = sum.base > 0 || paye.count > 0;
+  if (hasPaye) {
+    root.append(sectionTitle('② Employment (PAYE) — deducted at source'));
+    const usingPayslips = s.payeSource === 'payslips' && paye.count > 0;
+    const empGross = usingPayslips ? paye.sumGross : sum.base;
+    const empTax = usingPayslips ? paye.sumTax : sum.incomeTaxBase;
+    const empNI = usingPayslips ? paye.sumNI : 0;
+    const et = el('table', { class: 'brk' });
+    const erow = (l, v, cls = '') => { const tr = el('tr', { class: cls }); tr.append(el('td', { html: l }), el('td', { text: v })); et.append(tr); };
+    erow(usingPayslips ? `Salary received (${paye.count} payslip${paye.count === 1 ? '' : 's'})` : 'Annual salary', fmtGBP(empGross));
+    erow('Income tax deducted', fmtGBP(empTax));
+    if (empNI) erow('National Insurance deducted', fmtGBP(empNI));
+    if (usingPayslips) erow('Annualised salary', fmtGBP(paye.annualSalary), 'sub');
+    root.append(el('div', { class: 'card' }, [et]));
+    root.append(el('div', { class: 'callout callout--brand', html: `${icon('check')}<div>Your employer already deducts this tax &amp; NI from each payslip — <b>you don't set anything aside for it</b>. It only matters here because your salary uses your Personal Allowance, which is why your delivery profit is taxed from the first £.</div>` }));
+
+    // ---- Combined position ----
+    root.append(sectionTitle('③ Combined this tax year'));
+    const ct = el('table', { class: 'brk' });
+    const crow = (l, v, cls = '') => { const tr = el('tr', { class: cls }); tr.append(el('td', { html: l }), el('td', { text: v })); ct.append(tr); };
+    crow('Employment income (PAYE)', fmtGBP(empGross));
+    crow('Self-employment profit', fmtGBP(sum.netProfit));
+    crow('Total income', fmtGBP(round2(empGross + Math.max(0, sum.netProfit))), 'total');
+    crow('Income tax — deducted via PAYE', fmtGBP(empTax), 'sub');
+    crow('Income tax — to pay on self-employment', fmtGBP(sum.incomeTaxSE), 'sub');
+    crow('Class 4 NIC — to pay', fmtGBP(sum.class4), 'sub');
+    crow('You still owe (Self Assessment)', fmtGBP(sum.totalSETax), 'total');
+    root.append(el('div', { class: 'card' }, [ct]));
+  }
 
   // Payments on account
   root.append(sectionTitle('Payments on account'));
@@ -126,6 +150,12 @@ export async function render() {
   // VAT status
   const vatPct = Math.round(sum.vat.ratio * 100);
   root.append(el('div', { class: 'callout ' + (sum.vat.near ? 'callout--warn' : 'callout--info'), style: 'margin-top:14px', html: `${icon(sum.vat.near ? 'warn' : 'info')}<div><b>VAT:</b> you register only if turnover passes <b>${fmtGBP(sum.vat.threshold, { round: true })}</b>/year. You're at ${fmtGBP(sum.grossIncome, { round: true })} (${vatPct}%).</div>` }));
+
+  // Making Tax Digital heads-up for higher self-employment turnover
+  if (sum.grossIncome > 45000) {
+    const over = sum.grossIncome >= 50000;
+    root.append(el('div', { class: 'callout ' + (over ? 'callout--warn' : 'callout--info'), html: `${icon(over ? 'warn' : 'info')}<div><b>Making Tax Digital:</b> from 6 Apr 2026, self-employment income over <b>£50,000</b>/year means keeping digital records and sending <b>quarterly updates</b> to HMRC (threshold falls to £30k in 2027, £20k in 2028). You're at ${fmtGBP(sum.grossIncome, { round: true })}${over ? ' — you likely qualify; check HMRC or an accountant.' : '.'}</div>` }));
+  }
 
   // export
   root.append(sectionTitle('Export'));

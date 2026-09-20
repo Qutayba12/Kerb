@@ -22,6 +22,7 @@ const AR = {
   'profit after tax': 'الربح بعد الضريبة', 'Tax pot — set this aside': 'وعاء الضريبة — جنّب هذا',
   'Set an earnings goal': 'حدّد هدف دخل', '£ / hour': '£/ساعة', '£ / mile': '£/ميل', 'Tips': 'البقشيش',
   'Weekly goal': 'الهدف الأسبوعي', 'Daily goal': 'الهدف اليومي', 'Monthly goal': 'الهدف الشهري',
+  'Employment (PAYE) — separate': 'الوظيفة (PAYE) — منفصلة', 'Salary': 'الراتب', 'Tax deducted': 'الضريبة المخصومة',
   'Shift in progress': 'وردية جارية', 'Gross income': 'إجمالي الدخل', 'Deductions': 'الخصومات', 'Set aside': 'المُجنّب',
   // income / expenses lists
   '7 days': '7 أيام', '30 days': '30 يوماً', 'Tax year': 'السنة الضريبية', 'All': 'الكل',
@@ -37,6 +38,13 @@ const AR = {
   'Export': 'تصدير', 'Summary (CSV)': 'ملخّص (CSV)', 'Transactions (CSV)': 'المعاملات (CSV)',
   'Self Assessment report (print / PDF)': 'تقرير Self Assessment (طباعة / PDF)', 'Net profit': 'صافي الربح',
   'Effective rate': 'المعدّل الفعلي', 'Take-home': 'الصافي', 'Applies': 'ينطبق', 'Likely none this year': 'غالباً لا شيء هذا العام',
+  '① Self-employment (delivery)': '① العمل الحر (التوصيل)',
+  '② Employment (PAYE) — deducted at source': '② الوظيفة (PAYE) — مخصومة تلقائياً',
+  '③ Combined this tax year': '③ المجموع هذه السنة الضريبية',
+  'Annual salary': 'الراتب السنوي', 'Income tax deducted': 'ضريبة الدخل المخصومة', 'National Insurance deducted': 'التأمين الوطني المخصوم',
+  'Annualised salary': 'الراتب السنوي المقدّر', 'Employment income (PAYE)': 'دخل الوظيفة (PAYE)', 'Self-employment profit': 'ربح العمل الحر',
+  'Income tax — deducted via PAYE': 'ضريبة الدخل — مخصومة عبر PAYE', 'Income tax — to pay on self-employment': 'ضريبة الدخل — مستحقّة على العمل الحر',
+  'Class 4 NIC — to pay': 'تأمين وطني Class 4 — مستحق', 'You still owe (Self Assessment)': 'ما تزال مديناً به (Self Assessment)',
   'incl. tips': 'شامل البقشيش', 'Less: allowable expenses': 'ناقص: مصاريف قابلة للخصم', 'Less: use of home': 'ناقص: استخدام المنزل',
   'Less: £1,000 trading allowance': 'ناقص: بدل تداول £1,000', 'Each instalment (×2)': 'كل دفعة (×2)',
   // pots
