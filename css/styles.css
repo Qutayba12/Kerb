@@ -379,3 +379,28 @@ hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 @media (min-width: 560px) {
   .hero__value { font-size: 44px; }
 }
+
+/* ---------- Self Assessment report ---------- */
+.report { padding: 22px; }
+.report__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--border-strong); padding-bottom: 14px; margin-bottom: 6px; }
+.report__title { font-size: 20px; font-weight: 800; }
+.report__sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.report__brand { display: flex; align-items: center; gap: 7px; font-weight: 800; }
+.report__brand img { border-radius: 6px; }
+.report__meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin: 14px 0; }
+.report__metaItem { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; border-bottom: 1px dotted var(--border); padding: 3px 0; }
+.report__metaItem .k { color: var(--muted); }
+.report__metaItem .v { font-weight: 700; text-align: right; }
+.report__section { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--brand-700); margin: 18px 0 4px; }
+.report__table { margin-bottom: 4px; }
+.report__box { display: inline-block; font-size: 10px; font-weight: 700; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+.report__foot { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 11px; color: var(--faint); }
+
+@media print {
+  :root { --bg: #fff; --surface: #fff; --text: #111; --muted: #444; --faint: #666; --border: #ccc; --border-strong: #999; }
+  .topbar, .tabbar, #toast-root, #sheet-root, .no-print { display: none !important; }
+  .view { padding: 0 !important; max-width: none; }
+  .report { box-shadow: none; border: none; padding: 0; margin: 0; }
+  .report__box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: #fff; }
+}

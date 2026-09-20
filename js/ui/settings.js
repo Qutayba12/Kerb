@@ -35,6 +35,8 @@ export async function render() {
       s.expenseMethod === 'mileage' ? 'Claim a flat rate per business mile.' : 'Claim the business share of real vehicle costs.'),
     field('Working tax year', bindSelect('taxYear', availableYears().map(y => ({ value: y, label: y })), true)),
     field('Self-employment start date', bindDate('seStartDate'), 'Used for your HMRC registration reminder.'),
+    field('Your name (for SA report)', bindText('traderName'), 'Optional — appears on the printable report.'),
+    field('UTR (for SA report)', bindText('utr'), 'Optional Unique Taxpayer Reference.'),
   ]));
 
   // ---------- Income context ----------
@@ -107,6 +109,12 @@ function bindNumber(key, refresh, { min, max, step } = {}) {
   const inp = el('input', { class: 'input', type: 'number', value: s[key] ?? '', inputMode: 'decimal' });
   if (min != null) inp.min = min; if (max != null) inp.max = max; if (step != null) inp.step = step;
   inp.addEventListener('change', () => { saveSettings({ [key]: parseFloat(inp.value) || 0 }); if (refresh) bus.refresh(); });
+  return inp;
+}
+function bindText(key) {
+  const s = getSettings();
+  const inp = el('input', { class: 'input', type: 'text', value: s[key] || '', autocomplete: 'off' });
+  inp.addEventListener('change', () => saveSettings({ [key]: inp.value.trim() }));
   return inp;
 }
 function bindDate(key) {

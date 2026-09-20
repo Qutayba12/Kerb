@@ -132,6 +132,11 @@ export async function render() {
   exp.append(csvBtn, txnBtn);
   root.append(exp);
 
+  const reportBtn = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:10px' });
+  reportBtn.innerHTML = icon('note') + '<span>Self Assessment report (print / PDF)</span>';
+  reportBtn.onclick = () => bus.navigate('report');
+  root.append(reportBtn);
+
   root.append(el('div', { class: 'callout callout--brand', style: 'margin-top:14px', html: `${icon('info')}<div>Estimates for guidance using ${sum.taxYear} rates (${VEHICLE_LABELS[s.vehicle]}, ${s.expenseMethod === 'mileage' ? 'simplified mileage' : 'actual costs'}). Always confirm figures on your HMRC Self Assessment. Adjust rates or your PAYE salary in Settings.</div>` }));
 
   return root;
