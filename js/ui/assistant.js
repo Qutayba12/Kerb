@@ -5,10 +5,11 @@
 // each question (never raw personal notes beyond what you ask).
 // ============================================================
 import { el, fmtGBP, fmtNum, todayISO, addDays, parseISO, taxYearFromLabel, round2 } from '../util.js';
-import { earnings, expenses } from '../db.js';
+import { earnings, expenses, payslips } from '../db.js';
 import { getSettings, categoryById, platformById, allPlatforms, EXPENSE_CATEGORIES } from '../store.js';
 import { computeTaxYear, summariseRange } from '../tax.js';
 import { computeGoal } from '../goals.js';
+import { derivePaye } from '../payslips.js';
 import { claudeText, parseEntry, hasApiKey } from '../claude.js';
 import { icon, toast } from './shared.js';
 import { openEarningsForm, openExpenseForm } from './forms.js';
@@ -32,7 +33,7 @@ export async function render() {
     return root;
   }
 
-  const [allE, allX] = await Promise.all([earnings.all(), expenses.all()]);
+  const [allE, allX, allPS] = await Promise.all([earnings.all(), expenses.all(), payslips.all()]);
 
   // ---- quick add ----
   root.append(el('div', { class: 'section-title', text: 'Quick add by text' }));
@@ -63,15 +64,16 @@ export async function render() {
 
   // ---- ask ----
   root.append(el('div', { class: 'section-title', text: 'Ask about your money' }));
+  const ar = (s.lang === 'ar');
   const chips = el('div', { class: 'chips', style: 'margin-bottom:10px' });
   [
-    ['Summarise this week', 'Give me a short summary of this week vs last week.'],
-    ['How am I doing this month?', 'How am I doing this month compared to my goal and recent months?'],
-    ['Best day & platform', 'Which weekday and which platform earn me the most per hour?'],
-    ['How much tax so far?', 'How much should I set aside for tax and NIC so far this tax year, and why?'],
-  ].forEach(([label, q]) => {
+    ['Summarise this week', 'Give me a short summary of this week vs last week.', 'لخّص لي هذا الأسبوع مقارنةً بالأسبوع الماضي باختصار.'],
+    ['How am I doing this month?', 'How am I doing this month compared to my goal and recent months?', 'كيف أدائي هذا الشهر مقارنةً بهدفي والأشهر الأخيرة؟'],
+    ['Best day & platform', 'Which weekday and which platform earn me the most per hour?', 'أي يوم في الأسبوع وأي منصّة تكسبني أكثر في الساعة؟'],
+    ['How much tax so far?', 'How much should I set aside for tax and NIC so far this tax year, and why?', 'كم يجب أن أجنّب للضريبة والتأمين الوطني حتى الآن هذه السنة الضريبية، ولماذا؟'],
+  ].forEach(([label, qEn, qAr]) => {
     const c = el('button', { class: 'chip', type: 'button', text: label });
-    c.onclick = () => ask(q);
+    c.onclick = () => ask(ar ? qAr : qEn);
     chips.append(c);
   });
   root.append(chips);
@@ -93,10 +95,12 @@ export async function render() {
     const loading = bubble('assistant', '…'); loading.classList.add('is-loading'); th.append(loading);
     loading.scrollIntoView({ behavior: 'smooth', block: 'end' });
     try {
-      const summary = buildSummary(allE, allX, s);
-      const system = `You are Kerb, a friendly assistant for a UK self-employed delivery driver.
-Answer the question using ONLY the JSON data provided. Be concise (1–4 sentences), use £ and plain language, and never invent figures.
-If the data can't answer it, say so briefly. Reply in the same language the user used.`;
+      const summary = buildSummary(allE, allX, allPS, s);
+      const system = `You are Kerb, a friendly assistant for a UK driver who is self-employed (delivery) and may ALSO have a PAYE employed job.
+Answer using ONLY the JSON data. Be concise (1–4 sentences), use £ and plain language, never invent figures. Reply in the same language the user used.
+Important:
+- "Money to set aside" for tax/NIC applies to SELF-EMPLOYMENT (Self Assessment) only. PAYE tax and NI are already deducted at source by the employer, so the driver does not set those aside.
+- The data has two parts: "selfEmployment" (delivery) and "employmentPAYE" (job/payslips). If self-employment profit is £0 but there is PAYE income, say the SE set-aside is £0 AND acknowledge the PAYE income/tax that is handled automatically — do not say total income is £0.`;
       const text = await claudeText({ system, user: `${question}\n\nDATA (JSON):\n${JSON.stringify(summary)}`, settings: s, maxTokens: 500 });
       history.push({ role: 'assistant', text });
       loading.replaceWith(bubble('assistant', text));
@@ -122,9 +126,10 @@ function getPlatforms() { return allPlatforms().map(p => ({ id: p.id, name: p.na
 function categoryList() { return EXPENSE_CATEGORIES.map(c => ({ id: c.id, label: c.label })); }
 
 // Compact, privacy-minded aggregate summary for the model.
-function buildSummary(allE, allX, s) {
+function buildSummary(allE, allX, allPS, s) {
   const sum = computeTaxYear(allE, allX, s);
   const ty = taxYearFromLabel(s.taxYear);
+  const paye = derivePaye(allPS || [], s.taxYear);
   const thisWeek = summariseRange(allE, allX, addDays(todayISO(), -6), todayISO(), s);
   const lastWeek = summariseRange(allE, allX, addDays(todayISO(), -13), addDays(todayISO(), -7), s);
   const last30 = summariseRange(allE, allX, addDays(todayISO(), -29), todayISO(), s);
@@ -151,14 +156,24 @@ function buildSummary(allE, allX, s) {
   const g = s.goalEnabled ? computeGoal(allE, allX, s) : null;
   return {
     taxYear: sum.taxYear,
-    context: { region: s.region, vehicle: s.vehicle, expenseMethod: s.expenseMethod, payeSalaryAnnual: s.payeSalary },
-    yearToDate: {
-      grossIncome: sum.grossIncome, netProfit: sum.netProfit, totalTaxToSetAside: sum.totalSETax,
-      incomeTax: sum.incomeTaxSE, class4NIC: sum.class4, netTakeHome: sum.netTakeHome,
+    context: { region: s.region, vehicle: s.vehicle, expenseMethod: s.expenseMethod },
+    selfEmployment: {
+      incomeToDate: sum.grossIncome, netProfitToDate: sum.netProfit,
+      taxToSetAside: sum.totalSETax, incomeTax: sum.incomeTaxSE, class4NIC: sum.class4, netTakeHome: sum.netTakeHome,
       effectiveRatePct: round2(sum.effectiveSERate), businessMiles: sum.businessMiles, mileageDeduction: sum.mileageDed,
       hours: sum.totalHours, deliveries: sum.totalDeliveries,
       poundsPerHour: sum.totalHours ? round2(sum.grossIncome / sum.totalHours) : null,
       poundsPerMile: sum.businessMiles ? round2(sum.grossIncome / sum.businessMiles) : null,
+    },
+    employmentPAYE: {
+      note: 'PAYE tax & NI are deducted at source by the employer — not set aside by the driver.',
+      source: s.payeSource,
+      annualSalary: s.payeSalary || 0,
+      annualTaxDeducted: s.payeTaxPaid || 0,
+      payslipsThisYear: paye.count,
+      ytdGrossFromPayslips: paye.sumGross,
+      ytdTaxFromPayslips: paye.sumTax,
+      ytdNIFromPayslips: paye.sumNI,
     },
     byPlatform: sum.byPlatform.map(p => ({ name: p.name, amount: p.amount })),
     incomeByMonth: byMonth,
