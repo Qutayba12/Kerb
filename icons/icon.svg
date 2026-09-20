@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kerb">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f8a74"/>
+      <stop offset="1" stop-color="#085c4e"/>
+    </linearGradient>
+    <linearGradient id="coin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7bd5c"/>
+      <stop offset="1" stop-color="#f2a233"/>
+    </linearGradient>
+  </defs>
+  <!-- full-bleed background (maskable-safe) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- gold coin -->
+  <circle cx="256" cy="232" r="132" fill="#000" opacity="0.14"/>
+  <circle cx="256" cy="226" r="132" fill="url(#coin)"/>
+  <circle cx="256" cy="226" r="112" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="6"/>
+  <!-- pound sign -->
+  <text x="256" y="300" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="205" font-weight="700" fill="#ffffff">£</text>
+  <!-- road / kerb dashes -->
+  <g fill="#ffffff">
+    <rect x="150" y="410" width="62" height="22" rx="11"/>
+    <rect x="225" y="410" width="62" height="22" rx="11"/>
+    <rect x="300" y="410" width="62" height="22" rx="11"/>
+  </g>
+</svg>

@@ -1,0 +1,170 @@
+// ============================================================
+// ui/dashboard.js — the Home screen: take-home, tax reserve,
+// this week, upcoming dues, income mix, recent activity.
+// ============================================================
+import { el, fmtGBP, fmtNum, fmtPct, todayISO, addDays, humanUntil, fmtDate, daysBetween } from '../util.js';
+import { earnings, expenses, bills } from '../db.js';
+import { getSettings } from '../store.js';
+import { computeTaxYear, summariseRange, taxReserve } from '../tax.js';
+import { donut } from '../charts.js';
+import { icon } from './shared.js';
+import { earningItem, expenseItem } from './items.js';
+import { openEarningsForm, openExpenseForm } from './forms.js';
+import { bus } from '../bus.js';
+
+export async function render() {
+  const s = getSettings();
+  const [allE, allX, allB] = await Promise.all([earnings.all(), expenses.all(), bills.all()]);
+  const sum = computeTaxYear(allE, allX, s);
+  const root = el('div');
+
+  if (!allE.length && !allX.length) {
+    root.append(welcomeCard());
+  }
+
+  // ---- Hero: take-home this tax year ----
+  const hero = el('div', { class: 'hero' }, [
+    el('div', { class: 'hero__label', text: `Estimated take-home · ${sum.taxYear}` }),
+    el('div', { class: 'hero__value', text: fmtGBP(Math.max(0, sum.netTakeHome)) }),
+    el('div', { class: 'hero__sub', text: `Net profit ${fmtGBP(sum.netProfit)} after ${fmtGBP(sum.totalSETax)} tax & NIC` }),
+    el('div', { class: 'hero__split' }, [
+      heroCell('Gross income', fmtGBP(sum.grossIncome, { round: true })),
+      heroCell('Deductions', fmtGBP(sum.effectiveDeduction, { round: true })),
+      heroCell('Set aside', fmtGBP(sum.totalSETax, { round: true })),
+    ]),
+  ]);
+  root.append(hero);
+
+  // ---- Quick actions ----
+  const actions = el('div', { class: 'btn-grid' });
+  const bEarn = el('button', { class: 'btn btn--sub', type: 'button' }); bEarn.innerHTML = icon('plus') + '<span>Add earnings</span>';
+  bEarn.onclick = () => openEarningsForm();
+  const bExp = el('button', { class: 'btn btn--sub', type: 'button' }); bExp.innerHTML = icon('camera') + '<span>Scan receipt</span>';
+  bExp.onclick = () => openExpenseForm();
+  actions.append(bEarn, bExp);
+  root.append(actions);
+
+  // ---- Tax reserve card ----
+  const reserve = taxReserve(sum, s);
+  const rate = s.taxPotMode === 'manual' ? s.taxPotManualPct : sum.effectiveSERate;
+  const marginPct = sum.marginal.combined * 100;
+  root.append(sectionTitle('Money to keep'));
+  const reserveCard = el('div', { class: 'card' }, [
+    el('div', { class: 'row row--between' }, [
+      el('div', {}, [
+        el('div', { class: 'tile__k', html: icon('wallet') + '<span>Tax pot — set this aside</span>' }),
+        el('div', { class: 'tile__v', style: 'color:var(--warn)', text: fmtGBP(reserve) }),
+        el('div', { class: 'tile__s', text: `≈ ${fmtPct(rate)} of profit${s.taxPotMode === 'manual' ? ' (manual)' : ' (live estimate)'}` }),
+      ]),
+      el('div', {}, [
+        el('div', { class: 'tile__k', html: '<span>Safe to spend</span>' }),
+        el('div', { class: 'tile__v', style: 'color:var(--pos)', text: fmtGBP(Math.max(0, sum.netTakeHome)) }),
+        el('div', { class: 'tile__s', text: 'profit after tax' }),
+      ]),
+    ]),
+    el('div', { class: 'callout callout--brand', style: 'margin:12px 0 0', html: `${icon('info')}<div>For every <b>£100</b> profit from now, keep about <b>${fmtGBP(marginPct)}</b> for tax &amp; NIC — the rest is yours.</div>` }),
+  ]);
+  reserveCard.style.cursor = 'pointer';
+  reserveCard.onclick = () => bus.navigate('pots');
+  root.append(reserveCard);
+
+  // ---- This week ----
+  const wStart = addDays(todayISO(), -6);
+  const wk = summariseRange(allE, allX, wStart, todayISO(), s);
+  root.append(sectionTitle('Last 7 days'));
+  const week = el('div', { class: 'grid-2' }, [
+    tile('Income', fmtGBP(wk.income), `${wk.count} shift${wk.count === 1 ? '' : 's'}`, 'pos'),
+    tile('Expenses', fmtGBP(wk.expensesPaid), `${wk.expenseCount} item${wk.expenseCount === 1 ? '' : 's'}`, 'neg'),
+    tile('£ / hour', wk.hours ? fmtGBP(wk.income / wk.hours) : '—', `${fmtNum(wk.hours, 1)}h worked`),
+    tile('£ / mile', wk.miles ? fmtGBP(wk.income / wk.miles) : '—', `${fmtNum(wk.miles)} mi`),
+  ]);
+  root.append(week);
+
+  // ---- Upcoming ----
+  const upcoming = buildUpcoming(sum, allB);
+  if (upcoming) root.append(sectionTitle('Coming up'), upcoming);
+
+  // ---- Income mix ----
+  if (sum.byPlatform.length) {
+    root.append(sectionTitle('Income by platform'));
+    const data = sum.byPlatform.map(p => ({ label: p.name, value: p.amount, color: p.color }));
+    const card = el('div', { class: 'card' });
+    card.innerHTML = donut(data, { centerTop: fmtGBP(sum.grossIncome, { round: true }), centerSub: sum.taxYear });
+    const legend = el('div', { class: 'chart-legend', style: 'justify-content:center' });
+    data.forEach(d => legend.insertAdjacentHTML('beforeend', `<span class="k"><span class="dot" style="background:${d.color}"></span>${d.label} · ${fmtGBP(d.value, { round: true })}</span>`));
+    card.append(legend);
+    root.append(card);
+  }
+
+  // ---- Recent activity ----
+  const recent = [...allE.map(e => ({ ...e, _t: 'e' })), ...allX.map(x => ({ ...x, _t: 'x' }))]
+    .sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
+  if (recent.length) {
+    root.append(rowTitle('Recent activity', 'View all', () => bus.navigate('income')));
+    const list = el('div', { class: 'card card--flush' });
+    recent.forEach(r => list.append(r._t === 'e' ? earningItem(r) : expenseItem(r)));
+    root.append(list);
+  }
+
+  return root;
+}
+
+// ---- helpers ----
+function heroCell(k, v) { return el('div', { class: 'hero__cell' }, [el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v })]); }
+function sectionTitle(t) { return el('div', { class: 'section-title', text: t }); }
+function rowTitle(t, action, onAction) {
+  return el('div', { class: 'row row--between', style: 'margin:18px 4px 8px' }, [
+    el('div', { class: 'section-title', style: 'margin:0', text: t }),
+    el('button', { class: 'link tiny', type: 'button', text: action, onclick: onAction }),
+  ]);
+}
+function tile(k, v, s, tone) {
+  return el('div', { class: 'tile' }, [
+    el('div', { class: 'tile__k', text: k }),
+    el('div', { class: 'tile__v', style: tone === 'pos' ? 'color:var(--pos)' : tone === 'neg' ? 'color:var(--neg)' : '', text: v }),
+    el('div', { class: 'tile__s', text: s }),
+  ]);
+}
+function buildUpcoming(sum, allB) {
+  const items = [];
+  const d = sum.deadlines;
+  const today = todayISO();
+  const deadlineList = [
+    { label: 'Register with HMRC as self-employed', date: d.registerBy },
+    { label: 'File & pay Self Assessment (online)', date: d.onlineFileAndPay },
+    { label: '2nd payment on account', date: d.secondPOA, only: sum.poa.applies },
+  ].filter(x => x.date >= today && x.only !== false).sort((a, b) => a.date < b.date ? -1 : 1);
+  const nextDeadline = deadlineList[0];
+
+  const wrap = el('div', { class: 'card card--flush' });
+  let any = false;
+  if (nextDeadline) {
+    any = true;
+    const near = daysBetween(today, nextDeadline.date) < 45;
+    wrap.append(el('div', { class: 'item' }, [
+      el('div', { class: 'item__icon', style: `background:var(--warn-tint);color:var(--warn)`, html: icon('calendar') }),
+      el('div', { class: 'item__main' }, [
+        el('div', { class: 'item__title', text: nextDeadline.label }),
+        el('div', { class: 'item__sub', text: `${fmtDate(nextDeadline.date, { withYear: true })} · ${humanUntil(nextDeadline.date)}` }),
+      ]),
+      el('div', { html: `<span class="pill pill--${near ? 'warn' : 'info'}">${humanUntil(nextDeadline.date)}</span>` }),
+    ]));
+  }
+  // next bill due
+  const bill = (allB || []).slice().sort((a, b) => (a.nextDue < b.nextDue ? -1 : 1))[0];
+  if (bill) {
+    any = true;
+    wrap.append(el('div', { class: 'item' }, [
+      el('div', { class: 'item__icon', style: `background:var(--info-tint);color:var(--info)`, html: icon('clock') }),
+      el('div', { class: 'item__main' }, [
+        el('div', { class: 'item__title', text: bill.name }),
+        el('div', { class: 'item__sub', text: `${fmtDate(bill.nextDue, { withYear: true })} · ${humanUntil(bill.nextDue)}` }),
+      ]),
+      el('div', { class: 'item__amt', text: fmtGBP(bill.amount) }),
+    ]));
+  }
+  return any ? wrap : null;
+}
+function welcomeCard() {
+  return el('div', { class: 'callout callout--brand', html: `${icon('spark')}<div><b>Welcome to Kerb.</b> Log a shift or scan a receipt to get started — your income, expenses and tax update instantly, and everything stays private on this device.</div>` });
+}

@@ -1,0 +1,222 @@
+// ============================================================
+// ui/forms.js — add/edit sheets for earnings, expenses, bills.
+// Shared by the Add screen and the list edit actions.
+// ============================================================
+import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP } from '../util.js';
+import { earnings, expenses, bills } from '../db.js';
+import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
+import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog } from './shared.js';
+import { extractReceipt, hasApiKey, estimateScanCost } from '../claude.js';
+import { bus } from '../bus.js';
+
+// ---------------- Earnings ----------------
+export function openEarningsForm(existing = null) {
+  const s = getSettings();
+  const e = existing || { id: uid(), date: todayISO(), platform: allPlatforms()[0].id, amount: '', tips: '', hours: '', deliveries: '', miles: '', notes: '' };
+  const form = el('form', { class: 'kform', autocomplete: 'off' });
+
+  const dateInput = el('input', { class: 'input', type: 'date', value: e.date, max: todayISO() });
+  const platformSel = selectInput(allPlatforms().map(p => ({ value: p.id, label: p.name })), e.platform);
+  const amount = moneyInput({ value: e.amount, placeholder: '0.00' });
+  const tips = moneyInput({ value: e.tips, placeholder: '0.00' });
+  const hours = el('input', { class: 'input', type: 'number', step: '0.25', min: '0', inputMode: 'decimal', value: e.hours, placeholder: 'e.g. 4' });
+  const deliveries = el('input', { class: 'input', type: 'number', step: '1', min: '0', inputMode: 'numeric', value: e.deliveries, placeholder: 'e.g. 12' });
+  const miles = el('input', { class: 'input', type: 'number', step: '0.1', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
+  const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
+
+  form.append(
+    field('Date', dateInput),
+    field('Platform', platformSel),
+    field('Earnings (before tips)', amount, 'What the app/platform paid you for the work.'),
+    field('Tips', tips, 'Tips are taxable income — kept separate for your records.'),
+    el('div', { class: 'grid-2' }, [field('Hours worked', hours), field('Deliveries', deliveries)]),
+    field('Business miles driven', miles, s.expenseMethod === 'mileage'
+      ? `Claimed at your mileage rate (car: 55p/mile up to 10k, then 25p).`
+      : `Tracked for your records (you use the actual-costs method).`),
+    field('Note', notes),
+  );
+
+  const save = async () => {
+    const rec = {
+      id: e.id, date: dateInput.value || todayISO(), platform: platformSel.value,
+      amount: parseMoney(amount.input.value), tips: parseMoney(tips.input.value),
+      hours: parseFloat(hours.value) || 0, deliveries: parseInt(deliveries.value) || 0,
+      miles: parseFloat(miles.value) || 0, notes: notes.value.trim(),
+    };
+    if (!rec.amount && !rec.tips && !rec.miles) { toast('Enter earnings, tips or miles', 'err'); return; }
+    await earnings.save(rec);
+    closeSheet(); toast(existing ? 'Shift updated' : 'Shift added', 'ok'); bus.refresh();
+  };
+
+  form.append(footer(save, existing ? () => removeEntry('earnings', e.id, 'Shift') : null));
+  form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
+  openSheet({ title: existing ? 'Edit shift' : 'Add earnings', node: form });
+  setTimeout(() => amount.input.focus(), 150);
+}
+
+// ---------------- Expenses ----------------
+export function openExpenseForm(existing = null) {
+  const s = getSettings();
+  const x = existing || { id: uid(), date: todayISO(), category: 'fuel', amount: '', vendor: '', bizPct: null, vat: '', notes: '', image: '', source: 'manual' };
+  const form = el('form', { class: 'kform', autocomplete: 'off' });
+
+  // ---- scan area ----
+  const fileInput = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+  const scanBtn = el('button', { class: 'btn btn--primary btn--block', type: 'button' });
+  scanBtn.innerHTML = icon('camera') + '<span>Scan receipt with Claude</span>';
+  const scanStatus = el('div', { class: 'scan-status', hidden: true });
+  const preview = el('img', { class: 'scan-preview', hidden: true, alt: 'receipt' });
+  if (x.image) { preview.src = x.image; preview.hidden = false; }
+
+  const dateInput = el('input', { class: 'input', type: 'date', value: x.date, max: todayISO() });
+  const catSel = selectInput(EXPENSE_CATEGORIES.map(c => ({ value: c.id, label: c.label })), x.category);
+  const amount = moneyInput({ value: x.amount, placeholder: '0.00' });
+  const vendor = el('input', { class: 'input', type: 'text', value: x.vendor, placeholder: 'e.g. Shell, EE' });
+  const bizPct = el('input', { class: 'input', type: 'number', min: '0', max: '100', step: '1', inputMode: 'numeric', value: x.bizPct != null ? x.bizPct : categoryById(x.category).defaultBizPct });
+  const vat = moneyInput({ value: x.vat, placeholder: '0.00' });
+  const notes = el('input', { class: 'input', type: 'text', value: x.notes, placeholder: 'optional' });
+
+  // note about vehicle costs under mileage method
+  const vehNote = el('div', { class: 'hint' });
+  const updateVehNote = () => {
+    const cat = categoryById(catSel.value);
+    if (s.expenseMethod === 'mileage' && cat.vehicle) {
+      vehNote.innerHTML = `<span style="color:var(--warn)">⚠ Covered by the mileage rate — not separately deductible. Tracked for your cash records only.</span>`;
+    } else vehNote.textContent = 'Deductible business expense.';
+  };
+  catSel.addEventListener('change', () => { bizPct.value = categoryById(catSel.value).defaultBizPct; updateVehNote(); });
+  updateVehNote();
+
+  // scan handlers
+  scanBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0]; if (!file) return;
+    let dataUrl;
+    try { dataUrl = await fileToResizedDataURL(file); } catch { toast('Could not read image', 'err'); return; }
+    preview.src = dataUrl; preview.hidden = false; x.image = dataUrl;
+    if (!hasApiKey(s)) {
+      toast('Add your API key in Settings to auto-read receipts', 'warn');
+      scanStatus.hidden = true;
+      return;
+    }
+    scanStatus.hidden = false;
+    scanStatus.innerHTML = `<span class="splash__spin"></span> Claude is reading the receipt…`;
+    scanBtn.disabled = true;
+    try {
+      const r = await extractReceipt(dataUrl, s);
+      if (r.amount) amount.input.value = r.amount.toFixed(2);
+      if (r.date) dateInput.value = r.date;
+      if (r.vendor) vendor.value = r.vendor;
+      if (r.category) { catSel.value = r.category; bizPct.value = categoryById(r.category).defaultBizPct; updateVehNote(); }
+      if (r.vat) vat.input.value = r.vat.toFixed(2);
+      if (r.notes) notes.value = r.notes;
+      x.source = 'claude';
+      const conf = Math.round((r.confidence || 0) * 100);
+      scanStatus.innerHTML = `${icon('check')} Read it${conf ? ` (${conf}% confident)` : ''} — please double-check the amount.`;
+      scanStatus.style.color = 'var(--pos)';
+    } catch (err) {
+      scanStatus.innerHTML = `${icon('warn')} ${err.message}`;
+      scanStatus.style.color = 'var(--neg)';
+    } finally { scanBtn.disabled = false; }
+  });
+
+  const scanWrap = el('div', {}, [scanBtn, fileInput, scanStatus, preview]);
+  if (!hasApiKey(s)) scanWrap.append(el('div', { class: 'hint', html: `Tip: add your Anthropic API key in Settings — scanning costs ${estimateScanCost()}.` }));
+
+  form.append(
+    scanWrap,
+    el('hr', { class: 'soft' }),
+    field('Date', dateInput),
+    field('Category', catSel, undefined),
+    (() => { const f = field('', vehNote); f.style.marginTop = '-8px'; return f; })(),
+    field('Amount paid (inc. VAT)', amount),
+    field('Vendor', vendor),
+    el('div', { class: 'grid-2' }, [
+      field('Business use %', bizPct, 'e.g. phone 50%'),
+      field('VAT (optional)', vat),
+    ]),
+    field('Note', notes),
+  );
+
+  const save = async () => {
+    const rec = {
+      id: x.id, date: dateInput.value || todayISO(), category: catSel.value,
+      amount: parseMoney(amount.input.value), vendor: vendor.value.trim(),
+      bizPct: Math.max(0, Math.min(100, parseInt(bizPct.value) || 0)),
+      vat: parseMoney(vat.input.value), notes: notes.value.trim(),
+      image: x.image || '', source: x.source || 'manual',
+    };
+    if (!rec.amount) { toast('Enter the amount', 'err'); return; }
+    await expenses.save(rec);
+    closeSheet(); toast(existing ? 'Expense updated' : 'Expense added', 'ok'); bus.refresh();
+  };
+
+  form.append(footer(save, existing ? () => removeEntry('expenses', x.id, 'Expense') : null));
+  form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
+  openSheet({ title: existing ? 'Edit expense' : 'Add expense', node: form });
+}
+
+// ---------------- Recurring bills ----------------
+const FREQS = [
+  { value: 'weekly', label: 'Weekly' }, { value: 'fourweekly', label: 'Every 4 weeks' },
+  { value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'annual', label: 'Annual' },
+];
+export function openBillForm(existing = null) {
+  const b = existing || { id: uid(), name: '', amount: '', freq: 'monthly', category: 'phone', business: true, bizPct: 50, nextDue: todayISO() };
+  const form = el('form', { class: 'kform', autocomplete: 'off' });
+  const name = el('input', { class: 'input', type: 'text', value: b.name, placeholder: 'e.g. Phone contract' });
+  const amount = moneyInput({ value: b.amount, placeholder: '0.00' });
+  const freq = selectInput(FREQS, b.freq);
+  const catSel = selectInput(EXPENSE_CATEGORIES.map(c => ({ value: c.id, label: c.label })), b.category);
+  const nextDue = el('input', { class: 'input', type: 'date', value: b.nextDue });
+  const bizToggle = el('input', { type: 'checkbox' }); bizToggle.checked = !!b.business;
+  const bizPct = el('input', { class: 'input', type: 'number', min: '0', max: '100', value: b.bizPct });
+
+  const bizRow = el('label', { class: 'switch-row' }, [
+    el('span', { text: 'Business expense (deductible)' }),
+    el('span', { class: 'switch' }, [bizToggle, el('span', { class: 'track' })]),
+  ]);
+
+  form.append(
+    field('Name', name),
+    el('div', { class: 'grid-2' }, [field('Amount', amount), field('Frequency', freq)]),
+    field('Category', catSel),
+    field('Next due', nextDue),
+    bizRow,
+    field('Business use %', bizPct),
+  );
+  const save = async () => {
+    const rec = {
+      id: b.id, name: name.value.trim() || 'Bill', amount: parseMoney(amount.input.value),
+      freq: freq.value, category: catSel.value, nextDue: nextDue.value || todayISO(),
+      business: bizToggle.checked, bizPct: Math.max(0, Math.min(100, parseInt(bizPct.value) || 0)),
+    };
+    if (!rec.amount) { toast('Enter the amount', 'err'); return; }
+    await bills.save(rec);
+    closeSheet(); toast(existing ? 'Bill updated' : 'Bill added', 'ok'); bus.refresh();
+  };
+  form.append(footer(save, existing ? () => removeEntry('bills', b.id, 'Bill') : null));
+  form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
+  openSheet({ title: existing ? 'Edit bill' : 'Add recurring bill', node: form });
+}
+
+// ---------------- helpers ----------------
+function footer(onSave, onDelete) {
+  const wrap = el('div', { style: 'margin-top:16px' });
+  const saveBtn = el('button', { class: 'btn btn--primary btn--block', type: 'submit', text: 'Save' });
+  wrap.append(saveBtn);
+  if (onDelete) {
+    const delBtn = el('button', { class: 'btn btn--danger btn--block', type: 'button', style: 'margin-top:8px' });
+    delBtn.innerHTML = icon('trash') + '<span>Delete</span>';
+    delBtn.addEventListener('click', onDelete);
+    wrap.append(delBtn);
+  }
+  return wrap;
+}
+async function removeEntry(store, id, label) {
+  const ok = await confirmDialog({ title: `Delete ${label.toLowerCase()}?`, message: 'This cannot be undone.', confirmText: 'Delete', danger: true });
+  if (!ok) return;
+  const map = { earnings, expenses, bills };
+  await map[store].remove(id);
+  closeSheet(); toast(`${label} deleted`, 'ok'); bus.refresh();
+}

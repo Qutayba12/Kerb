@@ -1,0 +1,23 @@
+{
+  "name": "Kerb — Delivery Earnings & Tax",
+  "short_name": "Kerb",
+  "description": "Private, offline-first money & tax tracker for UK self-employed delivery drivers (Amazon Flex, Uber Eats).",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1220",
+  "theme_color": "#0f8a74",
+  "categories": ["finance", "productivity", "business"],
+  "lang": "en-GB",
+  "dir": "ltr",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Add earnings", "url": "./#/income" },
+    { "name": "Scan receipt", "url": "./#/expenses" },
+    { "name": "Tax summary", "url": "./#/tax" }
+  ]
+}
