@@ -11,6 +11,7 @@ import { icon } from './shared.js';
 import { earningItem, expenseItem } from './items.js';
 import { openEarningsForm, openExpenseForm } from './forms.js';
 import { getActive, elapsedMs, fmtDuration } from '../shift.js';
+import { computeGoal, PERIOD_LABELS } from '../goals.js';
 import { bus } from '../bus.js';
 
 export async function render() {
@@ -87,6 +88,28 @@ export async function render() {
   reserveCard.style.cursor = 'pointer';
   reserveCard.onclick = () => bus.navigate('pots');
   root.append(reserveCard);
+
+  // ---- Goal ----
+  if (s.goalEnabled && s.goalAmount > 0) {
+    const g = computeGoal(allE, allX, s);
+    root.append(sectionTitle(`${PERIOD_LABELS[g.period]} goal`));
+    const gc = el('div', { class: 'card', style: 'cursor:pointer' });
+    gc.append(
+      el('div', { class: 'row row--between', style: 'margin-bottom:8px' }, [
+        el('div', { style: 'font-weight:800', html: `${g.met ? '✅' : '🎯'} ${fmtGBP(g.current)} <span class="muted" style="font-weight:600">/ ${fmtGBP(g.amount)}</span>` }),
+        el('span', { class: 'tiny', style: 'font-weight:700;color:var(--brand)', text: g.streak > 0 ? `🔥 ${g.streak}` : '' }),
+      ]),
+      (() => { const b = el('div', { class: 'bar' }); b.append(el('div', { class: 'bar__fill' + (g.met ? '' : ''), style: `width:${g.pct}%;background:${g.met ? 'var(--pos)' : 'var(--brand)'}` })); return b; })(),
+      el('div', { class: 'tiny muted', style: 'margin-top:8px', text: g.met ? 'Goal met — great work!' : `${fmtGBP(g.remaining)} to go` }),
+    );
+    gc.onclick = () => bus.navigate('goals');
+    root.append(gc);
+  } else if (!getActive()) {
+    const setg = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-bottom:4px' });
+    setg.innerHTML = icon('target') + '<span>Set an earnings goal</span>';
+    setg.onclick = () => bus.navigate('goals');
+    root.append(setg);
+  }
 
   // ---- This week ----
   const wStart = addDays(todayISO(), -6);

@@ -122,6 +122,11 @@ const DEFAULTS = {
   potTaxSaved: 0,                // money actually put aside so far (manual counters)
   potVehicleSaved: 0,
   potSavingsSaved: 0,
+  goalEnabled: false,            // earnings goal
+  goalMetric: 'income',          // 'income' | 'profit'
+  goalPeriod: 'week',            // 'day' | 'week' | 'month'
+  goalAmount: 0,
+  notifyEnabled: false,          // local reminders (deadlines, goal)
   seStartDate: '',
   traderName: '',                // optional, shown on the Self Assessment report
   utr: '',                       // optional Unique Taxpayer Reference

@@ -2,7 +2,7 @@
 // service-worker.js — offline app shell for the Kerb PWA.
 // Bump CACHE when any precached file changes.
 // ============================================================
-const CACHE = 'kerb-v4';
+const CACHE = 'kerb-v5';
 
 const ASSETS = [
   './',
@@ -18,8 +18,11 @@ const ASSETS = [
   'js/claude.js',
   'js/bus.js',
   'js/shift.js',
+  'js/goals.js',
+  'js/notify.js',
   'js/ui/shared.js',
   'js/ui/shift.js',
+  'js/ui/goals.js',
   'js/ui/forms.js',
   'js/ui/items.js',
   'js/ui/dashboard.js',
@@ -45,6 +48,27 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+// Focus (or open) the app when a notification is tapped.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) { if ('focus' in c) return c.focus(); }
+    if (self.clients.openWindow) return self.clients.openWindow('./');
+  })());
+});
+
+// Best-effort daily nudge on supported platforms (registered only when the
+// user has enabled reminders).
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'kerb-daily') {
+    event.waitUntil(self.registration.showNotification('Kerb', {
+      body: 'Log today\'s shifts and keep your tax pot up to date.',
+      tag: 'kerb-daily', icon: 'icons/icon.svg', badge: 'icons/icon.svg',
+    }));
+  }
 });
 
 self.addEventListener('fetch', (event) => {

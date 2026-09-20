@@ -8,6 +8,7 @@ import { openSheet, closeSheet, icon, toast } from './ui/shared.js';
 import { openEarningsForm, openExpenseForm, openBillForm } from './ui/forms.js';
 import { maybeOnboard } from './ui/onboarding.js';
 import { resumeIfActive } from './shift.js';
+import { runChecks, registerPeriodicSync } from './notify.js';
 
 import * as home from './ui/dashboard.js';
 import * as income from './ui/income.js';
@@ -18,8 +19,9 @@ import * as insights from './ui/insights.js';
 import * as settings from './ui/settings.js';
 import * as shift from './ui/shift.js';
 import * as report from './ui/report.js';
+import * as goals from './ui/goals.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
@@ -152,6 +154,9 @@ function boot() {
   onHashChange();          // render initial route
   if (!location.hash) navigate('home');
   setTimeout(maybeOnboard, 400);
+
+  // fire any due local reminders shortly after boot
+  setTimeout(() => { runChecks(); registerPeriodicSync(); }, 1500);
 }
 
 boot();
