@@ -8,7 +8,21 @@ import { uid, round2 } from './util.js';
 
 const KEY = 'kerb.activeShift';
 let watchId = null;
+let wakeLock = null;
 const listeners = new Set();
+
+// Keep the screen awake during a shift so GPS keeps updating (best-effort).
+async function acquireWakeLock() {
+  try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch { wakeLock = null; }
+}
+function releaseWakeLock() { try { wakeLock && wakeLock.release(); } catch {} wakeLock = null; }
+export function isWakeLockActive() { return !!wakeLock; }
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    const s = getActive();
+    if (document.visibilityState === 'visible' && s && s.gps) { acquireWakeLock(); startGps(); }
+  });
+}
 
 export function onShiftChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function emit() { const s = getActive(); for (const fn of listeners) { try { fn(s); } catch {} } }
@@ -20,24 +34,31 @@ function write(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch 
 export function startShift({ platform, gps }) {
   const s = {
     id: uid(), startedAt: Date.now(), platform, gps: !!gps,
-    miles: 0, lastLat: null, lastLng: null,
+    miles: 0, lastLat: null, lastLng: null, fixes: 0,
+    odoStart: null, odoEnd: null,
     earnings: 0, tips: 0, deliveries: 0, gpsError: '',
   };
   write(s);
-  if (gps) startGps();
+  if (gps) { startGps(); acquireWakeLock(); }
   return s;
+}
+// Miles to record: odometer (start→end) takes precedence when both are set.
+export function effectiveMiles(s) {
+  s = s || getActive(); if (!s) return 0;
+  if (s.odoStart != null && s.odoEnd != null && s.odoEnd >= s.odoStart) return round2(s.odoEnd - s.odoStart);
+  return round2(s.miles || 0);
 }
 export function updateShift(patch) {
   const s = getActive(); if (!s) return null;
   const n = { ...s, ...patch }; write(n); return n;
 }
 export function stopShift() {
-  const s = getActive(); stopGps();
+  const s = getActive(); stopGps(); releaseWakeLock();
   try { localStorage.removeItem(KEY); } catch {}
   emit(); return s;
 }
 export function elapsedMs(s) { s = s || getActive(); return s ? Math.max(0, Date.now() - s.startedAt) : 0; }
-export function resumeIfActive() { const s = getActive(); if (s && s.gps) startGps(); }
+export function resumeIfActive() { const s = getActive(); if (s && s.gps) { startGps(); acquireWakeLock(); } }
 
 // ---------- GPS ----------
 function startGps() {
@@ -57,7 +78,7 @@ function onPos(pos) {
     const d = haversineMiles(s.lastLat, s.lastLng, latitude, longitude);
     if (d > 0.005 && d < 3) miles = round2(miles + d); // filter jitter & GPS jumps
   }
-  write({ ...s, miles, lastLat: latitude, lastLng: longitude, gpsError: '' });
+  write({ ...s, miles, lastLat: latitude, lastLng: longitude, gpsError: '', fixes: (s.fixes || 0) + 1 });
 }
 function onErr(err) {
   updateShift({ gpsError: err && err.code === 1 ? 'Location permission denied — enter miles manually' : 'GPS signal unavailable' });
