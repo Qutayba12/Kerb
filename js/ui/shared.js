@@ -37,7 +37,8 @@ const ICONS = {
   spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/>',
 };
 export function icon(name, cls = '') {
-  return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ICONS.dots}</svg>`;
+  // width/height default to 1em for inline use; CSS rules (.btn svg, .tile svg…) override where set.
+  return `<svg class="${cls}" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex:none">${ICONS[name] || ICONS.dots}</svg>`;
 }
 
 // ---------- toast ----------
