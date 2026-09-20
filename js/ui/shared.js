@@ -3,6 +3,7 @@
 // confirm dialog, icons, and small builders.
 // ============================================================
 import { el } from '../util.js';
+import { translate, isRTL } from '../i18n.js';
 
 // ---------- icons (inline SVG path data) ----------
 const ICONS = {
@@ -48,6 +49,7 @@ export function toast(msg, type = '') {
   if (type === 'ok') t.innerHTML = icon('check');
   else if (type === 'err') t.innerHTML = icon('warn');
   t.append(document.createTextNode(msg));
+  if (isRTL()) translate(t);
   root.append(t);
   setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, type === 'err' ? 3800 : 2400);
 }
@@ -67,6 +69,7 @@ export function openSheet({ title, node, onClose, wide = false } = {}) {
   if (node) sheet.append(node);
   backdrop.append(sheet);
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeSheet(); });
+  if (isRTL()) translate(sheet);
   root.append(backdrop);
   requestAnimationFrame(() => backdrop.classList.add('is-open'));
   activeSheet = { backdrop, onClose };

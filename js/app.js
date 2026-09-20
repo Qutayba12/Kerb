@@ -9,6 +9,7 @@ import { openEarningsForm, openExpenseForm, openBillForm } from './ui/forms.js';
 import { maybeOnboard } from './ui/onboarding.js';
 import { resumeIfActive } from './shift.js';
 import { runChecks, registerPeriodicSync } from './notify.js';
+import { applyDir, translate, isRTL } from './i18n.js';
 
 import * as home from './ui/dashboard.js';
 import * as income from './ui/income.js';
@@ -52,6 +53,7 @@ async function renderRoute(route) {
     node = el('div', { class: 'callout callout--warn', html: `${icon('warn')}<div>Something went wrong rendering this screen.<br><span class="tiny">${(err && err.message) || err}</span></div>` });
   }
   container.replaceChildren(node);
+  if (isRTL()) translate(container);
   container.removeAttribute('aria-busy');
   container.scrollTop = 0;
   window.scrollTo(0, 0);
@@ -146,7 +148,9 @@ function boot() {
     applyTheme,
   });
   applyTheme();
+  applyDir();
   wire();
+  if (isRTL()) { translate(document.querySelector('.topbar')); translate(document.querySelector('.tabbar')); }
   lockZoom();
   registerSW();
   resumeIfActive();   // resume GPS tracking if a shift was in progress
