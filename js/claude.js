@@ -313,6 +313,64 @@ function normFreq(v) {
   return 'monthly';
 }
 
+// ---------- earnings statement extraction (image or PDF) ----------
+function earningsPrompt(context) {
+  return `You are reading a UK delivery driver's EARNINGS statement/summary (e.g. Amazon Flex, Uber Eats, Deliveroo, Just Eat).
+Extract each work session/block/day as a SEPARATE entry. Reply with ONLY a JSON object (no prose, no fences):
+{
+  "entries": [
+    { "date":"<YYYY-MM-DD>", "platform":"<one of the platform ids>", "amount": <base earnings for this entry, GBP number>,
+      "tips": <tips for this entry, number, else 0>, "hours": <hours, number, else 0>,
+      "deliveries": <count, integer, else 0>, "miles": <miles, number, else 0>, "notes":"<short, optional>" }
+  ]
+}
+Rules:
+- Use only platform ids from this list: ${JSON.stringify(context.platforms)}. If the statement names one platform, use it for all rows.
+- "amount" is the base pay; if tips are shown separately put them in "tips", otherwise include everything in "amount" and set tips 0.
+- Parse dates carefully (UK DD/MM/YYYY) → output YYYY-MM-DD. If a row shows only a time/block, still use its date.
+- If the statement gives ONLY a single period total with no per-day breakdown, return ONE entry dated the period end (today is ${context.today} if no date is shown).
+- Numbers are plain GBP (no symbols). Never invent values you cannot see.`;
+}
+
+export async function extractEarnings(source, context, settings) {
+  if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
+  let contentBlock;
+  if (source.kind === 'pdf') contentBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: source.base64 } };
+  else { const { media_type, base64 } = splitDataUrl(source.dataUrl); contentBlock = { type: 'image', source: { type: 'base64', media_type, data: base64 } }; }
+  const body = {
+    model: settings.claudeModel || 'claude-haiku-4-5',
+    max_tokens: 1500,
+    messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: earningsPrompt(context) }] }],
+  };
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': settings.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify(body),
+    });
+  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
+  if (!res.ok) {
+    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
+    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
+    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
+    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
+  }
+  const data = await res.json();
+  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+  const parsed = parseJson(text);
+  const rows = parsed && Array.isArray(parsed.entries) ? parsed.entries : (Array.isArray(parsed) ? parsed : null);
+  if (!rows) throw new Error('Could not read the statement. Try a clearer photo/PDF.');
+  const ids = new Set((context.platforms || []).map(p => p.id));
+  return rows.slice(0, 200).map(e => ({
+    date: cleanDate(e.date) || context.today,
+    platform: ids.has(e.platform) ? e.platform : (context.platforms[0] && context.platforms[0].id) || 'amazonflex',
+    amount: toNum(e.amount), tips: toNum(e.tips), hours: toNum(e.hours),
+    deliveries: Math.round(toNum(e.deliveries)), miles: toNum(e.miles),
+    notes: String(e.notes || '').trim().slice(0, 80),
+  })).filter(e => e.amount > 0 || e.tips > 0 || e.miles > 0);
+}
+
 // Validate an API key with a tiny, cheap request.
 export async function testKey(settings) {
   if (!hasApiKey(settings)) throw new Error('Enter your API key first.');

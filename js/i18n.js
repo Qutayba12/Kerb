@@ -81,7 +81,8 @@ const AR = {
   'Add recurring bill': 'إضافة فاتورة متكرّرة',
   // add menu
   'Ask Kerb (AI)': 'اسأل Kerb (ذكاء)', 'Start live shift': 'ابدأ وردية مباشرة', 'Log mileage only': 'تسجيل الأميال فقط',
-  'Add expense manually': 'إضافة مصروف يدوياً',
+  'Add expense manually': 'إضافة مصروف يدوياً', 'Scan earnings statement': 'مسح كشف الأرباح', 'Scan earnings': 'مسح الأرباح',
+  'Scan photo': 'مسح صورة', 'Upload PDF / file': 'رفع PDF / ملف', 'Import CSV': 'استيراد CSV', 'Add payslip': 'إضافة قسيمة راتب',
   // settings
   'Tax basis': 'أساس الضريبة', 'Region': 'المنطقة', 'Expense method': 'طريقة المصاريف', 'Working tax year': 'السنة الضريبية العاملة',
   'Self-employment start date': 'تاريخ بدء العمل الحر', 'Your income context': 'سياق دخلك',
