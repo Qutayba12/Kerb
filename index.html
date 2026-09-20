@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0" />
+  <title>Kerb — Delivery Earnings & Tax</title>
+  <meta name="description" content="Kerb — a private, offline-first money & tax tracker for UK self-employed delivery drivers (Amazon Flex, Uber Eats). Every penny of income, expenses, tax and take-home." />
+
+  <meta name="theme-color" content="#0f8a74" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Kerb" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app" class="app" hidden>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar__brand">
+        <img class="topbar__logo" src="icons/icon.svg" alt="" width="26" height="26" />
+        <div class="topbar__titles">
+          <span class="topbar__name">Kerb</span>
+          <button class="topbar__year" id="year-chip" type="button" title="Tax year">—</button>
+        </div>
+      </div>
+      <div class="topbar__actions">
+        <button class="iconbtn" id="nav-insights" type="button" aria-label="Insights" title="Insights">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        </button>
+        <button class="iconbtn" id="nav-pots" type="button" aria-label="Pots" title="Pots">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        </button>
+        <button class="iconbtn" id="nav-settings" type="button" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Where views render -->
+    <main id="view" class="view" tabindex="-1"></main>
+
+    <!-- Bottom navigation -->
+    <nav class="tabbar" id="tabbar">
+      <button class="tab" data-route="home" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="tab" data-route="income" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>Income</span>
+      </button>
+      <button class="tab tab--fab" data-route="add" type="button" aria-label="Add">
+        <span class="fab"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+      </button>
+      <button class="tab" data-route="expenses" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        <span>Expenses</span>
+      </button>
+      <button class="tab" data-route="tax" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l4 4v14H5V3h4Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
+        <span>Tax</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Bottom sheet / modal host -->
+  <div id="sheet-root"></div>
+  <!-- Toast host -->
+  <div id="toast-root" aria-live="polite"></div>
+
+  <!-- Loading splash (shown until app boots) -->
+  <div id="splash" class="splash">
+    <img src="icons/icon.svg" alt="Kerb" width="72" height="72" />
+    <div class="splash__name">Kerb</div>
+    <div class="splash__spin" aria-hidden="true"></div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

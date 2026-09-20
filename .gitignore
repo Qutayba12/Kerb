@@ -1,0 +1,14 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node (this project has no runtime deps, but just in case)
+node_modules/
+npm-debug.log*
+
+# Local/testing artifacts
+__seed.html
+*.local
