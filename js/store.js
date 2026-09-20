@@ -133,6 +133,7 @@ const DEFAULTS = {
   apiKey: '',
   claudeModel: 'claude-haiku-4-5',
   theme: 'system',
+  lang: 'en',                    // 'en' | 'ar' (Arabic, RTL)
   customPlatforms: [],
   onboarded: false,
   rateOverrides: {},             // { '2026/27': { personalAllowance: 12570, ... } }

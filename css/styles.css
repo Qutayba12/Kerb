@@ -389,6 +389,18 @@ hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   .hero__value { font-size: 44px; }
 }
 
+/* ---------- RTL (Arabic) ---------- */
+[dir="rtl"] .input-prefix > span { left: auto; right: 12px; }
+[dir="rtl"] .input-prefix > .input { padding-left: 13px; padding-right: 26px; }
+[dir="rtl"] .select { background-position: left 12px center; padding-right: 13px; padding-left: 36px; }
+[dir="rtl"] .switch input:checked + .track::before { transform: translateX(-18px); }
+[dir="rtl"] .item__title, [dir="rtl"] .tile__k, [dir="rtl"] .section-title { text-align: right; }
+[dir="rtl"] .bubble--user { justify-content: flex-start; }
+[dir="rtl"] .bubble--assistant { justify-content: flex-end; }
+[dir="rtl"] .toast { direction: rtl; }
+[dir="rtl"] .brk td:last-child { text-align: left; }
+[dir="rtl"] .hero__value, [dir="rtl"] .tile__v { direction: ltr; text-align: right; } /* keep £ numbers LTR */
+
 /* ---------- Self Assessment report ---------- */
 .report { padding: 22px; }
 .report__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--border-strong); padding-bottom: 14px; margin-bottom: 6px; }

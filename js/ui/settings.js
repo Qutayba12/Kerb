@@ -10,6 +10,7 @@ import {
 import { exportAll, importAll, wipeAll } from '../db.js';
 import { icon, field, selectInput, moneyInput, toast, confirmDialog, openSheet, closeSheet } from './shared.js';
 import { testKey } from '../claude.js';
+import { setLang } from '../i18n.js';
 import { bus } from '../bus.js';
 
 const SL_PLANS = [
@@ -79,7 +80,9 @@ export async function render() {
   root.append(sec('Appearance'));
   const themeSel = selectInput([{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], s.theme);
   themeSel.addEventListener('change', () => { saveSettings({ theme: themeSel.value }); bus.applyTheme(); });
-  root.append(card([field('Theme', themeSel)]));
+  const langSel = selectInput([{ value: 'en', label: 'English' }, { value: 'ar', label: 'العربية' }], s.lang || 'en');
+  langSel.addEventListener('change', () => { if (langSel.value !== (getSettings().lang || 'en')) setLang(langSel.value); });
+  root.append(card([field('Theme', themeSel), field('Language', langSel, 'العربية تبدّل الواجهة إلى اليمين-لليسار.')]));
 
   // ---------- Data ----------
   root.append(sec('Your data'));
