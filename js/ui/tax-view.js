@@ -1,7 +1,7 @@
 // ============================================================
 // ui/tax-view.js — full Self Assessment breakdown for the year.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline } from '../util.js';
 import { earnings, expenses } from '../db.js';
 import { getSettings, saveSettings, availableYears, VEHICLE_LABELS, REGION_LABELS } from '../store.js';
 import { computeTaxYear } from '../tax.js';
@@ -72,6 +72,11 @@ export async function render() {
 
   root.append(el('div', { class: 'card' }, [t]));
 
+  // PAYE clarity — the set-aside figure is self-employment only
+  if (sum.base > 0) {
+    root.append(el('div', { class: 'callout callout--brand', html: `${icon('info')}<div><b>Your PAYE job is separate.</b> Income tax (≈${fmtGBP(sum.incomeTaxBase)}) and NI on your ${fmtGBP(sum.base, { round: true })} salary are already deducted by your employer. The <b>“Total to set aside”</b> above is only what you'll owe on your <b>self-employment</b> via Self Assessment.</div>` }));
+  }
+
   // class 2 note
   root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div><b>Class 2 NIC:</b> ${sum.class2.status}. ${sum.class2.credited ? 'Your profit is above the Small Profits Threshold, so you get National Insurance credits toward your State Pension at no cost.' : `You can pay voluntarily (£${sum.class2.voluntaryWeekly.toFixed(2)}/week) to protect your State Pension.`}</div>` }));
 
@@ -112,7 +117,7 @@ export async function render() {
       el('div', { html: `<span class="pill pill--${past ? 'info' : near ? 'warn' : 'info'}">${humanUntil(date)}</span>` }),
     ]));
   };
-  dline('Register with HMRC', d.registerBy);
+  dline('Register with HMRC', registrationDeadline(s.seStartDate) || d.registerBy);
   dline('Online return & balancing payment', d.onlineFileAndPay);
   dline('1st payment on account', d.onlineFileAndPay, sum.poa.applies);
   dline('2nd payment on account', d.secondPOA, sum.poa.applies);

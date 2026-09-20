@@ -112,10 +112,11 @@ const AR_PH = {
 
 // Prefix rules for dynamic strings (a number/year follows the label).
 const AR_PREFIX = [
+  ['Self-employment take-home · ', 'صافي العمل الحر · '],
   ['Estimated take-home · ', 'صافي متوقّع · '],
   ['Set aside for HMRC · ', 'جنّب لـ HMRC · '],
   ['Less: mileage', 'ناقص المسافة'],
-  ['Estimated take-home', 'صافي متوقّع'],
+  ['Self-employment take-home', 'صافي العمل الحر'],
 ];
 
 function tr(text) {
