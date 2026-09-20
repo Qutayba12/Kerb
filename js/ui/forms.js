@@ -10,9 +10,14 @@ import { extractReceipt, hasApiKey, estimateScanCost } from '../claude.js';
 import { bus } from '../bus.js';
 
 // ---------------- Earnings ----------------
-export function openEarningsForm(existing = null) {
+export function openEarningsForm(existing = null, opts = {}) {
   const s = getSettings();
-  const e = existing || { id: uid(), date: todayISO(), platform: allPlatforms()[0].id, amount: '', tips: '', hours: '', deliveries: '', miles: '', notes: '' };
+  const isEdit = !!existing && !opts.asNew;
+  const b = existing || {};
+  const e = {
+    id: isEdit ? b.id : uid(), date: b.date || todayISO(), platform: b.platform || allPlatforms()[0].id,
+    amount: b.amount ?? '', tips: b.tips ?? '', hours: b.hours ?? '', deliveries: b.deliveries ?? '', miles: b.miles ?? '', notes: b.notes || '',
+  };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
   const dateInput = el('input', { class: 'input', type: 'date', value: e.date, max: todayISO() });
@@ -45,19 +50,25 @@ export function openEarningsForm(existing = null) {
     };
     if (!rec.amount && !rec.tips && !rec.miles) { toast('Enter earnings, tips or miles', 'err'); return; }
     await earnings.save(rec);
-    closeSheet(); toast(existing ? 'Shift updated' : 'Shift added', 'ok'); bus.refresh();
+    closeSheet(); toast(isEdit ? 'Shift updated' : 'Shift added', 'ok'); bus.refresh();
   };
 
-  form.append(footer(save, existing ? () => removeEntry('earnings', e.id, 'Shift') : null));
+  form.append(footer(save, isEdit ? () => removeEntry('earnings', e.id, 'Shift') : null));
   form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
-  openSheet({ title: existing ? 'Edit shift' : 'Add earnings', node: form });
+  openSheet({ title: isEdit ? 'Edit shift' : 'Add earnings', node: form });
   setTimeout(() => amount.input.focus(), 150);
 }
 
 // ---------------- Expenses ----------------
-export function openExpenseForm(existing = null) {
+export function openExpenseForm(existing = null, opts = {}) {
   const s = getSettings();
-  const x = existing || { id: uid(), date: todayISO(), category: 'fuel', amount: '', vendor: '', bizPct: null, vat: '', notes: '', image: '', source: 'manual' };
+  const isEdit = !!existing && !opts.asNew;
+  const b = existing || {};
+  const x = {
+    id: isEdit ? b.id : uid(), date: b.date || todayISO(), category: b.category || 'fuel',
+    amount: b.amount ?? '', vendor: b.vendor || '', bizPct: b.bizPct ?? null, vat: b.vat ?? '', notes: b.notes || '',
+    image: b.image || '', source: b.source || 'manual',
+  };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
   // ---- scan area ----
@@ -148,12 +159,12 @@ export function openExpenseForm(existing = null) {
     };
     if (!rec.amount) { toast('Enter the amount', 'err'); return; }
     await expenses.save(rec);
-    closeSheet(); toast(existing ? 'Expense updated' : 'Expense added', 'ok'); bus.refresh();
+    closeSheet(); toast(isEdit ? 'Expense updated' : 'Expense added', 'ok'); bus.refresh();
   };
 
-  form.append(footer(save, existing ? () => removeEntry('expenses', x.id, 'Expense') : null));
+  form.append(footer(save, isEdit ? () => removeEntry('expenses', x.id, 'Expense') : null));
   form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
-  openSheet({ title: existing ? 'Edit expense' : 'Add expense', node: form });
+  openSheet({ title: isEdit ? 'Edit expense' : 'Add expense', node: form });
 }
 
 // ---------------- Recurring bills ----------------

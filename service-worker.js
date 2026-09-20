@@ -2,7 +2,7 @@
 // service-worker.js — offline app shell for the Kerb PWA.
 // Bump CACHE when any precached file changes.
 // ============================================================
-const CACHE = 'kerb-v5';
+const CACHE = 'kerb-v6';
 
 const ASSETS = [
   './',
@@ -34,6 +34,7 @@ const ASSETS = [
   'js/ui/settings.js',
   'js/ui/onboarding.js',
   'js/ui/report.js',
+  'js/ui/assistant.js',
   'icons/icon.svg',
 ];
 
