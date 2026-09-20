@@ -110,6 +110,7 @@ const DEFAULTS = {
   vehicle: 'car',
   expenseMethod: 'mileage',      // 'mileage' | 'actual'
   taxYear: currentTaxYear().label,
+  payeSource: 'manual',          // 'manual' | 'payslips' (auto-derive from scanned payslips)
   payeSalary: 0,                 // annual gross from an employed (PAYE) job
   payeTaxPaid: 0,                // income tax already deducted via PAYE (optional)
   otherIncome: 0,                // other taxable income (rent, etc.)

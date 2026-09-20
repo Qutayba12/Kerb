@@ -203,6 +203,104 @@ Expense categories: ${JSON.stringify(context.categories)}`;
   return parsed;
 }
 
+// ---------- payslip extraction (image or PDF) ----------
+function payslipPrompt() {
+  return `You are reading a UK employee PAYE payslip. Extract EVERYTHING and reply with ONLY a JSON object (no prose, no fences):
+{
+  "payDate":"<YYYY-MM-DD payment date>","payTime":"<HH:MM if shown else empty>",
+  "frequency":"<monthly|weekly|4-weekly|other>",
+  "periodStart":"<YYYY-MM-DD or empty>","periodEnd":"<YYYY-MM-DD or empty>",
+  "taxPeriod":"<tax month/week number if shown, e.g. 'Month 6' else empty>",
+  "taxCode":"<e.g. 1257L>","niLetter":"<NI category letter if shown>","niNumber":"<National Insurance number if shown>",
+  "gross": <this period's gross pay, number>,
+  "net": <this period's net/take-home pay, number>,
+  "incomeTax": <PAYE income tax deducted this period, number>,
+  "nationalInsurance": <employee NI this period, number>,
+  "pension": <employee pension this period, number, else 0>,
+  "studentLoan": <student loan deducted this period, number, else 0>,
+  "otherDeductions": <sum of any other deductions this period, number, else 0>,
+  "ytdGross": <year-to-date gross if shown, number, else 0>,
+  "ytdTax": <year-to-date tax if shown, number, else 0>,
+  "ytdNI": <year-to-date NI if shown, number, else 0>,
+  "ytdPension": <year-to-date pension if shown, number, else 0>,
+  "hours": <hours worked this period if shown, number, else 0>,
+  "hourlyRate": <hourly rate if shown, number, else 0>,
+  "annualSalary": <stated annual salary if shown, number, else 0>,
+  "employeeName":"<full name>","employeeAddress":"<full address incl. postcode, comma-separated>",
+  "employerName":"<employer name>","employerAddress":"<employer full address incl. postcode>",
+  "payeReference":"<employer PAYE reference if shown>","payrollNumber":"<employee/payroll number if shown>",
+  "paymentMethod":"<e.g. BACS, bank transfer>","notes":"<anything else useful, <60 chars>",
+  "confidence": <0..1>
+}
+Rules:
+- All money fields are plain GBP numbers (no symbols). Use 0 when not shown; never invent values.
+- Read amounts exactly. Parse dates carefully (UK is DD/MM/YYYY) and output YYYY-MM-DD.
+- Capture full employee and employer names and addresses (with postcodes) exactly as printed.
+- "gross"/"incomeTax"/"nationalInsurance" are THIS payslip's period values; the "ytd*" fields are the year-to-date totals.`;
+}
+
+// source: { kind:'image', dataUrl } OR { kind:'pdf', base64, mediaType }
+export async function extractPayslip(source, settings) {
+  if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
+  let contentBlock;
+  if (source.kind === 'pdf') {
+    contentBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: source.base64 } };
+  } else {
+    const { media_type, base64 } = splitDataUrl(source.dataUrl);
+    contentBlock = { type: 'image', source: { type: 'base64', media_type, data: base64 } };
+  }
+  const body = {
+    model: settings.claudeModel || 'claude-haiku-4-5',
+    max_tokens: 900,
+    messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: payslipPrompt() }] }],
+  };
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': settings.apiKey.trim(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
+  if (!res.ok) {
+    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
+    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
+    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
+    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
+  }
+  const data = await res.json();
+  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+  const parsed = parseJson(text);
+  if (!parsed) throw new Error('Could not read the payslip. Try a clearer photo/PDF or enter it manually.');
+  const num = (v) => toNum(v);
+  const str = (v, n = 200) => (v == null ? '' : String(v)).trim().slice(0, n);
+  return {
+    payDate: cleanDate(parsed.payDate), payTime: cleanTime(parsed.payTime),
+    frequency: normFreq(parsed.frequency), periodStart: cleanDate(parsed.periodStart), periodEnd: cleanDate(parsed.periodEnd),
+    taxPeriod: str(parsed.taxPeriod, 20), taxCode: str(parsed.taxCode, 12), niLetter: str(parsed.niLetter, 2), niNumber: str(parsed.niNumber, 13),
+    gross: num(parsed.gross), net: num(parsed.net), incomeTax: num(parsed.incomeTax), nationalInsurance: num(parsed.nationalInsurance),
+    pension: num(parsed.pension), studentLoan: num(parsed.studentLoan), otherDeductions: num(parsed.otherDeductions),
+    ytdGross: num(parsed.ytdGross), ytdTax: num(parsed.ytdTax), ytdNI: num(parsed.ytdNI), ytdPension: num(parsed.ytdPension),
+    hours: num(parsed.hours), hourlyRate: num(parsed.hourlyRate), annualSalary: num(parsed.annualSalary),
+    employeeName: str(parsed.employeeName, 80), employeeAddress: str(parsed.employeeAddress, 200),
+    employerName: str(parsed.employerName, 80), employerAddress: str(parsed.employerAddress, 200),
+    payeReference: str(parsed.payeReference, 30), payrollNumber: str(parsed.payrollNumber, 30),
+    paymentMethod: str(parsed.paymentMethod, 30), notes: str(parsed.notes, 120), confidence: num(parsed.confidence),
+  };
+}
+function normFreq(v) {
+  const s = String(v || '').toLowerCase();
+  if (s.includes('week') && s.includes('4')) return '4-weekly';
+  if (s.includes('week')) return 'weekly';
+  if (s.includes('month')) return 'monthly';
+  return 'monthly';
+}
+
 // Validate an API key with a tiny, cheap request.
 export async function testKey(settings) {
   if (!hasApiKey(settings)) throw new Error('Enter your API key first.');

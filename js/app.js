@@ -23,8 +23,9 @@ import * as report from './ui/report.js';
 import * as goals from './ui/goals.js';
 import * as assistant from './ui/assistant.js';
 import * as importCsv from './ui/import.js';
+import * as payslips from './ui/payslips.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
@@ -99,6 +100,7 @@ function openAddMenu() {
     mk('clock', 'Start live shift', 'Track time & miles live, see £/hour', () => navigate('shift')),
     mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
     mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
+    mk('note', 'Add payslip', 'Scan / upload your PAYE payslip', () => navigate('payslips')),
     mk('note', 'Add expense manually', 'Type in an expense', () => openExpenseForm()),
     mk('upload', 'Import CSV', 'Bulk import a platform statement', () => navigate('import')),
     mk('route', 'Log mileage only', 'Record business miles with no earnings', () => openEarningsForm()),

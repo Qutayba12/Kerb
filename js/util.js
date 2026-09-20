@@ -140,6 +140,20 @@ export function groupByDay(items) {
   return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
 }
 
+// Read any File to base64 (no data: prefix) + its media type. Used for PDFs.
+export function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result);
+      const comma = s.indexOf(',');
+      resolve({ base64: comma >= 0 ? s.slice(comma + 1) : s, mediaType: file.type || 'application/octet-stream' });
+    };
+    r.onerror = () => reject(new Error('Could not read file'));
+    r.readAsDataURL(file);
+  });
+}
+
 // Resize an image File to a JPEG data URL bounded by maxDim (keeps cost/storage low).
 export function fileToResizedDataURL(file, maxDim = 1568, quality = 0.82) {
   return new Promise((resolve, reject) => {
