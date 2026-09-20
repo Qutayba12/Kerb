@@ -237,6 +237,10 @@ function num(v) { const n = parseFloat(v); return isFinite(n) ? n : 0; }
 // ---------------- Data ----------------
 function dataCard() {
   const wrap = el('div', { class: 'card' });
+  const csvBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
+  csvBtn.innerHTML = icon('upload') + '<span>Import platform CSV</span>';
+  csvBtn.onclick = () => bus.navigate('import');
+  wrap.append(csvBtn, el('hr', { class: 'soft' }));
   const exportBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
   exportBtn.innerHTML = icon('download') + '<span>Export backup (JSON)</span>';
   exportBtn.onclick = async () => {

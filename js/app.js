@@ -22,8 +22,9 @@ import * as shift from './ui/shift.js';
 import * as report from './ui/report.js';
 import * as goals from './ui/goals.js';
 import * as assistant from './ui/assistant.js';
+import * as importCsv from './ui/import.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
@@ -99,6 +100,7 @@ function openAddMenu() {
     mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
     mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
     mk('note', 'Add expense manually', 'Type in an expense', () => openExpenseForm()),
+    mk('upload', 'Import CSV', 'Bulk import a platform statement', () => navigate('import')),
     mk('route', 'Log mileage only', 'Record business miles with no earnings', () => openEarningsForm()),
     mk('clock', 'Add recurring bill', 'Track a repeating outgoing & its due date', () => openBillForm()),
   ]);
