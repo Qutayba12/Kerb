@@ -7,6 +7,7 @@ import { setBus, bus } from './bus.js';
 import { openSheet, closeSheet, icon, toast } from './ui/shared.js';
 import { openEarningsForm, openExpenseForm, openBillForm } from './ui/forms.js';
 import { maybeOnboard } from './ui/onboarding.js';
+import { resumeIfActive } from './shift.js';
 
 import * as home from './ui/dashboard.js';
 import * as income from './ui/income.js';
@@ -15,8 +16,9 @@ import * as tax from './ui/tax-view.js';
 import * as pots from './ui/pots.js';
 import * as insights from './ui/insights.js';
 import * as settings from './ui/settings.js';
+import * as shift from './ui/shift.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
@@ -29,13 +31,18 @@ function applyTheme() {
 }
 
 // ---------- rendering ----------
+let cleanupFns = [];
+function registerCleanup(fn) { if (typeof fn === 'function') cleanupFns.push(fn); }
+function runCleanups() { const fns = cleanupFns; cleanupFns = []; fns.forEach((fn) => { try { fn(); } catch {} }); }
+
 async function renderRoute(route) {
   const view = VIEWS[route] || VIEWS.home;
   const container = $('#view');
+  runCleanups();
   container.setAttribute('aria-busy', 'true');
   let node;
   try {
-    node = await view.render();
+    node = await view.render({ registerCleanup });
   } catch (err) {
     console.error('render error', err);
     node = el('div', { class: 'callout callout--warn', html: `${icon('warn')}<div>Something went wrong rendering this screen.<br><span class="tiny">${(err && err.message) || err}</span></div>` });
@@ -80,6 +87,7 @@ function openAddMenu() {
     return b;
   };
   const body = el('div', {}, [
+    mk('clock', 'Start live shift', 'Track time & miles live, see £/hour', () => navigate('shift')),
     mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
     mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
     mk('note', 'Add expense manually', 'Type in an expense', () => openExpenseForm()),
@@ -117,6 +125,7 @@ function boot() {
   applyTheme();
   wire();
   registerSW();
+  resumeIfActive();   // resume GPS tracking if a shift was in progress
 
   $('#app').hidden = false;
   const splash = $('#splash');

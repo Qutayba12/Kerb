@@ -358,6 +358,11 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .callout--brand { background: var(--brand-tint); color: var(--brand-700); }
 .callout b { font-weight: 800; }
 
+/* live shift indicator */
+.live-pill { align-items: center; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 4px; animation: livepulse 1.2s ease-in-out infinite; }
+@keyframes livepulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+
 .link { color: var(--brand); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; font: inherit; }
 .divider { height: 1px; background: var(--border); margin: 14px 0; border: none; }
 hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }

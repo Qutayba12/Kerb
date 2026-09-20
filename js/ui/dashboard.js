@@ -10,6 +10,7 @@ import { donut } from '../charts.js';
 import { icon } from './shared.js';
 import { earningItem, expenseItem } from './items.js';
 import { openEarningsForm, openExpenseForm } from './forms.js';
+import { getActive, elapsedMs, fmtDuration } from '../shift.js';
 import { bus } from '../bus.js';
 
 export async function render() {
@@ -18,8 +19,27 @@ export async function render() {
   const sum = computeTaxYear(allE, allX, s);
   const root = el('div');
 
-  if (!allE.length && !allX.length) {
+  if (!allE.length && !allX.length && !getActive()) {
     root.append(welcomeCard());
+  }
+
+  // Active live-shift banner
+  const active = getActive();
+  if (active) {
+    const banner = el('div', { class: 'card', style: 'cursor:pointer;border-color:var(--brand);background:var(--brand-tint)' }, [
+      el('div', { class: 'row row--between' }, [
+        el('div', { class: 'row', style: 'gap:10px' }, [
+          el('span', { class: 'pill pill--neg live-pill', html: '<span class="live-dot"></span> LIVE' }),
+          el('div', {}, [
+            el('div', { style: 'font-weight:800', text: 'Shift in progress' }),
+            el('div', { class: 'tiny muted', text: `${fmtDuration(elapsedMs(active))} · tap to open` }),
+          ]),
+        ]),
+        el('span', { html: icon('clock'), style: 'color:var(--brand)' }),
+      ]),
+    ]);
+    banner.onclick = () => bus.navigate('shift');
+    root.append(banner);
   }
 
   // ---- Hero: take-home this tax year ----
