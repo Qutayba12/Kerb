@@ -11,6 +11,7 @@ import { exportAll, importAll, wipeAll } from '../db.js';
 import { icon, field, selectInput, moneyInput, toast, confirmDialog, openSheet, closeSheet } from './shared.js';
 import { testKey } from '../claude.js';
 import { setLang } from '../i18n.js';
+import { lockConfigured, cryptoOk, openPinSetup, openPinVerify, disableLock } from '../lock.js';
 import { bus } from '../bus.js';
 
 const SL_PLANS = [
@@ -88,6 +89,10 @@ export async function render() {
   const langSel = selectInput([{ value: 'en', label: 'English' }, { value: 'ar', label: 'العربية' }], s.lang || 'en');
   langSel.addEventListener('change', () => { if (langSel.value !== (getSettings().lang || 'en')) setLang(langSel.value); });
   root.append(card([field('Theme', themeSel), field('Language', langSel, 'العربية تبدّل الواجهة إلى اليمين-لليسار.')]));
+
+  // ---------- Privacy & security ----------
+  root.append(sec('Privacy & security'));
+  root.append(securityCard());
 
   // ---------- Data ----------
   root.append(sec('Your data'));
@@ -238,6 +243,55 @@ function ratesCard() {
   return wrap;
 }
 function num(v) { const n = parseFloat(v); return isFinite(n) ? n : 0; }
+
+// ---------------- Privacy & security ----------------
+function securityCard() {
+  const wrap = el('div', { class: 'card' });
+
+  if (!cryptoOk()) {
+    wrap.append(el('div', { class: 'callout callout--warn', style: 'margin:0', html: `${icon('info')}<div>The app lock needs a secure connection (https). Open Kerb from its installed icon or the https link to use it.</div>` }));
+    return wrap;
+  }
+
+  const on = lockConfigured();
+  wrap.append(el('div', { class: 'row row--between', style: 'margin-bottom:10px' }, [
+    el('div', {}, [
+      el('div', { style: 'font-weight:800', html: `${icon('shield')} App lock (PIN)` }),
+      el('div', { class: 'tiny muted', text: on ? 'On — a PIN is required to open Kerb.' : 'Off — anyone with your phone can open Kerb.' }),
+    ]),
+    el('span', { class: `pill pill--${on ? 'ok' : 'warn'}`, text: on ? 'On' : 'Off' }),
+  ]));
+
+  if (!on) {
+    const setBtn = el('button', { class: 'btn btn--primary btn--block', type: 'button' });
+    setBtn.innerHTML = icon('shield') + '<span>Set up a PIN</span>';
+    setBtn.onclick = () => openPinSetup(() => bus.refresh());
+    wrap.append(setBtn);
+  } else {
+    // auto-lock timing
+    const opts = [
+      { value: '0', label: 'Immediately' }, { value: '1', label: 'After 1 minute' },
+      { value: '2', label: 'After 2 minutes' }, { value: '5', label: 'After 5 minutes' }, { value: '15', label: 'After 15 minutes' },
+    ];
+    const cur = String(getSettings().autoLockMins == null ? 2 : getSettings().autoLockMins);
+    const sel = selectInput(opts, cur);
+    sel.addEventListener('change', () => { saveSettings({ autoLockMins: parseInt(sel.value, 10) || 0 }); toast('Saved', 'ok'); });
+    wrap.append(field('Lock when left in the background', sel));
+
+    const changeBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-top:4px' });
+    changeBtn.innerHTML = icon('edit') + '<span>Change PIN</span>';
+    changeBtn.onclick = () => openPinVerify(() => openPinSetup(() => bus.refresh()));
+
+    const offBtn = el('button', { class: 'btn btn--danger btn--block', type: 'button', style: 'margin-top:8px' });
+    offBtn.innerHTML = icon('trash') + '<span>Turn off app lock</span>';
+    offBtn.onclick = () => openPinVerify(() => { disableLock(); toast('App lock turned off', 'ok'); bus.refresh(); });
+
+    wrap.append(changeBtn, offBtn);
+  }
+
+  wrap.append(el('div', { class: 'callout callout--info', style: 'margin:12px 0 0', html: `${icon('info')}<div>The PIN keeps casual snoopers out. Your data still lives <b>unencrypted</b> on this device, so keep your phone's own screen lock on and export a backup now and then. If you forget the PIN, you'll need to clear the app's data to get back in.</div>` }));
+  return wrap;
+}
 
 // ---------------- Data ----------------
 function dataCard() {

@@ -25,6 +25,7 @@ Kerb works out — to the penny — your income, expenses, allowable deductions,
 - **Duplicate protection on import** — bank, earnings-statement and CSV imports flag rows that match entries you already have (by date & amount) so the same money is never counted twice.
 - **Deadlines** — countdowns to HMRC registration (5 Oct), filing & payment (31 Jan) and the 2nd payment on account (31 Jul).
 - **Private & offline** — a PWA you install on your phone; all data lives in your browser (IndexedDB). Export/import a JSON backup and CSVs for your accountant.
+- **App lock (PIN)** — optional 4-digit PIN with auto-lock in the background. The PIN is stored only as a salted SHA-256 hash, and is never included in a backup.
 - **Editable tax rates** — every rate/threshold is stored per tax year and editable, so Kerb stays correct as HMRC figures change.
 
 ## 📱 Install on your phone
@@ -94,8 +95,9 @@ Kerb gives **estimates to help you budget and stay organised**. It is not tax ad
 ## 🔒 Privacy
 
 - All entries stay in your browser's local database on your device.
-- Backups you export are plain files you control; they never include your API key.
-- The only network call the app makes is your optional receipt scan, straight to Anthropic with your key.
+- Backups you export are plain files you control; they never include your API key or your PIN.
+- An optional **PIN lock** gates access to the app (stored as a salted SHA-256 hash). It keeps casual snoopers out; it is not full encryption of the data at rest, so keep your phone's own screen lock on too.
+- The only network call the app makes is your optional scan, straight to Anthropic with your key.
 
 ## License
 

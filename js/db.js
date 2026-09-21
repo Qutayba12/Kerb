@@ -82,8 +82,8 @@ export async function exportAll() {
   const [e, x, b, ps] = await Promise.all([getAll('earnings'), getAll('expenses'), getAll('bills'), getAll('payslips')]);
   let settings = {};
   try { settings = JSON.parse(localStorage.getItem('kerb.settings.v1') || '{}'); } catch {}
-  // Never include the API key in an exported backup file.
-  if (settings.apiKey) settings = { ...settings, apiKey: '' };
+  // Never include the API key or the device PIN in an exported backup file.
+  settings = { ...settings, apiKey: '', pinHash: '', pinSalt: '', lockEnabled: false };
   return { app: 'kerb', version: 2, exportedAt: new Date().toISOString(), settings, earnings: e, expenses: x, bills: b, payslips: ps };
 }
 
@@ -95,10 +95,15 @@ export async function importAll(data, { replace = true } = {}) {
   for (const o of (data.bills || [])) await put('bills', o);
   for (const o of (data.payslips || [])) await put('payslips', o);
   if (data.settings) {
-    // Preserve the existing on-device API key; backups never carry it.
+    // Preserve this device's own API key and PIN lock; backups never carry them.
     let cur = {};
     try { cur = JSON.parse(localStorage.getItem('kerb.settings.v1') || '{}'); } catch {}
-    const merged = { ...data.settings, apiKey: cur.apiKey || '' };
+    const merged = {
+      ...data.settings,
+      apiKey: cur.apiKey || '',
+      pinHash: cur.pinHash || '', pinSalt: cur.pinSalt || '', lockEnabled: !!cur.lockEnabled,
+      autoLockMins: cur.autoLockMins != null ? cur.autoLockMins : (data.settings.autoLockMins != null ? data.settings.autoLockMins : 2),
+    };
     localStorage.setItem('kerb.settings.v1', JSON.stringify(merged));
   }
   return true;

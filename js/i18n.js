@@ -93,6 +93,14 @@ const AR = {
   'Already logged': 'مُسجّل مسبقاً', 'Skip likely duplicates (recommended)': 'تخطّي التكرارات المحتملة (موصى به)',
   // expense method advisor
   'Expense method': 'طريقة المصاريف', 'Simplified mileage': 'المسافة المبسّطة', 'Actual costs': 'التكاليف الفعلية',
+  // privacy & security
+  'Privacy & security': 'الخصوصية والأمان', 'Set up a PIN': 'إعداد رمز PIN', 'Change PIN': 'تغيير الرمز',
+  'Turn off app lock': 'إيقاف قفل التطبيق', 'Lock when left in the background': 'القفل عند ترك التطبيق في الخلفية',
+  'Enter your PIN': 'أدخل رمزك', 'Kerb is locked': 'التطبيق مقفل', 'Wrong PIN — try again.': 'رمز خاطئ — حاول مجدداً.',
+  'Choose a 4-digit PIN': 'اختر رمزاً من 4 أرقام', 'Confirm your PIN': 'أكّد رمزك',
+  'Enter your current PIN': 'أدخل رمزك الحالي', 'Set a PIN': 'ضبط رمز', 'Confirm PIN': 'تأكيد الرمز',
+  'Immediately': 'فوراً', 'After 1 minute': 'بعد دقيقة', 'After 2 minutes': 'بعد دقيقتين', 'After 5 minutes': 'بعد 5 دقائق', 'After 15 minutes': 'بعد 15 دقيقة',
+  'On': 'مُفعّل', 'Off': 'مُطفأ',
   // settings
   'Tax basis': 'أساس الضريبة', 'Region': 'المنطقة', 'Expense method': 'طريقة المصاريف', 'Working tax year': 'السنة الضريبية العاملة',
   'Self-employment start date': 'تاريخ بدء العمل الحر', 'Your income context': 'سياق دخلك',
