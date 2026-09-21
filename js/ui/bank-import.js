@@ -9,6 +9,7 @@ import { earnings, expenses } from '../db.js';
 import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
 import { extractBankTransactions, hasApiKey } from '../claude.js';
 import { icon, toast, selectInput } from './shared.js';
+import { makeDupChecker } from '../dedupe.js';
 import { bus } from '../bus.js';
 
 let extracted = null; // array of transactions pending confirmation
@@ -26,6 +27,11 @@ export async function render() {
     root.append(b);
     return root;
   }
+
+  // Records already saved — used to flag likely duplicates so the same money
+  // isn't counted twice (e.g. a payout that's in both a statement and the bank).
+  const [existingE, existingX] = await Promise.all([earnings.all(), expenses.all()]);
+  const dupChecker = makeDupChecker(existingE, existingX);
 
   const photoInput = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
   const fileInput = el('input', { type: 'file', accept: 'application/pdf,image/*', style: 'display:none' });
@@ -99,16 +105,29 @@ export async function render() {
 
     extracted.forEach(t => {
       const card = el('div', { class: 'card', style: 'margin-bottom:8px;padding:12px' });
-      // ---- header: date · description + amount ----
       const isOut = t.direction === 'out';
+      // Resolve the effective platform/category so duplicate matching is stable.
+      if (!isOut && !t.platform) t.platform = allPlatforms()[0].id;
+      if (isOut && !t.category) t.category = 'fuel';
+      // Does this line match something already saved on the device?
+      const rowDup = () => isOut
+        ? dupChecker.isDup('expense', { date: t.date, amount: t.amount })
+        : dupChecker.isDup('earning', { date: t.date, platform: t.platform, amount: t.amount, tips: 0 });
+      // A likely duplicate defaults to "skip" so it isn't counted twice.
+      if (rowDup() && t.suggestion !== 'ignore') { t.suggestion = 'ignore'; t._autoSkipped = true; }
+
+      // ---- header: date · description + amount ----
+      const dupPill = el('span', { class: 'pill pill--warn', style: 'display:none;margin-top:5px', text: 'Already logged' });
       const head = el('div', { class: 'row row--between', style: 'gap:10px' }, [
         el('div', { style: 'min-width:0' }, [
           el('div', { class: 'item__title', style: 'white-space:normal', text: t.description || 'Transaction' }),
           el('div', { class: 'item__sub', text: fmtDate(t.date, { weekday: true }) }),
+          dupPill,
         ]),
         el('div', { class: isOut ? 'amt-neg' : 'amt-pos', style: 'font-weight:800;white-space:nowrap', text: (isOut ? '−' : '+') + fmtGBP(t.amount) }),
       ]);
       card.append(head);
+      const updatePill = () => { dupPill.style.display = rowDup() ? 'inline-block' : 'none'; };
 
       // ---- classification controls ----
       const controls = el('div', { class: 'grid-2', style: 'margin-top:10px' });
@@ -124,7 +143,7 @@ export async function render() {
         detailWrap.replaceChildren();
         if (t.suggestion === 'income') {
           const sel = selectInput(allPlatforms().map(p => ({ value: p.id, label: p.name })), t.platform || allPlatforms()[0].id);
-          sel.onchange = () => { t.platform = sel.value; };
+          sel.onchange = () => { t.platform = sel.value; updatePill(); };
           t.platform = sel.value;
           detailWrap.append(sel);
         } else if (t.suggestion === 'expense') {
@@ -136,14 +155,22 @@ export async function render() {
           detailWrap.append(el('div', { class: 'hint', style: 'margin:0;padding-top:9px', text: 'Won\'t be added' }));
         }
       };
-      typeSel.onchange = () => { t.suggestion = typeSel.value; buildDetail(); refreshSummary(); card.classList.toggle('is-skipped', t.suggestion === 'ignore'); };
+      typeSel.onchange = () => { t.suggestion = typeSel.value; buildDetail(); updatePill(); refreshSummary(); card.classList.toggle('is-skipped', t.suggestion === 'ignore'); };
       buildDetail();
+      updatePill();
       card.classList.toggle('is-skipped', t.suggestion === 'ignore');
 
       controls.append(typeSel, detailWrap);
       card.append(controls);
       listEl.append(card);
     });
+
+    // Notice: how many rows were auto-skipped as likely duplicates.
+    // Appended before listEl is added to preview, so it sits above the list.
+    const dupCount = extracted.filter(t => t._autoSkipped).length;
+    if (dupCount) {
+      preview.append(el('div', { class: 'callout callout--warn', html: `${icon('info')}<div><b>${dupCount}</b> transaction${dupCount === 1 ? '' : 's'} look like ${dupCount === 1 ? 'one' : 'ones'} you've already logged, so ${dupCount === 1 ? "it's" : "they're"} set to <b>Skip</b>. Switch a row back to Income/Expense if you do want to add it.</div>` }));
+    }
 
     preview.append(listEl);
     refreshSummary();

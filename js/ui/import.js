@@ -7,12 +7,16 @@ import { earnings, expenses } from '../db.js';
 import { getSettings, allPlatforms, platformById, EXPENSE_CATEGORIES } from '../store.js';
 import { parseCSV, guessColumn, parseFlexDate, parseNum } from '../csv.js';
 import { icon, field, selectInput, toast } from './shared.js';
+import { makeDupChecker } from '../dedupe.js';
 import { bus } from '../bus.js';
 
 let target = 'earnings';
 
 export async function render() {
   const root = el('div');
+  // Flag rows that match entries already saved, to avoid double-counting.
+  const [existingE, existingX] = await Promise.all([earnings.all(), expenses.all()]);
+  const dupChecker = makeDupChecker(existingE, existingX);
   root.append(el('h2', { style: 'font-size:22px;margin:4px 2px 12px', text: 'Import CSV' }));
   root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div>Export your weekly statement from Amazon Flex / Uber Eats (or any app) as CSV, then import it here. Kerb auto-detects the columns — you can adjust the mapping before importing.</div>` }));
 
@@ -93,11 +97,19 @@ export async function render() {
     }
     out.append(card);
 
+    // skip-duplicates toggle
+    const skipDups = el('input', { type: 'checkbox' }); skipDups.checked = true;
+    const kind = () => (target === 'earnings' ? 'earning' : 'expense');
+
     // preview
     const preview = el('div');
     const renderPreview = () => {
       const recs = buildRecords(parsed, map, dateFmt.value, target, true);
+      const dupN = recs.filter(r => dupChecker.isDup(kind(), r)).length;
       preview.replaceChildren();
+      if (dupN) {
+        preview.append(el('div', { class: 'callout callout--warn', html: `${icon('info')}<div><b>${dupN}</b> of these ${recs.length} row${recs.length === 1 ? '' : 's'} match entries you already have. With the option below ticked, ${dupN === 1 ? "it's" : "they're"} skipped so nothing is counted twice.</div>` }));
+      }
       preview.append(el('div', { class: 'section-title', text: `Preview (first ${Math.min(3, recs.length)})` }));
       const pc = el('div', { class: 'card card--flush' });
       if (!recs.length) pc.append(el('div', { class: 'tiny muted', style: 'padding:12px', text: 'No valid rows with the current mapping — check the columns above.' }));
@@ -116,20 +128,30 @@ export async function render() {
     renderPreview();
     out.append(preview);
 
+    // skip-duplicates option
+    out.append(el('label', { class: 'switch-row', style: 'margin-top:10px' }, [
+      el('span', { text: 'Skip likely duplicates (recommended)' }),
+      el('span', { class: 'switch' }, [skipDups, el('span', { class: 'track' })]),
+    ]));
+
     // import button
     const go = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:12px' });
     go.innerHTML = icon('download') + `<span>Import ${target}</span>`;
     go.onclick = async () => {
-      const recs = buildRecords(parsed, map, dateFmt.value, target, false);
+      let recs = buildRecords(parsed, map, dateFmt.value, target, false);
       if (!recs.length) { toast('Nothing to import — check the mapping', 'err'); return; }
+      const dupN = recs.filter(r => dupChecker.isDup(kind(), r)).length;
+      if (skipDups.checked && dupN) recs = recs.filter(r => !dupChecker.isDup(kind(), r));
+      if (!recs.length) { toast('All rows look like duplicates — nothing new to import', 'warn'); return; }
       go.disabled = true; go.querySelector('span').textContent = 'Importing…';
       const store = target === 'earnings' ? earnings : expenses;
       for (const r of recs) await store.save(r);
-      toast(`Imported ${recs.length} ${target}`, 'ok');
+      const skipped = skipDups.checked ? dupN : 0;
+      toast(`Imported ${recs.length} ${target}${skipped ? ` · skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''}`, 'ok');
       bus.navigate(target === 'earnings' ? 'income' : 'expenses');
     };
     out.append(go);
-    out.append(el('div', { class: 'hint', style: 'margin-top:8px', text: 'Rows without a valid amount (or miles, for earnings) are skipped. Import again only if needed — duplicates are not auto-detected.' }));
+    out.append(el('div', { class: 'hint', style: 'margin-top:8px', text: 'Rows without a valid amount (or miles, for earnings) are skipped. Likely duplicates of entries you already have are detected by date and amount.' }));
   }
 
   return root;

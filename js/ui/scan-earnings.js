@@ -8,6 +8,7 @@ import { earnings } from '../db.js';
 import { getSettings, allPlatforms, platformById } from '../store.js';
 import { extractEarnings, hasApiKey } from '../claude.js';
 import { icon, toast } from './shared.js';
+import { makeDupChecker } from '../dedupe.js';
 import { bus } from '../bus.js';
 
 let extracted = null; // array of entries pending confirmation
@@ -25,6 +26,11 @@ export async function render() {
     root.append(b);
     return root;
   }
+
+  // Flag shifts that match ones already saved, so an overlapping statement
+  // (e.g. re-importing last week) doesn't double-count income.
+  const existingE = await earnings.all();
+  const dupChecker = makeDupChecker(existingE, []);
 
   const photoInput = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
   const fileInput = el('input', { type: 'file', accept: 'application/pdf,image/*', style: 'display:none' });
@@ -60,11 +66,31 @@ export async function render() {
   function renderPreview() {
     preview.replaceChildren();
     if (!extracted || !extracted.length) return;
-    const total = extracted.reduce((t, e) => t + e.amount + e.tips, 0);
-    preview.append(el('div', { class: 'row row--between', style: 'margin:2px 2px 8px' }, [
-      el('div', { class: 'section-title', style: 'margin:0', text: `Found ${extracted.length} shift${extracted.length === 1 ? '' : 's'}` }),
-      el('div', { style: 'font-weight:800', text: fmtGBP(total) }),
-    ]));
+    // Flag likely duplicates once; a duplicate is excluded by default.
+    extracted.forEach(e => { if (e._dup === undefined) { e._dup = dupChecker.isDup('earning', e); e._skip = e._dup; } });
+
+    const included = () => extracted.filter(e => !e._skip);
+    const total = included().reduce((t, e) => t + e.amount + e.tips, 0);
+    const dupCount = extracted.filter(e => e._dup).length;
+
+    const summaryRow = el('div', { class: 'row row--between', style: 'margin:2px 2px 8px' });
+    preview.append(summaryRow);
+    const add = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:12px' });
+
+    const refresh = () => {
+      const inc = included();
+      summaryRow.replaceChildren(
+        el('div', { class: 'section-title', style: 'margin:0', text: `Found ${extracted.length} shift${extracted.length === 1 ? '' : 's'}${inc.length !== extracted.length ? ` · adding ${inc.length}` : ''}` }),
+        el('div', { style: 'font-weight:800', text: fmtGBP(inc.reduce((t, e) => t + e.amount + e.tips, 0)) }),
+      );
+      add.innerHTML = icon('check') + `<span>Add ${inc.length} shift${inc.length === 1 ? '' : 's'}</span>`;
+      add.disabled = inc.length === 0;
+    };
+
+    if (dupCount) {
+      preview.append(el('div', { class: 'callout callout--warn', html: `${icon('info')}<div><b>${dupCount}</b> shift${dupCount === 1 ? '' : 's'} look like ${dupCount === 1 ? 'one' : 'ones'} you've already logged — ${dupCount === 1 ? "it's" : "they're"} unticked below. Tick to add anyway.</div>` }));
+    }
+
     const listEl = el('div', { class: 'card card--flush' });
     extracted.forEach(e => {
       const p = platformById(e.platform);
@@ -73,30 +99,39 @@ export async function render() {
       if (e.miles) bits.push(`${fmtNum(e.miles)} mi`);
       if (e.deliveries) bits.push(`${e.deliveries} drops`);
       if (e.tips) bits.push(`${fmtGBP(e.tips)} tips`);
-      const row = el('div', { class: 'item' }, [
+      const sub = el('div', { class: 'item__sub', text: bits.join(' · ') });
+      if (e._dup) sub.append(el('span', { class: 'pill pill--warn', style: 'margin-inline-start:6px', text: 'Already logged' }));
+
+      const row = el('div', { class: 'item' + (e._skip ? ' is-skipped' : '') }, [
         el('div', { class: 'item__icon', style: `background:${p.color}22;color:${p.color}`, html: icon('route') }),
-        el('div', { class: 'item__main' }, [
-          el('div', { class: 'item__title', text: p.name }),
-          el('div', { class: 'item__sub', text: bits.join(' · ') }),
-        ]),
+        el('div', { class: 'item__main' }, [el('div', { class: 'item__title', text: p.name }), sub]),
         el('div', { class: 'item__amt amt-pos', text: '+' + fmtGBP(e.amount + e.tips) }),
-        el('button', { class: 'sheet__close', type: 'button', html: '&times;', style: 'width:30px;height:30px;font-size:18px', onclick: () => { extracted = extracted.filter(x => x.id !== e.id); renderPreview(); } }),
       ]);
+      // Duplicates get an include checkbox; everything else keeps the remove ×.
+      if (e._dup) {
+        const cb = el('input', { type: 'checkbox', title: 'Add anyway', style: 'width:20px;height:20px;flex:none' });
+        cb.checked = !e._skip;
+        cb.onchange = () => { e._skip = !cb.checked; row.classList.toggle('is-skipped', e._skip); refresh(); };
+        row.append(cb);
+      } else {
+        row.append(el('button', { class: 'sheet__close', type: 'button', html: '&times;', style: 'width:30px;height:30px;font-size:18px', onclick: () => { extracted = extracted.filter(x => x.id !== e.id); renderPreview(); } }));
+      }
       listEl.append(row);
     });
     preview.append(listEl);
-    const add = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:12px' });
-    add.innerHTML = icon('check') + `<span>Add ${extracted.length} shift${extracted.length === 1 ? '' : 's'}</span>`;
+
     add.onclick = async () => {
       add.disabled = true;
-      for (const e of extracted) {
-        await earnings.save({ id: e.id, date: e.date, platform: e.platform, amount: e.amount, tips: e.tips, hours: e.hours, deliveries: e.deliveries, miles: e.miles, notes: e.notes || 'Scanned statement' });
+      const inc = included();
+      for (const e of inc) {
+        await earnings.save({ id: e.id, date: e.date, platform: e.platform, amount: e.amount, tips: e.tips, hours: e.hours, deliveries: e.deliveries, miles: e.miles, notes: e.notes || 'Scanned statement', source: 'scan' });
       }
-      const n = extracted.length; extracted = null;
-      toast(`Added ${n} shift${n === 1 ? '' : 's'}`, 'ok'); bus.navigate('income');
+      extracted = null;
+      toast(`Added ${inc.length} shift${inc.length === 1 ? '' : 's'}`, 'ok'); bus.navigate('income');
     };
     preview.append(add);
     preview.append(el('div', { class: 'hint', style: 'margin-top:8px', text: 'Review the rows, remove any that are wrong, then add. You can edit each shift afterwards in Income.' }));
+    refresh();
   }
 
   root.append(el('div', { class: 'card' }, [el('div', { class: 'btn-grid' }, [photoBtn, pdfBtn]), photoInput, fileInput, status]));

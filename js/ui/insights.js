@@ -4,11 +4,12 @@
 // ============================================================
 import { el, fmtGBP, fmtNum, fmtPct, taxYearFromLabel, parseISO, daysBetween, todayISO } from '../util.js';
 import { earnings, expenses } from '../db.js';
-import { getSettings, categoryById } from '../store.js';
-import { computeTaxYear } from '../tax.js';
+import { getSettings, saveSettings, categoryById, VEHICLE_LABELS } from '../store.js';
+import { computeTaxYear, compareExpenseMethods } from '../tax.js';
 import { groupedBars, barChart, PALETTE } from '../charts.js';
-import { icon, emptyState } from './shared.js';
+import { icon, emptyState, toast } from './shared.js';
 import { miniTile } from './income.js';
+import { bus } from '../bus.js';
 
 const MON = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -38,6 +39,10 @@ export async function render() {
     miniTile('Total miles', fmtNum(sum.businessMiles)),
   ]));
   root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div><b>Net £/hour</b> is what you actually keep after tax, NIC and mileage costs — the number that really matters when choosing shifts.</div>` }));
+
+  // ---- expense method advisor (mileage vs actual costs) ----
+  const advisor = methodAdvisorCard(allE, allX, s);
+  if (advisor) root.append(advisor);
 
   // ---- monthly income / deductions / tax ----
   const months = monthlyBuckets(yE, allX, ty, s);
@@ -103,6 +108,60 @@ export async function render() {
 }
 
 function proj(k, v) { return el('div', { class: 'center' }, [el('div', { class: 'tile__v', style: 'font-size:18px', text: v }), el('div', { class: 'tiny faint', text: k })]); }
+
+const METHOD_LABEL = { mileage: 'Simplified mileage', actual: 'Actual costs' };
+function methodAdvisorCard(allE, allX, s) {
+  const cmp = compareExpenseMethods(allE, allX, s);
+  // Nothing to advise on until there are miles or vehicle costs to compare.
+  if (cmp.businessMiles <= 0 && !cmp.hasVehicleCosts) return null;
+
+  const wrap = el('div');
+  wrap.append(el('div', { class: 'section-title', text: 'Expense method' }));
+  const card = el('div', { class: 'card' });
+
+  // side-by-side: mileage claim vs actual vehicle costs
+  const col = (label, value, sub, active) => el('div', { class: 'center', style: `flex:1;padding:10px 6px;border-radius:12px;${active ? 'background:var(--brand-tint)' : ''}` }, [
+    el('div', { class: 'tiny faint', text: label }),
+    el('div', { class: 'tile__v', style: 'font-size:20px;' + (active ? 'color:var(--brand)' : ''), text: value }),
+    el('div', { class: 'tiny muted', text: sub }),
+  ]);
+  card.append(el('div', { class: 'row', style: 'gap:8px;align-items:stretch' }, [
+    col('Simplified mileage', fmtGBP(cmp.mileageClaim, { round: true }), `${fmtNum(cmp.businessMiles)} mi claim`, cmp.better === 'mileage'),
+    el('div', { style: 'align-self:center;color:var(--faint);font-weight:800', text: 'vs' }),
+    col('Actual costs', cmp.hasVehicleCosts ? fmtGBP(cmp.vehicleActual, { round: true }) : '—', 'fuel, insurance, repairs', cmp.better === 'actual'),
+  ]));
+
+  // verdict
+  let msg, tone = 'brand';
+  if (cmp.bothTradingAllowance) {
+    msg = `Your <b>£1,000 trading allowance</b> is bigger than either deduction right now, so Kerb is using that. Revisit this once your costs grow.`;
+    tone = 'info';
+  } else if (!cmp.hasVehicleCosts) {
+    msg = `Log your vehicle costs (fuel, insurance, repairs) to compare properly. On mileage alone you'd claim <b>${fmtGBP(cmp.mileageClaim, { round: true })}</b> this year.`;
+    tone = 'info';
+  } else if (cmp.better === cmp.current) {
+    msg = cmp.taxSaving >= 1
+      ? `You're on the better method — <b>${METHOD_LABEL[cmp.current]}</b> saves you about <b>${fmtGBP(cmp.taxSaving, { round: true })}/yr</b> vs the other.`
+      : `Both methods work out about the same right now. You're on <b>${METHOD_LABEL[cmp.current]}</b>.`;
+    tone = 'brand';
+  } else {
+    msg = `<b>${METHOD_LABEL[cmp.better]}</b> would cut your tax by about <b>${fmtGBP(cmp.taxSaving, { round: true })}/yr</b> vs your current <b>${METHOD_LABEL[cmp.current]}</b>.`;
+    tone = 'warn';
+  }
+  card.append(el('div', { class: `callout callout--${tone}`, style: 'margin:12px 0 0', html: `${icon('info')}<div>${msg}</div>` }));
+
+  // one-tap switch when the other method is better
+  if (cmp.better !== cmp.current && !cmp.bothTradingAllowance && cmp.hasVehicleCosts && cmp.taxSaving >= 1) {
+    const btn = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:10px' });
+    btn.innerHTML = icon('check') + `<span>Switch to ${METHOD_LABEL[cmp.better]}</span>`;
+    btn.onclick = () => { saveSettings({ expenseMethod: cmp.better }); toast(`Now using ${METHOD_LABEL[cmp.better]}`, 'ok'); bus.refresh(); };
+    card.append(btn);
+  }
+
+  card.append(el('div', { class: 'tiny faint', style: 'margin-top:10px', text: `HMRC rule: once you claim simplified mileage for a ${(VEHICLE_LABELS[s.vehicle] || 'vehicle').toLowerCase()}, keep that method for it until you change vehicle.` }));
+  wrap.append(card);
+  return wrap;
+}
 
 function monthlyBuckets(yE, allX, ty, s) {
   const labels = MON.slice();

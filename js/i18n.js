@@ -87,6 +87,10 @@ const AR = {
   'Scan or upload': 'مسح أو رفع', 'Add manually': 'إضافة يدوية', 'Track & ask': 'التتبّع والسؤال',
   // bank statement import
   'Import bank statement': 'استيراد كشف بنكي', 'Expense': 'مصروف', 'Skip': 'تخطّي', 'Won\'t be added': 'لن يُضاف',
+  // duplicate detection
+  'Already logged': 'مُسجّل مسبقاً', 'Skip likely duplicates (recommended)': 'تخطّي التكرارات المحتملة (موصى به)',
+  // expense method advisor
+  'Expense method': 'طريقة المصاريف', 'Simplified mileage': 'المسافة المبسّطة', 'Actual costs': 'التكاليف الفعلية',
   // settings
   'Tax basis': 'أساس الضريبة', 'Region': 'المنطقة', 'Expense method': 'طريقة المصاريف', 'Working tax year': 'السنة الضريبية العاملة',
   'Self-employment start date': 'تاريخ بدء العمل الحر', 'Your income context': 'سياق دخلك',

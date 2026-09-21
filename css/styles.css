@@ -372,8 +372,8 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .menu-group + .menu-group { margin-top: 16px; }
 .menu-group__label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin: 0 4px 8px; }
 
-/* bank-import review rows that the user chose to skip */
-.card.is-skipped { opacity: .5; }
+/* import review rows the user chose to skip (bank cards & scanned list items) */
+.card.is-skipped, .item.is-skipped { opacity: .5; }
 
 /* chat bubbles (assistant) */
 .bubble { display: flex; margin-bottom: 10px; }
