@@ -391,6 +391,15 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .pin-key:active { background: var(--surface-2); }
 .pin-key--fn { font-size: 22px; color: var(--muted); background: transparent; border-color: transparent; }
 
+/* segmented chooser (e.g. shift mileage method) */
+.seg { display: flex; flex-direction: column; gap: 8px; }
+.seg__btn {
+  text-align: start; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer;
+}
+.seg__btn.is-active { border-color: var(--brand); background: var(--brand-tint); }
+.seg__btn.is-active .faint { color: var(--brand-700); }
+
 /* grouped add / action menu */
 .menu-group { margin: 4px 2px 6px; }
 .menu-group + .menu-group { margin-top: 16px; }

@@ -19,6 +19,7 @@ Kerb works out — to the penny — your income, expenses, allowable deductions,
 - **Organised Add menu** — one **+** button grouped into *Scan or upload*, *Add manually* and *Track & ask* so every way to add money is one tap away.
 - **Tax engine (2026/27)** — Income Tax, Class 4 & Class 2 NIC, the £1,000 trading allowance, personal-allowance interaction with a **PAYE job**, and **Payments on Account** — all computed the way Self Assessment does it.
 - **Mileage or actual costs** — simplified per-mile relief (car 55p/25p, motorcycle 24p, bicycle 20p) with the vehicle-cost rule handled correctly, or actual costs.
+- **Shift mileage that survives closing the app** — clock in with your odometer reading and enter the end reading when you finish (miles = end − start); no need to keep the app open. Live GPS is offered too, but as a web app it only tracks while Kerb is open, so the odometer is the recommended, accurate method.
 - **Pots** — a weekly plan (how much to keep for tax / vehicle / savings vs. spend) and saved-so-far trackers.
 - **Insights** — £/hour, £/mile, £/drop, **net £/hour after tax**, best weekday, platform comparison and a full-year projection.
 - **Expense-method advisor** — compares simplified **mileage** vs **actual vehicle costs**, tells you which leaves a lower tax bill and by how much per year, and switches method in one tap.
