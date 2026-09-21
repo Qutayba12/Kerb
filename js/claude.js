@@ -176,6 +176,15 @@ function salvageArray(text, key) {
   if (arrStart < 0) return [];
   return extractJsonObjects(text, arrStart + 1);
 }
+// Build an actionable error when a document can't be read, surfacing WHY —
+// an empty reply, a cut-off (too long), or whatever the model actually said.
+function readFailReason(text, data, what) {
+  const stop = (data && data.stop_reason) || '';
+  if (!text) return `Could not read the ${what} — Claude returned an empty reply${stop ? ` (stop: ${stop})` : ''}. Try again with a clear single page (photo or PDF).`;
+  if (stop === 'max_tokens') return `The ${what} is very long and the reply was cut off before any full row. Import fewer pages at a time (one page, or a shorter date range).`;
+  const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 160);
+  return `Could not read the ${what}. Claude replied: “${snippet}${text.length > 160 ? '…' : ''}”. Use a clear single page where the rows are legible (photo or PDF), or try the more capable model in Settings.`;
+}
 function toNum(v) { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : 0; }
 function cleanDate(v) {
   const s = String(v || '').trim();
@@ -386,7 +395,7 @@ export async function extractEarnings(source, context, settings) {
   const parsed = parseJson(text);
   let rows = parsed && Array.isArray(parsed.entries) ? parsed.entries : (Array.isArray(parsed) ? parsed : null);
   if (!rows || !rows.length) { const salvaged = salvageArray(text, 'entries'); if (salvaged.length) rows = salvaged; }
-  if (!rows || !rows.length) throw new Error('Could not read the statement. Use a clear, straight photo (or the PDF) with each shift/row readable. Very long statements can also be too big — try fewer pages at a time.');
+  if (!rows || !rows.length) throw new Error(readFailReason(text, data, 'statement'));
   const ids = new Set((context.platforms || []).map(p => p.id));
   return rows.slice(0, 200).map(e => ({
     date: cleanDate(e.date) || context.today,
@@ -458,7 +467,7 @@ export async function extractBankTransactions(source, context, settings) {
   let rows = parsed && Array.isArray(parsed.transactions) ? parsed.transactions : (Array.isArray(parsed) ? parsed : null);
   // If the JSON was cut off (very long statement), recover whatever rows are complete.
   if (!rows || !rows.length) { const salvaged = salvageArray(text, 'transactions'); if (salvaged.length) rows = salvaged; }
-  if (!rows || !rows.length) throw new Error('Could not read the statement. Use a clear, straight photo of one page (or upload the PDF) with the transaction rows readable. Very long statements can also be too big — try importing fewer pages at a time.');
+  if (!rows || !rows.length) throw new Error(readFailReason(text, data, 'statement'));
   const platformIds = new Set((context.platforms || []).map(p => p.id));
   const catIds = new Set(context.categories || []);
   const suggestions = new Set(['income', 'expense', 'ignore']);

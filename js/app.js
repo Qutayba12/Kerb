@@ -157,8 +157,17 @@ function lockZoom() {
 // ---------- service worker ----------
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
+  // When a new service worker takes control, reload once so the page runs the
+  // fresh JS immediately (otherwise a cached build can linger for a visit or two).
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return; reloading = true; location.reload();
+  });
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(err => console.warn('SW registration failed', err));
+    navigator.serviceWorker.register('service-worker.js').then((reg) => {
+      // Check for an update on every launch, and again if one is found later.
+      reg.update().catch(() => {});
+    }).catch(err => console.warn('SW registration failed', err));
   });
 }
 
