@@ -72,8 +72,9 @@ export async function render() {
   function counts() {
     const inc = extracted.filter(t => t.suggestion === 'income');
     const exp = extracted.filter(t => t.suggestion === 'expense');
+    const sal = extracted.filter(t => t.suggestion === 'salary');
     return {
-      incN: inc.length, expN: exp.length,
+      incN: inc.length, expN: exp.length, salN: sal.length,
       incSum: inc.reduce((a, t) => a + t.amount, 0),
       expSum: exp.reduce((a, t) => a + t.amount, 0),
     };
@@ -95,7 +96,7 @@ export async function render() {
       summaryRow.replaceChildren(
         el('div', {}, [
           el('div', { class: 'section-title', style: 'margin:0', text: `${extracted.length} transaction${extracted.length === 1 ? '' : 's'} found` }),
-          el('div', { class: 'tiny', text: `${c.incN} income · ${c.expN} expense · ${extracted.length - c.incN - c.expN} skipped` }),
+          el('div', { class: 'tiny', text: `${c.incN} income · ${c.expN} expense${c.salN ? ` · ${c.salN} salary` : ''} · ${extracted.length - c.incN - c.expN - c.salN} skipped` }),
         ]),
         el('div', { style: 'text-align:right' }, [
           el('div', { class: 'amt-pos', style: 'font-weight:800', text: '+' + fmtGBP(c.incSum) }),
@@ -114,8 +115,8 @@ export async function render() {
       const rowDup = () => isOut
         ? dupChecker.isDup('expense', { date: t.date, amount: t.amount })
         : dupChecker.isDup('earning', { date: t.date, platform: t.platform, amount: t.amount, tips: 0 });
-      // A likely duplicate defaults to "skip" so it isn't counted twice.
-      if (rowDup() && t.suggestion !== 'ignore') { t.suggestion = 'ignore'; t._autoSkipped = true; }
+      // A likely duplicate income/expense defaults to "skip" so it isn't counted twice.
+      if ((t.suggestion === 'income' || t.suggestion === 'expense') && rowDup()) { t.suggestion = 'ignore'; t._autoSkipped = true; }
 
       // ---- header: date · description + amount ----
       const dupPill = el('span', { class: 'pill pill--warn', style: 'display:none;margin-top:5px', text: 'Already logged' });
@@ -132,13 +133,18 @@ export async function render() {
 
       // ---- classification controls ----
       const controls = el('div', { class: 'grid-2', style: 'margin-top:10px' });
-      // valid options depend on direction: money-in → income/skip; money-out → expense/skip
+      // valid options depend on direction. Money-in can be self-employed income,
+      // employment salary (PAYE — kept separate, not added), or skipped.
       const typeOpts = isOut
         ? [{ value: 'expense', label: 'Expense' }, { value: 'ignore', label: 'Skip' }]
-        : [{ value: 'income', label: 'Income' }, { value: 'ignore', label: 'Skip' }];
-      const typeSel = selectInput(typeOpts, t.suggestion === 'ignore' ? 'ignore' : (isOut ? 'expense' : 'income'));
+        : [{ value: 'income', label: 'Income (self-employed)' }, { value: 'salary', label: 'Salary (PAYE)' }, { value: 'ignore', label: 'Skip' }];
+      const validIn = new Set(['income', 'salary', 'ignore']);
+      const defaultType = isOut
+        ? (t.suggestion === 'expense' ? 'expense' : 'ignore')
+        : (validIn.has(t.suggestion) ? t.suggestion : 'ignore');
+      const typeSel = selectInput(typeOpts, defaultType);
 
-      // detail select (platform for income, category for expense)
+      // detail select (platform for income, category for expense, note for salary)
       const detailWrap = el('div', {});
       const buildDetail = () => {
         detailWrap.replaceChildren();
@@ -152,6 +158,8 @@ export async function render() {
           sel.onchange = () => { t.category = sel.value; };
           t.category = sel.value;
           detailWrap.append(sel);
+        } else if (t.suggestion === 'salary') {
+          detailWrap.append(el('div', { class: 'hint', style: 'margin:0;padding-top:9px', text: 'PAYE — kept separate. Add a payslip for full detail.' }));
         } else {
           detailWrap.append(el('div', { class: 'hint', style: 'margin:0;padding-top:9px', text: 'Won\'t be added' }));
         }

@@ -87,6 +87,8 @@ const AR = {
   'Scan or upload': 'مسح أو رفع', 'Add manually': 'إضافة يدوية', 'Track & ask': 'التتبّع والسؤال',
   // bank statement import
   'Import bank statement': 'استيراد كشف بنكي', 'Expense': 'مصروف', 'Skip': 'تخطّي', 'Won\'t be added': 'لن يُضاف',
+  'Income (self-employed)': 'دخل (عمل حر)', 'Salary (PAYE)': 'راتب (PAYE)',
+  'PAYE — kept separate. Add a payslip for full detail.': 'PAYE — يُحفظ منفصلاً. أضف قسيمة راتب للتفاصيل الكاملة.',
   // duplicate detection
   'Already logged': 'مُسجّل مسبقاً', 'Skip likely duplicates (recommended)': 'تخطّي التكرارات المحتملة (موصى به)',
   // expense method advisor

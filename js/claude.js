@@ -417,8 +417,8 @@ Extract EVERY transaction line and pre-classify each one. Reply with ONLY a JSON
     { "date":"<YYYY-MM-DD>", "description":"<merchant / reference exactly as printed>",
       "amount": <absolute value in GBP, always a positive number>,
       "direction":"in"|"out",
-      "suggestion":"income"|"expense"|"ignore",
-      "platform":"<one platform id if this looks like delivery income, else empty>",
+      "suggestion":"income"|"salary"|"expense"|"ignore",
+      "platform":"<one platform id if this is self-employed delivery income, else empty>",
       "category":"<one expense category id if this looks like a business cost, else empty>",
       "balance": <running balance if shown, number, else 0> }
   ]
@@ -427,10 +427,12 @@ Rules:
 - amount is ALWAYS a positive number. Use "direction":"in" for money received/credits, "out" for money spent/debits.
 - Parse UK dates (DD/MM/YYYY) → output strictly YYYY-MM-DD. If only day+month are shown, infer the year from the statement period.
 - Pre-classify with "suggestion":
-  - "income": money IN that looks like delivery/gig pay (Amazon, Uber, Deliveroo, Just Eat, "FLEX", driver payouts). Set "platform" to the matching id.
+  - "income": money IN that is SELF-EMPLOYED delivery pay AND the payer clearly matches one of the delivery platforms listed below. Set "platform" to the matching id. Do NOT invent a platform for a payer that is not in the list.
+  - "salary": money IN that looks like wages/salary from an EMPLOYER — a regular (often monthly) credit, or text such as SALARY, WAGES, PAY, PAYROLL, PAYE, or a company/"LTD"/"LIMITED" payer that is NOT one of the listed delivery platforms. This is PAYE income and must be kept separate from self-employment.
   - "expense": money OUT that looks like a business running cost (fuel/petrol/diesel, car insurance/repairs/MOT, parking/tolls, phone/mobile, delivery bags/kit). Set "category" to the matching id.
-  - "ignore": anything personal or unclear (groceries, salary from an employer, transfers, ATM, rent, subscriptions) — the user will decide.
-- Platform ids: ${JSON.stringify(context.platforms)}
+  - "ignore": anything else personal or unclear (groceries, transfers, ATM, rent, subscriptions).
+- IMPORTANT: only use "income" when the payer matches the delivery-platform list. Any other work-like credit (including couriers or companies not in the list) is "salary", never "income".
+- Delivery platform ids: ${JSON.stringify(context.platforms)}
 - Expense category ids: ${JSON.stringify(context.categories)}
 - Money as plain numbers (no symbols). Never invent transactions or values you cannot see.`;
 }
@@ -470,14 +472,30 @@ export async function extractBankTransactions(source, context, settings) {
   if (!rows || !rows.length) throw new Error(readFailReason(text, data, 'statement'));
   const platformIds = new Set((context.platforms || []).map(p => p.id));
   const catIds = new Set(context.categories || []);
-  const suggestions = new Set(['income', 'expense', 'ignore']);
+  const suggestions = new Set(['income', 'salary', 'expense', 'ignore']);
+  // Tokens from the known delivery-platform names, used to sanity-check that a
+  // credit the model called "income" actually names a gig platform in its text
+  // (the model sometimes attaches a valid platform id to an unrelated payer).
+  const gigTokens = new Set(['amazon', 'flex', 'uber', 'eats', 'deliveroo', 'just', 'justeat', 'stuart']);
+  for (const p of (context.platforms || [])) {
+    for (const tok of String(p.name || '').toLowerCase().split(/[^a-z0-9]+/)) if (tok.length >= 3) gigTokens.add(tok);
+  }
+  const looksLikeGig = (desc) => {
+    const d = String(desc || '').toLowerCase();
+    for (const tok of gigTokens) if (d.includes(tok)) return true;
+    return false;
+  };
   const out = rows.slice(0, 300).map(t => {
     const direction = String(t.direction || '').toLowerCase() === 'in' ? 'in' : 'out';
     let suggestion = String(t.suggestion || '').toLowerCase();
-    if (!suggestions.has(suggestion)) suggestion = direction === 'in' ? 'income' : 'ignore';
-    // A "money out" line can never be income; a "money in" line can never be a cost.
-    if (direction === 'out' && suggestion === 'income') suggestion = 'ignore';
+    if (!suggestions.has(suggestion)) suggestion = 'ignore';
+    // A "money out" line can only be an expense; a "money in" line can't be a cost.
+    if (direction === 'out' && (suggestion === 'income' || suggestion === 'salary')) suggestion = 'ignore';
     if (direction === 'in' && suggestion === 'expense') suggestion = 'ignore';
+    // Only keep "income" (self-employment) when the payer text actually names a
+    // known delivery platform. Otherwise treat it as PAYE salary, so a fixed-job
+    // wage (e.g. an employer's name) is never mixed into self-employment income.
+    if (suggestion === 'income' && (!platformIds.has(t.platform) || !looksLikeGig(t.description))) suggestion = 'salary';
     return {
       date: cleanDate(t.date) || context.today,
       description: String(t.description || '').trim().slice(0, 120),
