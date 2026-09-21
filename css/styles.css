@@ -352,6 +352,8 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* ---------- Scan preview ---------- */
 .scan-preview { width: 100%; border-radius: 12px; border: 1px solid var(--border); max-height: 240px; object-fit: contain; background: var(--surface-2); }
 .scan-status { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted); padding: 8px 0; }
+/* an explicit display beats the [hidden] UA rule, so restore it when hidden */
+.scan-status[hidden] { display: none; }
 .scan-status .splash__spin { width: 18px; height: 18px; border-width: 2px; margin: 0; }
 
 /* ---------- Charts ---------- */
