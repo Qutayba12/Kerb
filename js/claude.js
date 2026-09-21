@@ -151,6 +151,31 @@ function parseJson(text) {
   if (m) { try { return JSON.parse(m[0]); } catch {} }
   return null;
 }
+
+// Recover complete JSON objects from text even when the surrounding JSON is
+// truncated (e.g. the model hit max_tokens mid-array). Scans for brace-balanced
+// {...} spans and parses each independently, so a cut-off final row is dropped
+// rather than losing the whole response.
+function extractJsonObjects(text, fromIndex = 0) {
+  const objs = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = fromIndex; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') { inStr = true; continue; }
+    if (c === '{') { if (depth === 0) start = i; depth++; }
+    else if (c === '}') { if (depth > 0) { depth--; if (depth === 0 && start >= 0) { try { objs.push(JSON.parse(text.slice(start, i + 1))); } catch {} start = -1; } } }
+  }
+  return objs;
+}
+// Salvage the array under `key` from a truncated JSON response.
+function salvageArray(text, key) {
+  if (!text) return [];
+  const k = text.indexOf('"' + key + '"');
+  const arrStart = text.indexOf('[', k >= 0 ? k : 0);
+  if (arrStart < 0) return [];
+  return extractJsonObjects(text, arrStart + 1);
+}
 function toNum(v) { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : 0; }
 function cleanDate(v) {
   const s = String(v || '').trim();
@@ -339,7 +364,7 @@ export async function extractEarnings(source, context, settings) {
   else { const { media_type, base64 } = splitDataUrl(source.dataUrl); contentBlock = { type: 'image', source: { type: 'base64', media_type, data: base64 } }; }
   const body = {
     model: settings.claudeModel || 'claude-haiku-4-5',
-    max_tokens: 1500,
+    max_tokens: 6000, // long statements have many rows — avoid truncating the JSON
     messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: earningsPrompt(context) }] }],
   };
   let res;
@@ -359,8 +384,9 @@ export async function extractEarnings(source, context, settings) {
   const data = await res.json();
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
   const parsed = parseJson(text);
-  const rows = parsed && Array.isArray(parsed.entries) ? parsed.entries : (Array.isArray(parsed) ? parsed : null);
-  if (!rows) throw new Error('Could not read the statement. Try a clearer photo/PDF.');
+  let rows = parsed && Array.isArray(parsed.entries) ? parsed.entries : (Array.isArray(parsed) ? parsed : null);
+  if (!rows || !rows.length) { const salvaged = salvageArray(text, 'entries'); if (salvaged.length) rows = salvaged; }
+  if (!rows || !rows.length) throw new Error('Could not read the statement. Use a clear, straight photo (or the PDF) with each shift/row readable. Very long statements can also be too big — try fewer pages at a time.');
   const ids = new Set((context.platforms || []).map(p => p.id));
   return rows.slice(0, 200).map(e => ({
     date: cleanDate(e.date) || context.today,
@@ -407,7 +433,7 @@ export async function extractBankTransactions(source, context, settings) {
   else { const { media_type, base64 } = splitDataUrl(source.dataUrl); contentBlock = { type: 'image', source: { type: 'base64', media_type, data: base64 } }; }
   const body = {
     model: settings.claudeModel || 'claude-haiku-4-5',
-    max_tokens: 2500,
+    max_tokens: 8000, // a full statement has many rows — a low cap truncates the JSON
     messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: bankPrompt(context) }] }],
   };
   let res;
@@ -427,9 +453,12 @@ export async function extractBankTransactions(source, context, settings) {
   }
   const data = await res.json();
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+  const truncated = data.stop_reason === 'max_tokens';
   const parsed = parseJson(text);
-  const rows = parsed && Array.isArray(parsed.transactions) ? parsed.transactions : (Array.isArray(parsed) ? parsed : null);
-  if (!rows) throw new Error('Could not read the statement. Try a clearer photo/PDF.');
+  let rows = parsed && Array.isArray(parsed.transactions) ? parsed.transactions : (Array.isArray(parsed) ? parsed : null);
+  // If the JSON was cut off (very long statement), recover whatever rows are complete.
+  if (!rows || !rows.length) { const salvaged = salvageArray(text, 'transactions'); if (salvaged.length) rows = salvaged; }
+  if (!rows || !rows.length) throw new Error('Could not read the statement. Use a clear, straight photo of one page (or upload the PDF) with the transaction rows readable. Very long statements can also be too big — try importing fewer pages at a time.');
   const platformIds = new Set((context.platforms || []).map(p => p.id));
   const catIds = new Set(context.categories || []);
   const suggestions = new Set(['income', 'expense', 'ignore']);
@@ -451,7 +480,7 @@ export async function extractBankTransactions(source, context, settings) {
       balance: toNum(t.balance),
     };
   }).filter(t => t.amount > 0);
-  return { account: String((parsed && parsed.account) || '').trim().slice(0, 60), transactions: out };
+  return { account: String((parsed && parsed.account) || '').trim().slice(0, 60), transactions: out, truncated };
 }
 
 // Validate an API key with a tiny, cheap request.

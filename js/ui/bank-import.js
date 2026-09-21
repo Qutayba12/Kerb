@@ -57,11 +57,12 @@ export async function render() {
         platforms: allPlatforms().map(p => ({ id: p.id, name: p.name })),
         categories: EXPENSE_CATEGORIES.map(c => c.id),
       };
-      const { transactions } = await extractBankTransactions(source, context, getSettings());
+      const { transactions, truncated } = await extractBankTransactions(source, context, getSettings());
       status.hidden = true;
       if (!transactions.length) { toast('No transactions found in that statement', 'warn'); return; }
       extracted = transactions.map(t => ({ ...t, id: uid() }));
       renderPreview();
+      if (truncated) toast(`Long statement — showing the first ${transactions.length}. Import the rest a page at a time.`, 'warn');
     } catch (e) { status.innerHTML = `${icon('warn')} ${e.message}`; status.style.color = 'var(--neg)'; }
     finally { photoBtn.disabled = pdfBtn.disabled = false; photoInput.value = ''; fileInput.value = ''; }
   }
