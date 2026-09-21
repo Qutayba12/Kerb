@@ -20,22 +20,52 @@ function startPanel() {
   const s = getSettings();
   const root = el('div');
   root.append(el('h2', { style: 'font-size:22px;margin:4px 2px 14px', text: 'Live shift' }));
-  root.append(el('div', { class: 'callout callout--brand', html: `${icon('spark')}<div>Start a shift and Kerb tracks your <b>time</b> and (optionally) <b>miles</b> automatically, showing your live £/hour. Stop it to save the shift.</div>` }));
+  root.append(el('div', { class: 'callout callout--brand', html: `${icon('spark')}<div>Clock in to track your <b>time</b> and <b>miles</b>. Pick how to count miles below.</div>` }));
 
   const platform = selectInput(allPlatforms().map(p => ({ value: p.id, label: p.name })), s.vehicle === 'bicycle' ? 'ubereats' : allPlatforms()[0].id);
-  const gpsToggle = el('input', { type: 'checkbox' }); gpsToggle.checked = false;
-  const gpsRow = el('label', { class: 'switch-row' }, [
-    el('div', {}, [el('div', { style: 'font-weight:700', text: 'Track miles with GPS' }), el('div', { class: 'tiny faint', text: 'Optional. Kerb keeps the screen on while tracking. Works while the app is open — if the phone locks, GPS pauses, so for exact miles use the odometer fields.' })]),
-    el('span', { class: 'switch' }, [gpsToggle, el('span', { class: 'track' })]),
-  ]);
 
-  const card = el('div', { class: 'card' }, [field('Platform', platform), gpsRow]);
+  // ---- mileage method chooser (odometer is the reliable default) ----
+  let mode = 'odometer';
+  const modes = [
+    { id: 'odometer', label: 'Odometer', sub: 'Most accurate · works even if you close the app' },
+    { id: 'gps', label: 'GPS (app open)', sub: 'Live tracking while Kerb stays open' },
+    { id: 'none', label: 'Add later', sub: 'Enter miles when you finish' },
+  ];
+  const chips = el('div', { class: 'seg' });
+  const odoStartInput = el('input', { class: 'input', type: 'number', min: '0', step: '1', inputMode: 'decimal', placeholder: 'e.g. 84213' });
+  const odoWrap = field('Odometer reading now (start)', odoStartInput, 'Read the number on your dashboard. At the end, enter the new reading — Kerb works out the miles.');
+  const note = el('div', { class: 'callout callout--info', style: 'margin-top:10px' });
+
+  const syncMode = () => {
+    chips.querySelectorAll('.seg__btn').forEach(b => b.classList.toggle('is-active', b.dataset.m === mode));
+    odoWrap.style.display = mode === 'odometer' ? '' : 'none';
+    if (mode === 'odometer') note.innerHTML = `${icon('check')}<div>Best choice. You only open Kerb twice — now, and when you finish. Nothing runs in the background.</div>`;
+    else if (mode === 'gps') note.innerHTML = `${icon('info')}<div>Kerb is a web app, so GPS only runs <b>while the app is open</b> (it keeps the screen on). If you lock the phone or switch apps, GPS pauses — so this suits short trips you watch. For a full shift, use the odometer.</div>`;
+    else note.innerHTML = `${icon('info')}<div>You'll type the miles when you stop — check your dashboard or Google Maps Timeline.</div>`;
+  };
+  modes.forEach(m => {
+    const b = el('button', { class: 'seg__btn', type: 'button', dataset: { m: m.id } }, [
+      el('div', { style: 'font-weight:700', text: m.label }),
+      el('div', { class: 'tiny faint', text: m.sub }),
+    ]);
+    b.onclick = () => { mode = m.id; syncMode(); };
+    chips.append(b);
+  });
+
+  const card = el('div', { class: 'card' }, [
+    field('Platform', platform),
+    field('Count miles by', chips),
+    odoWrap,
+    note,
+  ]);
   root.append(card);
+  syncMode();
 
   const start = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:4px' });
   start.innerHTML = icon('clock') + '<span>Start shift</span>';
   start.onclick = () => {
-    startShift({ platform: platform.value, gps: gpsToggle.checked });
+    if (mode === 'odometer' && !odoStartInput.value) { toast('Enter the odometer reading, or pick another method', 'err'); return; }
+    startShift({ platform: platform.value, gps: mode === 'gps', odoStart: mode === 'odometer' ? odoStartInput.value : null, milesMode: mode });
     toast('Shift started — good luck!', 'ok');
     bus.refresh();
   };
@@ -92,26 +122,36 @@ function livePanel(ctx) {
     gpsNote,
   ]));
 
-  // manual miles (when GPS off)
-  let manualMiles = null;
-  if (!s0.gps) {
-    manualMiles = el('input', { class: 'input', type: 'number', min: '0', step: '0.1', inputMode: 'decimal', value: s0.miles || '', placeholder: 'miles this shift', style: 'margin-top:10px' });
-    manualMiles.addEventListener('input', () => { updateShift({ miles: parseFloat(manualMiles.value) || 0 }); refreshMiles(); refreshRates(); });
-    milesCard.append(manualMiles);
-  }
+  const mode = s0.milesMode || (s0.gps ? 'gps' : (s0.odoStart != null ? 'odometer' : 'manual'));
 
-  // odometer (most accurate, overrides when both set)
+  // odometer inputs (shared)
   const odoStart = el('input', { class: 'input', type: 'number', min: '0', step: '1', inputMode: 'decimal', value: s0.odoStart ?? '', placeholder: 'start' });
   const odoEnd = el('input', { class: 'input', type: 'number', min: '0', step: '1', inputMode: 'decimal', value: s0.odoEnd ?? '', placeholder: 'end' });
   const onOdo = () => { updateShift({ odoStart: odoStart.value === '' ? null : parseFloat(odoStart.value), odoEnd: odoEnd.value === '' ? null : parseFloat(odoEnd.value) }); refreshMiles(); refreshRates(); };
   odoStart.addEventListener('input', onOdo); odoEnd.addEventListener('input', onOdo);
-  const odoDetails = el('details', { class: 'kdetails', style: 'margin:10px 0 0' }, [
-    el('summary', { text: 'Enter by odometer (most accurate)' }),
-    el('div', { class: 'grid-2' }, [field('Odometer start', odoStart), field('Odometer end', odoEnd)]),
-    el('div', { class: 'hint', text: 'HMRC-friendly: read your dashboard odometer at the start and end. Overrides GPS/manual miles.' }),
-  ]);
-  if (s0.odoStart != null || s0.odoEnd != null) odoDetails.open = true;
-  milesCard.append(odoDetails);
+
+  let manualMiles = null;
+  if (mode === 'odometer') {
+    // Odometer is the primary method — show both readings prominently.
+    milesCard.append(el('div', { class: 'grid-2', style: 'margin-top:12px' }, [
+      field('Odometer start', odoStart),
+      field('Odometer now (end)', odoEnd),
+    ]));
+    milesCard.append(el('div', { class: 'hint', text: 'When you finish, enter the dashboard reading here — miles = end − start. No need to keep the app open in between.' }));
+  } else {
+    if (!s0.gps) {
+      manualMiles = el('input', { class: 'input', type: 'number', min: '0', step: '0.1', inputMode: 'decimal', value: s0.miles || '', placeholder: 'miles this shift', style: 'margin-top:10px' });
+      manualMiles.addEventListener('input', () => { updateShift({ miles: parseFloat(manualMiles.value) || 0 }); refreshMiles(); refreshRates(); });
+      milesCard.append(manualMiles);
+    }
+    const odoDetails = el('details', { class: 'kdetails', style: 'margin:10px 0 0' }, [
+      el('summary', { text: 'Enter by odometer (most accurate)' }),
+      el('div', { class: 'grid-2' }, [field('Odometer start', odoStart), field('Odometer end', odoEnd)]),
+      el('div', { class: 'hint', text: 'HMRC-friendly: read your dashboard odometer at the start and end. Overrides GPS/manual miles.' }),
+    ]);
+    if (s0.odoStart != null || s0.odoEnd != null) odoDetails.open = true;
+    milesCard.append(odoDetails);
+  }
   root.append(milesCard);
 
   const perHr = el('div', { class: 'tile__v', style: 'color:var(--pos)', text: '—' });
@@ -139,7 +179,9 @@ function livePanel(ctx) {
     const mi = effectiveMiles(s);
     milesEl.textContent = fmtNum(mi, 1);
     const usingOdo = (s.odoStart != null && s.odoEnd != null && s.odoEnd >= s.odoStart);
-    milesSrc.textContent = usingOdo ? 'from odometer' : (s.gps ? `GPS · ${s.fixes || 0} fixes` : 'entered manually');
+    milesSrc.textContent = usingOdo ? 'from odometer'
+      : (mode === 'odometer' ? 'enter the end reading to finish'
+        : (s.gps ? `GPS · ${s.fixes || 0} fixes` : 'entered manually'));
     if (s.gps && !usingOdo) {
       if (s.gpsError) { gpsNote.textContent = s.gpsError; gpsNote.style.color = 'var(--warn)'; }
       else if (isWakeLockActive()) { gpsNote.innerHTML = '<span class="live-dot" style="color:var(--pos)"></span> <span style="color:var(--pos)">tracking · screen on</span>'; }

@@ -31,11 +31,13 @@ export function getActive() { try { return JSON.parse(localStorage.getItem(KEY) 
 export function isActive() { return !!getActive(); }
 function write(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} emit(); }
 
-export function startShift({ platform, gps }) {
+export function startShift({ platform, gps, odoStart = null, milesMode }) {
+  const os = (odoStart === '' || odoStart == null) ? null : Number(odoStart);
   const s = {
     id: uid(), startedAt: Date.now(), platform, gps: !!gps,
+    milesMode: milesMode || (gps ? 'gps' : (os != null ? 'odometer' : 'manual')),
     miles: 0, lastLat: null, lastLng: null, fixes: 0,
-    odoStart: null, odoEnd: null,
+    odoStart: isFinite(os) ? os : null, odoEnd: null,
     earnings: 0, tips: 0, deliveries: 0, gpsError: '',
   };
   write(s);

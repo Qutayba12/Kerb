@@ -67,6 +67,9 @@ const AR = {
   'Platform': 'المنصّة', 'Earnings so far': 'الدخل حتى الآن', 'Deliveries': 'التوصيلات',
   'Business miles (enter at the end)': 'أميال العمل (أدخلها في النهاية)', '£ / hour (live)': '£/ساعة (مباشر)',
   'Stop & save shift': 'إيقاف وحفظ الوردية', 'Discard shift': 'تجاهل الوردية',
+  'Count miles by': 'حساب الأميال عبر', 'Odometer': 'عدّاد المسافة', 'GPS (app open)': 'GPS (والتطبيق مفتوح)', 'Add later': 'أضف لاحقاً',
+  'Odometer reading now (start)': 'قراءة العدّاد الآن (البداية)', 'Odometer start': 'عدّاد البداية',
+  'Odometer now (end)': 'عدّاد الآن (النهاية)', 'Odometer end': 'عدّاد النهاية',
   // assistant
   'Quick add by text': 'إضافة سريعة بالنص', 'Ask about your money': 'اسأل عن أموالك', 'Ask': 'اسأل', 'Clear': 'مسح',
   'Open Settings': 'فتح الإعدادات', 'Summarise this week': 'لخّص هذا الأسبوع', 'How am I doing this month?': 'كيف أدائي هذا الشهر؟',
