@@ -10,6 +10,7 @@ import { maybeOnboard } from './ui/onboarding.js';
 import { resumeIfActive } from './shift.js';
 import { runChecks, registerPeriodicSync } from './notify.js';
 import { applyDir, translate, isRTL } from './i18n.js';
+import { ensureUnlocked, installAutoLock } from './lock.js';
 
 import * as home from './ui/dashboard.js';
 import * as income from './ui/income.js';
@@ -172,7 +173,7 @@ function registerSW() {
 }
 
 // ---------- boot ----------
-function boot() {
+async function boot() {
   setBus({
     navigate,
     refresh: () => renderRoute(currentRoute),
@@ -184,6 +185,11 @@ function boot() {
   if (isRTL()) { translate(document.querySelector('.topbar')); translate(document.querySelector('.tabbar')); }
   lockZoom();
   registerSW();
+
+  // If a PIN lock is set, hold here (behind the splash) until it's entered.
+  await ensureUnlocked();
+  installAutoLock(() => renderRoute(currentRoute));
+
   resumeIfActive();   // resume GPS tracking if a shift was in progress
 
   $('#app').hidden = false;

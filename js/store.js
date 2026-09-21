@@ -133,6 +133,10 @@ const DEFAULTS = {
   utr: '',                       // optional Unique Taxpayer Reference
   apiKey: '',
   claudeModel: 'claude-haiku-4-5',
+  lockEnabled: false,            // require a PIN to open the app
+  pinHash: '',                   // SHA-256(salt + PIN) — never the PIN itself
+  pinSalt: '',
+  autoLockMins: 2,               // re-lock after this many minutes in the background
   theme: 'system',
   lang: 'en',                    // 'en' | 'ar' (Arabic, RTL)
   customPlatforms: [],
