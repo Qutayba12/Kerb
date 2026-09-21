@@ -203,6 +203,49 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
   };
 }
 
+// Compare the two expense methods (simplified mileage vs actual costs) and say
+// which leaves a lower tax bill. Both are run through the full engine so the
+// trading allowance, PAYE interaction and NIC are all handled correctly.
+export function compareExpenseMethods(allEarnings, allExpenses, settings, yearLabel = settings.taxYear) {
+  const config = getConfig(yearLabel);
+  const mileageSum = computeTaxYear(allEarnings, allExpenses, { ...settings, expenseMethod: 'mileage' }, yearLabel);
+  const actualSum = computeTaxYear(allEarnings, allExpenses, { ...settings, expenseMethod: 'actual' }, yearLabel);
+
+  // The only figures that differ between methods: the mileage claim (mileage
+  // method) vs the actual deductible vehicle running costs (actual method).
+  const ty = taxYearFromLabel(yearLabel);
+  const X = allExpenses.filter(x => inRange(x.date, ty.start, ty.end));
+  let vehicleActual = 0;
+  for (const x of X) {
+    const cat = categoryById(x.category);
+    if (cat.vehicle) {
+      const bizPct = (x.bizPct != null ? x.bizPct : cat.defaultBizPct) / 100;
+      vehicleActual += (x.amount || 0) * bizPct;
+    }
+  }
+  vehicleActual = round2(vehicleActual);
+  const mileageClaim = mileageSum.mileageDed;
+
+  const taxDiff = round2(mileageSum.totalSETax - actualSum.totalSETax); // >0 → actual saves tax
+  let better = 'equal';
+  if (Math.abs(taxDiff) >= 0.5) better = taxDiff > 0 ? 'actual' : 'mileage';
+  else if (Math.abs(mileageClaim - vehicleActual) >= 0.5) better = mileageClaim > vehicleActual ? 'mileage' : 'actual';
+
+  return {
+    current: settings.expenseMethod,
+    better,
+    taxSaving: round2(Math.abs(taxDiff)),
+    businessMiles: mileageSum.businessMiles,
+    mileageClaim,
+    vehicleActual,
+    bothTradingAllowance: mileageSum.usedTradingAllowance && actualSum.usedTradingAllowance,
+    hasVehicleCosts: vehicleActual > 0,
+    mileage: { netProfit: mileageSum.netProfit, totalSETax: mileageSum.totalSETax, netTakeHome: mileageSum.netTakeHome, effectiveDeduction: mileageSum.effectiveDeduction },
+    actual: { netProfit: actualSum.netProfit, totalSETax: actualSum.totalSETax, netTakeHome: actualSum.netTakeHome, effectiveDeduction: actualSum.effectiveDeduction },
+    vehicleFlatRate: (config.mileage[settings.vehicle] || config.mileage.car).firstRate,
+  };
+}
+
 // The tax to reserve right now, given the pot mode.
 export function taxReserve(summary, settings) {
   if (settings.taxPotMode === 'manual') {

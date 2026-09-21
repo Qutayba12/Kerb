@@ -21,6 +21,8 @@ Kerb works out — to the penny — your income, expenses, allowable deductions,
 - **Mileage or actual costs** — simplified per-mile relief (car 55p/25p, motorcycle 24p, bicycle 20p) with the vehicle-cost rule handled correctly, or actual costs.
 - **Pots** — a weekly plan (how much to keep for tax / vehicle / savings vs. spend) and saved-so-far trackers.
 - **Insights** — £/hour, £/mile, £/drop, **net £/hour after tax**, best weekday, platform comparison and a full-year projection.
+- **Expense-method advisor** — compares simplified **mileage** vs **actual vehicle costs**, tells you which leaves a lower tax bill and by how much per year, and switches method in one tap.
+- **Duplicate protection on import** — bank, earnings-statement and CSV imports flag rows that match entries you already have (by date & amount) so the same money is never counted twice.
 - **Deadlines** — countdowns to HMRC registration (5 Oct), filing & payment (31 Jan) and the 2nd payment on account (31 Jul).
 - **Private & offline** — a PWA you install on your phone; all data lives in your browser (IndexedDB). Export/import a JSON backup and CSVs for your accountant.
 - **Editable tax rates** — every rate/threshold is stored per tax year and editable, so Kerb stays correct as HMRC figures change.
