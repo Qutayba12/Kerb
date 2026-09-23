@@ -3,10 +3,10 @@
 // ============================================================
 import { el, fmtGBP, fmtNum, todayISO, addDays, groupByDay, fmtDate, dowName } from '../util.js';
 import { earnings, expenses } from '../db.js';
-import { getSettings } from '../store.js';
+import { getSettings, platformById } from '../store.js';
 import { summariseRange } from '../tax.js';
 import { taxYearFromLabel } from '../util.js';
-import { icon, emptyState } from './shared.js';
+import { icon, emptyState, searchBox } from './shared.js';
 import { earningItem } from './items.js';
 import { openEarningsForm } from './forms.js';
 import { bus } from '../bus.js';
@@ -23,10 +23,10 @@ export async function render() {
   root.append(periodChips(() => bus.refresh()));
 
   const { start, end, label } = rangeFor(period, s);
-  const list = allE.filter(e => e.date >= start && e.date <= end);
+  const periodList = allE.filter(e => e.date >= start && e.date <= end);
   const sum = summariseRange(allE, allX, start, end, s);
 
-  // summary tiles
+  // summary tiles (reflect the whole period, not the search)
   root.append(el('div', { class: 'grid-3', style: 'margin-bottom:14px' }, [
     miniTile('Income', fmtGBP(sum.income), 'pos'),
     miniTile('Hours', fmtNum(sum.hours, sum.hours % 1 ? 1 : 0)),
@@ -36,7 +36,7 @@ export async function render() {
     miniTile('Tips', fmtGBP(sum.tips)),
   ]));
 
-  if (!list.length) {
+  if (!periodList.length) {
     root.append(emptyState('route', 'No shifts logged', `Nothing recorded for ${label.toLowerCase()}.`));
     const add = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:10px' });
     add.innerHTML = icon('plus') + '<span>Add earnings</span>'; add.onclick = () => openEarningsForm();
@@ -44,16 +44,34 @@ export async function render() {
     return root;
   }
 
-  for (const [day, items] of groupByDay(list)) {
-    const dayTotal = items.reduce((t, e) => t + (e.amount || 0) + (e.tips || 0), 0);
-    root.append(el('div', { class: 'day-head' }, [
-      el('span', { class: 'd', text: `${dowName(day)}, ${fmtDate(day, { withYear: true })}` }),
-      el('span', { class: 't', text: '+' + fmtGBP(dayTotal) }),
-    ]));
-    const card = el('div', { class: 'card card--flush' });
-    items.forEach(e => card.append(earningItem(e)));
-    root.append(card);
+  // live search (platform or note) — filters the list without losing focus
+  const search = searchBox('Search platform or note…');
+  root.append(search.wrap);
+  const listWrap = el('div');
+  root.append(listWrap);
+
+  const hay = (e) => `${platformById(e.platform).name} ${e.notes || ''}`.toLowerCase();
+  function renderList() {
+    const q = search.input.value.trim().toLowerCase();
+    const list = q ? periodList.filter(e => hay(e).includes(q)) : periodList;
+    listWrap.replaceChildren();
+    if (!list.length) {
+      listWrap.append(el('div', { class: 'tiny muted center', style: 'padding:18px', text: `No shifts match “${search.input.value.trim()}”.` }));
+      return;
+    }
+    for (const [day, items] of groupByDay(list)) {
+      const dayTotal = items.reduce((t, e) => t + (e.amount || 0) + (e.tips || 0), 0);
+      listWrap.append(el('div', { class: 'day-head' }, [
+        el('span', { class: 'd', text: `${dowName(day)}, ${fmtDate(day, { withYear: true })}` }),
+        el('span', { class: 't', text: '+' + fmtGBP(dayTotal) }),
+      ]));
+      const card = el('div', { class: 'card card--flush' });
+      items.forEach(e => card.append(earningItem(e)));
+      listWrap.append(card);
+    }
   }
+  search.input.addEventListener('input', renderList);
+  renderList();
   return root;
 }
 
