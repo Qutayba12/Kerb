@@ -151,10 +151,10 @@ export async function render() {
   const vatPct = Math.round(sum.vat.ratio * 100);
   root.append(el('div', { class: 'callout ' + (sum.vat.near ? 'callout--warn' : 'callout--info'), style: 'margin-top:14px', html: `${icon(sum.vat.near ? 'warn' : 'info')}<div><b>VAT:</b> you register only if turnover passes <b>${fmtGBP(sum.vat.threshold, { round: true })}</b>/year. You're at ${fmtGBP(sum.grossIncome, { round: true })} (${vatPct}%).</div>` }));
 
-  // Making Tax Digital heads-up for higher self-employment turnover
+  // Making Tax Digital heads-up (threshold is on self-employment TURNOVER, before expenses)
   if (sum.grossIncome > 45000) {
     const over = sum.grossIncome >= 50000;
-    root.append(el('div', { class: 'callout ' + (over ? 'callout--warn' : 'callout--info'), html: `${icon(over ? 'warn' : 'info')}<div><b>Making Tax Digital:</b> from 6 Apr 2026, self-employment income over <b>£50,000</b>/year means keeping digital records and sending <b>quarterly updates</b> to HMRC (threshold falls to £30k in 2027, £20k in 2028). You're at ${fmtGBP(sum.grossIncome, { round: true })}${over ? ' — you likely qualify; check HMRC or an accountant.' : '.'}</div>` }));
+    root.append(el('div', { class: 'callout ' + (over ? 'callout--warn' : 'callout--info'), html: `${icon(over ? 'warn' : 'info')}<div><b>Making Tax Digital for Income Tax:</b> from 6 Apr 2026 you must keep digital records and send <b>quarterly updates</b> to HMRC if your self-employment <b>turnover (before expenses)</b> is over <b>£50,000</b>/year — this excludes your PAYE salary (£30k threshold from Apr 2027, £20k from Apr 2028). You're at ${fmtGBP(sum.grossIncome, { round: true })}${over ? ' — you likely qualify.' : '.'}<br><span class="tiny">Kerb keeps your records digital and export-ready, but it is not HMRC-recognised filing software — you'll submit through recognised software or an accountant.</span></div>` }));
   }
 
   // export

@@ -36,6 +36,7 @@ const ICONS = {
   route: '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8 16 16 8"/>',
   wallet: '<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M16 12h3"/>',
   spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
 };
 export function icon(name, cls = '') {
   // width/height default to 1em for inline use; CSS rules (.btn svg, .tile svg…) override where set.

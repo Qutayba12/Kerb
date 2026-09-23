@@ -88,6 +88,7 @@ const AR = {
   'Scan photo': 'مسح صورة', 'Upload PDF / file': 'رفع PDF / ملف', 'Import CSV': 'استيراد CSV', 'Add payslip': 'إضافة قسيمة راتب',
   // add-menu group headers
   'Scan or upload': 'مسح أو رفع', 'Add manually': 'إضافة يدوية', 'Track & ask': 'التتبّع والسؤال',
+  'Add expense': 'إضافة مصروف', 'Scan or import…': 'مسح أو استيراد…', 'Scan or import': 'مسح أو استيراد',
   // bank statement import
   'Import bank statement': 'استيراد كشف بنكي', 'Expense': 'مصروف', 'Skip': 'تخطّي', 'Won\'t be added': 'لن يُضاف',
   'Income (self-employed)': 'دخل (عمل حر)', 'Salary (PAYE)': 'راتب (PAYE)',
