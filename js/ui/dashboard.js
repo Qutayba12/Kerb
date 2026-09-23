@@ -56,14 +56,28 @@ export async function render() {
   ]);
   root.append(hero);
 
-  // ---- Quick actions ----
+  // ---- Quick actions (the two you do most) ----
   const actions = el('div', { class: 'btn-grid' });
   const bEarn = el('button', { class: 'btn btn--sub', type: 'button' }); bEarn.innerHTML = icon('plus') + '<span>Add earnings</span>';
   bEarn.onclick = () => openEarningsForm();
-  const bExp = el('button', { class: 'btn btn--sub', type: 'button' }); bExp.innerHTML = icon('camera') + '<span>Scan receipt</span>';
+  const bExp = el('button', { class: 'btn btn--sub', type: 'button' }); bExp.innerHTML = icon('camera') + '<span>Add expense</span>';
   bExp.onclick = () => openExpenseForm();
   actions.append(bEarn, bExp);
   root.append(actions);
+
+  // ---- Quick links to the deeper tools (kept off the top bar to reduce clutter) ----
+  const link = (ic, label, route) => {
+    const b = el('button', { class: 'chip', type: 'button', style: 'gap:6px' });
+    b.innerHTML = icon(ic) + `<span>${label}</span>`;
+    b.onclick = () => bus.navigate(route);
+    return b;
+  };
+  root.append(el('div', { class: 'chips', style: 'margin:2px 0 2px;flex-wrap:wrap' }, [
+    link('chart', 'Insights', 'insights'),
+    link('wallet', 'Pots', 'pots'),
+    link('target', 'Goals', 'goals'),
+    link('spark', 'Ask Kerb', 'assistant'),
+  ]));
 
   // ---- Tax reserve card ----
   const reserve = taxReserve(sum, s);

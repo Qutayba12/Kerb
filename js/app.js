@@ -68,8 +68,6 @@ async function renderRoute(route) {
 function updateNav(route) {
   $$('#tabbar .tab').forEach(t => t.classList.toggle('is-active', t.dataset.route === route));
   $('#nav-assistant')?.classList.toggle('is-active', route === 'assistant');
-  $('#nav-insights')?.classList.toggle('is-active', route === 'insights');
-  $('#nav-pots')?.classList.toggle('is-active', route === 'pots');
   $('#nav-settings')?.classList.toggle('is-active', route === 'settings');
   const yearChip = $('#year-chip');
   if (yearChip) yearChip.textContent = getSettings().taxYear;
@@ -90,50 +88,40 @@ function onHashChange() {
 }
 
 // ---------- add menu ----------
+function menuItem(ic, label, sub, onClick) {
+  const b = el('button', { class: 'item', type: 'button', style: 'width:100%;border-radius:12px;border:1px solid var(--border);margin-bottom:8px' });
+  b.innerHTML = `<div class="item__icon" style="background:var(--brand-tint);color:var(--brand)">${icon(ic)}</div>
+    <div class="item__main"><div class="item__title">${label}</div><div class="item__sub">${sub}</div></div>`;
+  b.onclick = () => { closeSheet(); onClick(); };
+  return b;
+}
+// Simple, obvious: the few things you do all the time, plus one door to the
+// scan/import tools. No duplicate ways to do the same task.
 function openAddMenu() {
-  const mk = (ic, label, sub, onClick) => {
-    const b = el('button', { class: 'item', type: 'button', style: 'width:100%;border-radius:12px;border:1px solid var(--border);margin-bottom:8px' });
-    b.innerHTML = `<div class="item__icon" style="background:var(--brand-tint);color:var(--brand)">${icon(ic)}</div>
-      <div class="item__main"><div class="item__title">${label}</div><div class="item__sub">${sub}</div></div>`;
-    b.onclick = () => { closeSheet(); onClick(); };
-    return b;
-  };
-  const group = (label, items) => el('div', { class: 'menu-group' }, [
-    el('div', { class: 'menu-group__label', text: label }),
-    ...items,
-  ]);
-
   const body = el('div', {}, [
-    // Scan or upload — the fastest way to add anything (Claude reads it for you)
-    group('Scan or upload', [
-      mk('camera', 'Scan a receipt', 'Photograph a receipt — Claude reads it', () => openExpenseForm()),
-      mk('spark', 'Scan earnings statement', 'Photo / PDF of a Flex or Uber summary', () => navigate('scanearn')),
-      mk('wallet', 'Import bank statement', 'Photo / PDF — Claude sorts income & costs', () => navigate('bankimport')),
-      mk('note', 'Add payslip', 'Scan / upload your PAYE payslip', () => navigate('payslips')),
-      mk('upload', 'Import CSV', 'Bulk import a platform statement', () => navigate('import')),
-    ]),
-    // Add by hand
-    group('Add manually', [
-      mk('plus', 'Add earnings', 'Log a shift, block or day\'s takings', () => openEarningsForm()),
-      mk('edit', 'Add an expense', 'Type in a business cost', () => openExpenseForm()),
-      mk('route', 'Log mileage only', 'Record business miles with no earnings', () => openEarningsForm()),
-      mk('clock', 'Add recurring bill', 'Track a repeating outgoing & its due date', () => openBillForm()),
-    ]),
-    // Track & ask
-    group('Track & ask', [
-      mk('clock', 'Start live shift', 'Track time & miles live, see £/hour', () => navigate('shift')),
-      mk('spark', 'Ask Kerb (AI)', 'Add by text, or ask about your money', () => navigate('assistant')),
-    ]),
+    menuItem('plus', 'Add earnings', 'Money you earned delivering', () => openEarningsForm()),
+    menuItem('camera', 'Add expense', 'A business cost — type it or scan the receipt', () => openExpenseForm()),
+    menuItem('clock', 'Start live shift', 'Track time & miles now, see £/hour', () => navigate('shift')),
+    menuItem('wallet', 'Scan or import…', 'Earnings statement, bank statement, payslip or CSV', () => openImportMenu()),
   ]);
   openSheet({ title: 'Add', node: body });
+}
+// Secondary: the Claude-powered capture tools, all in one place.
+function openImportMenu() {
+  const body = el('div', {}, [
+    menuItem('spark', 'Scan earnings statement', 'Photo / PDF of a Flex or Uber summary', () => navigate('scanearn')),
+    menuItem('wallet', 'Import bank statement', 'Photo / PDF — Claude sorts income & costs', () => navigate('bankimport')),
+    menuItem('note', 'Add payslip', 'Scan / upload your PAYE payslip', () => navigate('payslips')),
+    menuItem('upload', 'Import CSV', 'A platform statement as a CSV file', () => navigate('import')),
+    menuItem('clock', 'Add recurring bill', 'A repeating outgoing & its due date', () => openBillForm()),
+  ]);
+  openSheet({ title: 'Scan or import', node: body });
 }
 
 // ---------- wiring ----------
 function wire() {
   $$('#tabbar .tab').forEach(tab => tab.addEventListener('click', () => navigate(tab.dataset.route)));
   $('#nav-assistant')?.addEventListener('click', () => navigate('assistant'));
-  $('#nav-insights')?.addEventListener('click', () => navigate('insights'));
-  $('#nav-pots')?.addEventListener('click', () => navigate('pots'));
   $('#nav-settings')?.addEventListener('click', () => navigate('settings'));
   $('#year-chip')?.addEventListener('click', () => navigate('tax'));
   window.addEventListener('hashchange', onHashChange);
