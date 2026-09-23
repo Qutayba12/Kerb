@@ -76,6 +76,7 @@ export function periodChips(onChange) {
   return wrap;
 }
 export const getPeriod = () => period;
+export function setPeriod(p) { period = p; }
 export function rangeFor(p, s) {
   const today = todayISO();
   if (p === '7d') return { start: addDays(today, -6), end: today, label: 'Last 7 days' };

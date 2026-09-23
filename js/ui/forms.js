@@ -2,7 +2,7 @@
 // ui/forms.js — add/edit sheets for earnings, expenses, bills.
 // Shared by the Add screen and the list edit actions.
 // ============================================================
-import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum } from '../util.js';
+import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog } from './shared.js';
@@ -30,7 +30,7 @@ export function openEarningsForm(existing = null, opts = {}) {
   const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
 
   form.append(
-    field('Date', dateInput),
+    dateFieldWithYearCheck('Date', dateInput),
     field('Platform', platformSel),
     field('Earnings (before tips)', amount, 'What the app/platform paid you for the work.'),
     field('Tips', tips, 'Tips are taxable income — kept separate for your records.'),
@@ -186,7 +186,7 @@ export function openExpenseForm(existing = null, opts = {}) {
   form.append(
     scanWrap,
     el('hr', { class: 'soft' }),
-    field('Date', dateInput),
+    dateFieldWithYearCheck('Date', dateInput),
     field('Category', catSel, undefined),
     (() => { const f = field('', vehNote); f.style.marginTop = '-8px'; return f; })(),
     field('Amount paid (inc. VAT)', amount),
@@ -266,6 +266,24 @@ export function openBillForm(existing = null) {
 }
 
 // ---------------- helpers ----------------
+// A date field that warns when the chosen date falls outside the working tax
+// year — those entries won't appear in the current totals, which surprises people.
+function dateFieldWithYearCheck(label, dateInput) {
+  const warn = el('div', { class: 'hint', style: 'color:var(--warn);margin-top:6px', hidden: true });
+  const f = field(label, dateInput);
+  f.append(warn);
+  const check = () => {
+    const yr = getSettings().taxYear;
+    const ty = taxYearFromLabel(yr);
+    const d = dateInput.value;
+    const out = d && (d < ty.start || d > ty.end);
+    warn.hidden = !out;
+    if (out) warn.innerHTML = `⚠ This date is in another tax year — it won't show in your <b>${yr}</b> totals.`;
+  };
+  dateInput.addEventListener('change', check);
+  check();
+  return f;
+}
 function footer(onSave, onDelete) {
   const wrap = el('div', { style: 'margin-top:16px' });
   const saveBtn = el('button', { class: 'btn btn--primary btn--block', type: 'submit', text: 'Save' });
