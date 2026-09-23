@@ -7,7 +7,7 @@ import { earnings, expenses, bills } from '../db.js';
 import { getSettings } from '../store.js';
 import { computeTaxYear, summariseRange, taxReserve } from '../tax.js';
 import { donut } from '../charts.js';
-import { icon } from './shared.js';
+import { icon, downloadBackup } from './shared.js';
 import { earningItem, expenseItem } from './items.js';
 import { openEarningsForm, openExpenseForm } from './forms.js';
 import { setPeriod as setIncomePeriod } from './income.js';
@@ -65,6 +65,16 @@ export async function render() {
     const banner = el('div', { class: 'callout callout--warn', style: 'cursor:pointer', html: `${icon('warn')}<div><b>${n}</b> ${n === 1 ? 'entry is' : 'entries are'} dated outside <b>${s.taxYear}</b>, so ${n === 1 ? "it isn't" : "they aren't"} in the totals here. Tap to review &amp; fix the date.</div>` });
     banner.onclick = () => { setIncomePeriod('all'); bus.navigate('income'); };
     root.append(banner);
+  }
+
+  // ---- Backup reminder: data lives only on this device; HMRC needs records kept 5+ years ----
+  const entryCount = allE.length + allX.length;
+  const daysSinceBackup = s.lastBackupAt ? daysBetween(s.lastBackupAt.slice(0, 10), todayISO()) : Infinity;
+  if (entryCount >= 5 && daysSinceBackup >= 30) {
+    const never = !s.lastBackupAt;
+    const bk = el('div', { class: 'callout callout--info', style: 'cursor:pointer', html: `${icon('download')}<div><b>Back up your records.</b> Everything is stored only on this device — ${never ? "you haven't exported a backup yet" : 'your last backup was over a month ago'}. HMRC records should be kept for 5+ years. Tap to save a backup file.</div>` });
+    bk.onclick = () => downloadBackup().then(() => bus.refresh());
+    root.append(bk);
   }
 
   // ---- Quick actions (the two you do most) ----

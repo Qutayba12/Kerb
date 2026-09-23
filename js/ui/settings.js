@@ -7,8 +7,8 @@ import {
   getSettings, saveSettings, resetSettings, getConfig, availableYears,
   VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS,
 } from '../store.js';
-import { exportAll, importAll, wipeAll } from '../db.js';
-import { icon, field, selectInput, moneyInput, toast, confirmDialog, openSheet, closeSheet } from './shared.js';
+import { importAll, wipeAll } from '../db.js';
+import { icon, field, selectInput, moneyInput, toast, confirmDialog, openSheet, closeSheet, downloadBackup } from './shared.js';
 import { testKey } from '../claude.js';
 import { setLang } from '../i18n.js';
 import { lockConfigured, cryptoOk, openPinSetup, openPinVerify, disableLock } from '../lock.js';
@@ -302,14 +302,7 @@ function dataCard() {
   wrap.append(csvBtn, el('hr', { class: 'soft' }));
   const exportBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
   exportBtn.innerHTML = icon('download') + '<span>Export backup (JSON)</span>';
-  exportBtn.onclick = async () => {
-    const data = await exportAll();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = el('a', { href: url, download: `kerb-backup-${todayISO()}.json` });
-    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast('Backup downloaded', 'ok');
-  };
+  exportBtn.onclick = () => downloadBackup();
 
   const importInput = el('input', { type: 'file', accept: 'application/json,.json', style: 'display:none' });
   const importBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-top:8px' });

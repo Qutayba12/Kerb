@@ -129,6 +129,7 @@ const DEFAULTS = {
   goalAmount: 0,
   notifyEnabled: false,          // local reminders (deadlines, goal)
   seStartDate: '',
+  lastBackupAt: '',              // ISO datetime of the last exported backup (data-safety nudge)
   traderName: '',                // optional, shown on the Self Assessment report
   utr: '',                       // optional Unique Taxpayer Reference
   apiKey: '',
