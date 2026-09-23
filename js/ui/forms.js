@@ -2,7 +2,7 @@
 // ui/forms.js — add/edit sheets for earnings, expenses, bills.
 // Shared by the Add screen and the list edit actions.
 // ============================================================
-import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel } from '../util.js';
+import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog } from './shared.js';
@@ -267,18 +267,38 @@ export function openBillForm(existing = null) {
 
 // ---------------- helpers ----------------
 // A date field that warns when the chosen date falls outside the working tax
-// year — those entries won't appear in the current totals, which surprises people.
+// year — those entries won't appear in the current totals, which surprises
+// people. The most common cause is the date-picker's year wheel landing one
+// year off when logging a recent shift, so we offer a one-tap correction.
 function dateFieldWithYearCheck(label, dateInput) {
-  const warn = el('div', { class: 'hint', style: 'color:var(--warn);margin-top:6px', hidden: true });
+  const warn = el('div', { class: 'hint', style: 'margin-top:6px', hidden: true });
   const f = field(label, dateInput);
   f.append(warn);
+  // Same day/month shifted into the working tax year, if that lands on/before today.
+  const suggestInYear = (iso, ty) => {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    for (const yy of [y + 1, y - 1, y + 2, y - 2]) {
+      const cand = `${yy}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (cand >= ty.start && cand <= ty.end && cand <= todayISO()) return cand;
+    }
+    return null;
+  };
   const check = () => {
+    warn.replaceChildren();
     const yr = getSettings().taxYear;
     const ty = taxYearFromLabel(yr);
     const d = dateInput.value;
-    const out = d && (d < ty.start || d > ty.end);
+    const out = !!(d && (d < ty.start || d > ty.end));
     warn.hidden = !out;
-    if (out) warn.innerHTML = `⚠ This date is in another tax year — it won't show in your <b>${yr}</b> totals.`;
+    if (!out) return;
+    warn.append(el('div', { style: 'color:var(--warn)', html: `⚠ This date is in another tax year — it won't show in your <b>${yr}</b> totals.` }));
+    const fix = suggestInYear(d, ty);
+    if (fix) {
+      const btn = el('button', { class: 'btn btn--sub btn--sm', type: 'button', style: 'margin-top:6px', text: `Use ${fmtDate(fix, { withYear: true })} instead` });
+      btn.onclick = () => { dateInput.value = fix; check(); };
+      warn.append(btn);
+    }
   };
   dateInput.addEventListener('change', check);
   check();
