@@ -139,6 +139,7 @@ const AR_PH = {
   'e.g. 4': 'مثال 4', 'e.g. 12': 'مثال 12', 'e.g. Shell, EE': 'مثال Shell، EE', 'e.g. phone 50%': 'مثال الهاتف 50%',
   'Ask anything about your earnings…': 'اسأل أي شيء عن دخلك…', 'e.g. Amazon Flex £52, 4 hours, 40 miles': 'مثال Amazon Flex £52، 4 ساعات، 40 ميلاً',
   'sk-ant-…': 'sk-ant-…', 'Add platform (e.g. Stuart)': 'إضافة منصّة (مثل Stuart)',
+  'Search platform or note…': 'ابحث بالمنصّة أو الملاحظة…', 'Search vendor, category or note…': 'ابحث بالمتجر أو التصنيف أو الملاحظة…',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).
