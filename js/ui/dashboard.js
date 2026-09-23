@@ -2,7 +2,7 @@
 // ui/dashboard.js — the Home screen: take-home, tax reserve,
 // this week, upcoming dues, income mix, recent activity.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, todayISO, addDays, humanUntil, fmtDate, daysBetween, registrationDeadline } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, todayISO, addDays, humanUntil, fmtDate, daysBetween, registrationDeadline, taxYearFromLabel } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings } from '../store.js';
 import { computeTaxYear, summariseRange, taxReserve } from '../tax.js';
@@ -10,6 +10,7 @@ import { donut } from '../charts.js';
 import { icon } from './shared.js';
 import { earningItem, expenseItem } from './items.js';
 import { openEarningsForm, openExpenseForm } from './forms.js';
+import { setPeriod as setIncomePeriod } from './income.js';
 import { getActive, elapsedMs, fmtDuration } from '../shift.js';
 import { computeGoal, PERIOD_LABELS } from '../goals.js';
 import { bus } from '../bus.js';
@@ -55,6 +56,16 @@ export async function render() {
     ]),
   ]);
   root.append(hero);
+
+  // ---- Entries dated outside the working tax year (a common cause of "why isn't this counted?") ----
+  const tyR = taxYearFromLabel(s.taxYear);
+  const outOfYear = [...allE, ...allX].filter(r => r.date < tyR.start || r.date > tyR.end);
+  if (outOfYear.length) {
+    const n = outOfYear.length;
+    const banner = el('div', { class: 'callout callout--warn', style: 'cursor:pointer', html: `${icon('warn')}<div><b>${n}</b> ${n === 1 ? 'entry is' : 'entries are'} dated outside <b>${s.taxYear}</b>, so ${n === 1 ? "it isn't" : "they aren't"} in the totals here. Tap to review &amp; fix the date.</div>` });
+    banner.onclick = () => { setIncomePeriod('all'); bus.navigate('income'); };
+    root.append(banner);
+  }
 
   // ---- Quick actions (the two you do most) ----
   const actions = el('div', { class: 'btn-grid' });
