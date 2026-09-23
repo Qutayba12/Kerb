@@ -2,8 +2,10 @@
 // ui/shared.js — reusable UI primitives: toast, bottom sheet,
 // confirm dialog, icons, and small builders.
 // ============================================================
-import { el } from '../util.js';
+import { el, todayISO } from '../util.js';
 import { translate, isRTL } from '../i18n.js';
+import { exportAll } from '../db.js';
+import { saveSettings } from '../store.js';
 
 // ---------- icons (inline SVG path data) ----------
 const ICONS = {
@@ -138,3 +140,20 @@ export function emptyState(iconName, title, sub) {
   ]);
 }
 export function pill(text, kind = 'brand') { return `<span class="pill pill--${kind}">${text}</span>`; }
+
+// Export all data to a JSON file and record when — used by Settings and the
+// Home backup reminder so a backup is always one tap away. The API key and PIN
+// are never included (db.exportAll strips them).
+export async function downloadBackup() {
+  try {
+    const data = await exportAll();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: `kerb-backup-${todayISO()}.json` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveSettings({ lastBackupAt: new Date().toISOString() });
+    toast('Backup downloaded', 'ok');
+    return true;
+  } catch (e) { toast('Could not export backup', 'err'); return false; }
+}
