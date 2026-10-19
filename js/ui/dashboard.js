@@ -57,6 +57,25 @@ export async function render() {
   ]);
   root.append(hero);
 
+  // ---- "Getting set up" progress (for a newly-registered driver) ----
+  if (!s.setupDismissed) {
+    const checks = [!!s.seStartDate, !!(s.utr && String(s.utr).trim()), allE.length > 0, (s.potTaxSaved || 0) > 0, !!s.lastBackupAt];
+    const doneN = checks.filter(Boolean).length;
+    if (doneN < checks.length) {
+      const pct = Math.round(doneN / checks.length * 100);
+      const card = el('div', { class: 'card', style: 'cursor:pointer' }, [
+        el('div', { class: 'row row--between', style: 'margin-bottom:8px' }, [
+          el('div', { style: 'font-weight:800', html: `${icon('check')} Getting set up` }),
+          el('div', { class: 'tiny', style: 'font-weight:800;color:var(--brand)', text: `${doneN} / ${checks.length}` }),
+        ]),
+        (() => { const b = el('div', { class: 'bar' }); b.append(el('div', { class: 'bar__fill', style: `width:${pct}%` })); return b; })(),
+        el('div', { class: 'tiny muted', style: 'margin-top:8px', text: 'Finish setting up for HMRC — tap to see your checklist & key dates.' }),
+      ]);
+      card.onclick = () => bus.navigate('guide');
+      root.append(card);
+    }
+  }
+
   // ---- Entries dated outside the working tax year (a common cause of "why isn't this counted?") ----
   const tyR = taxYearFromLabel(s.taxYear);
   const outOfYear = [...allE, ...allX].filter(r => r.date < tyR.start || r.date > tyR.end);
@@ -94,6 +113,7 @@ export async function render() {
     return b;
   };
   root.append(el('div', { class: 'chips', style: 'margin:2px 0 2px;flex-wrap:wrap' }, [
+    link('check', 'Guide', 'guide'),
     link('chart', 'Insights', 'insights'),
     link('wallet', 'Pots', 'pots'),
     link('target', 'Goals', 'goals'),
