@@ -17,6 +17,13 @@ const AR = {
   'Insights': 'تحليلات', 'Pots': 'الأوعية', 'Settings': 'الإعدادات', 'Ask Kerb': 'اسأل Kerb',
   // dashboard
   'Money to keep': 'ما يجب الاحتفاظ به', 'Last 7 days': 'آخر 7 أيام', 'Coming up': 'قادم',
+  // guide / setup
+  'Get set up': 'لنُجهّز حسابك', 'Guide': 'الدليل', 'Getting set up': 'جارٍ الإعداد', 'Your checklist': 'قائمتك',
+  'Good to know': 'معلومات مفيدة', 'Set your start date': 'حدّد تاريخ البدء', 'Add your UTR (tax reference)': 'أضف الـ UTR (المرجع الضريبي)',
+  'Log your first earnings': 'سجّل أول دخل لك', 'Start setting money aside': 'ابدأ بتجنيب المال', 'Take a backup': 'خذ نسخة احتياطية',
+  'Turn on scanning (optional)': 'فعّل المسح (اختياري)', 'Register with HMRC': 'التسجيل لدى HMRC',
+  'File online & pay your tax': 'قدّم أونلاين وادفع ضريبتك', 'Open your Self Assessment report': 'افتح تقرير Self Assessment',
+  'Getting started guide & checklist': 'دليل البدء والقائمة', 'Getting started guide': 'دليل البدء',
   'Income by platform': 'الدخل حسب المنصّة', 'Recent activity': 'النشاط الأخير', 'View all': 'عرض الكل',
   'Add earnings': 'إضافة دخل', 'Scan receipt': 'تصوير فاتورة', 'Safe to spend': 'آمن للصرف',
   'profit after tax': 'الربح بعد الضريبة', 'Tax pot — set this aside': 'وعاء الضريبة — جنّب هذا',

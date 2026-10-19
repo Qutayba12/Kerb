@@ -28,6 +28,12 @@ export async function render() {
   const root = el('div');
   root.append(el('h2', { style: 'font-size:22px;margin:4px 2px 14px', text: 'Settings' }));
 
+  // ---------- Getting started guide ----------
+  const guideBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-bottom:14px' });
+  guideBtn.innerHTML = icon('check') + '<span>Getting started guide & checklist</span>';
+  guideBtn.onclick = () => bus.navigate('guide');
+  root.append(guideBtn);
+
   // ---------- Tax basis ----------
   root.append(sec('Tax basis'));
   root.append(card([

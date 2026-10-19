@@ -27,8 +27,9 @@ import * as importCsv from './ui/import.js';
 import * as payslips from './ui/payslips.js';
 import * as scanearn from './ui/scan-earnings.js';
 import * as bankimport from './ui/bank-import.js';
+import * as guide from './ui/guide.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn, bankimport };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn, bankimport, guide };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
