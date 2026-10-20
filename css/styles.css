@@ -472,6 +472,14 @@ hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 .report__table { margin-bottom: 4px; }
 .report__box { display: inline-block; font-size: 10px; font-weight: 700; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
 .report__foot { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 11px; color: var(--faint); }
+.report__note { font-size: 11.5px; color: var(--muted); margin: 4px 0 2px; line-height: 1.5; }
+.report__data td, .report__data th { font-size: 12px; padding: 4px 6px; }
+.report__dhead th { color: var(--muted); border-bottom: 1px solid var(--border-strong); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: 10.5px; }
+.report__break { break-before: page; page-break-before: always; height: 0; }
+
+/* The off-screen container used by every "Save as PDF" action. Hidden on
+   screen; shown (and the live app hidden) only while the Print dialog is open. */
+.print-doc { display: none; }
 
 @media print {
   :root { --bg: #fff; --surface: #fff; --text: #111; --muted: #444; --faint: #666; --border: #ccc; --border-strong: #999; }
@@ -480,4 +488,8 @@ hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   .report { box-shadow: none; border: none; padding: 0; margin: 0; }
   .report__box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff; }
+  /* When a Save-as-PDF action is running, print only the generated document. */
+  body.is-printing #app, body.is-printing #splash { display: none !important; }
+  body.is-printing .print-doc { display: block !important; }
+  .report__data tr, .report table tr { break-inside: avoid; }
 }

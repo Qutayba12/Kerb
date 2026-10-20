@@ -78,15 +78,18 @@ export async function render() {
   if (hasPaye) {
     root.append(sectionTitle('② Employment (PAYE) — deducted at source'));
     const usingPayslips = s.payeSource === 'payslips' && paye.count > 0;
-    const empGross = usingPayslips ? paye.sumGross : sum.base;
-    const empTax = usingPayslips ? paye.sumTax : sum.incomeTaxBase;
+    // Show the figure the tax engine actually used: the final year total when
+    // the job has ended, otherwise the salary received so far (with the
+    // projected annual figure as a sub-line).
+    const empGross = usingPayslips ? (paye.final ? paye.annualSalary : paye.sumGross) : sum.base;
+    const empTax = usingPayslips ? (paye.final ? paye.annualTax : paye.sumTax) : sum.incomeTaxBase;
     const empNI = usingPayslips ? paye.sumNI : 0;
     const et = el('table', { class: 'brk' });
     const erow = (l, v, cls = '') => { const tr = el('tr', { class: cls }); tr.append(el('td', { html: l }), el('td', { text: v })); et.append(tr); };
-    erow(usingPayslips ? `Salary received (${paye.count} payslip${paye.count === 1 ? '' : 's'})` : 'Annual salary', fmtGBP(empGross));
+    erow(usingPayslips ? (paye.final ? `Salary this year — final (${paye.count} payslip${paye.count === 1 ? '' : 's'})` : `Salary received (${paye.count} payslip${paye.count === 1 ? '' : 's'})`) : 'Annual salary', fmtGBP(empGross));
     erow('Income tax deducted', fmtGBP(empTax));
     if (empNI) erow('National Insurance deducted', fmtGBP(empNI));
-    if (usingPayslips) erow('Annualised salary', fmtGBP(paye.annualSalary), 'sub');
+    if (usingPayslips && !paye.final) erow('Annualised salary', fmtGBP(paye.annualSalary), 'sub');
     root.append(el('div', { class: 'card' }, [et]));
     root.append(el('div', { class: 'callout callout--brand', html: `${icon('check')}<div>Your employer already deducts this tax &amp; NI from each payslip — <b>you don't set anything aside for it</b>. It only matters here because your salary uses your Personal Allowance, which is why your delivery profit is taxed from the first £.</div>` }));
 

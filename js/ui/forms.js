@@ -4,7 +4,7 @@
 // ============================================================
 import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
-import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
+import { getSettings, allPlatforms, getConfig, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog } from './shared.js';
 import { extractReceipt, hasApiKey, estimateScanCost } from '../claude.js';
 import { bus } from '../bus.js';
@@ -36,7 +36,7 @@ export function openEarningsForm(existing = null, opts = {}) {
     field('Tips', tips, 'Tips are taxable income — kept separate for your records.'),
     el('div', { class: 'grid-2' }, [field('Hours worked', hours), field('Deliveries', deliveries)]),
     field('Business miles driven', miles, s.expenseMethod === 'mileage'
-      ? `Claimed at your mileage rate (car: 55p/mile up to 10k, then 25p).`
+      ? mileageHint(s)
       : `Tracked for your records (you use the actual-costs method).`),
     field('Note', notes),
   );
@@ -263,6 +263,15 @@ export function openBillForm(existing = null) {
   form.append(footer(save, existing ? () => removeEntry('bills', b.id, 'Bill') : null));
   form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
   openSheet({ title: existing ? 'Edit bill' : 'Add recurring bill', node: form });
+}
+
+// Describe the mileage rate that actually applies to this driver's vehicle/year.
+function mileageHint(s) {
+  const m = getConfig(s.taxYear).mileage[s.vehicle] || getConfig(s.taxYear).mileage.car;
+  const p = (r) => Math.round(r * 100) + 'p';
+  const veh = (VEHICLE_LABELS[s.vehicle] || 'vehicle').toLowerCase();
+  if (isFinite(m.firstLimit)) return `Claimed at your mileage rate (${veh}: ${p(m.firstRate)}/mile up to ${fmtNum(m.firstLimit)}, then ${p(m.thenRate)}).`;
+  return `Claimed at your mileage rate (${veh}: ${p(m.firstRate)}/mile).`;
 }
 
 // ---------------- helpers ----------------
