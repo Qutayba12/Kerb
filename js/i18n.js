@@ -100,6 +100,10 @@ const AR = {
   'Import bank statement': 'استيراد كشف بنكي', 'Expense': 'مصروف', 'Skip': 'تخطّي', 'Won\'t be added': 'لن يُضاف',
   'Income (self-employed)': 'دخل (عمل حر)', 'Salary (PAYE)': 'راتب (PAYE)',
   'PAYE — kept separate. Add a payslip for full detail.': 'PAYE — يُحفظ منفصلاً. أضف قسيمة راتب للتفاصيل الكاملة.',
+  // payslips — job ended
+  'I\'ve left this job': 'لقد تركت هذه الوظيفة',
+  'Use the actual total earned (from your P45 / last payslip) — don\'t project it to a full year.': 'استخدم الإجمالي الفعلي المكتسب (من P45 / آخر قسيمة راتب) — دون توقّعه لسنة كاملة.',
+  'Annual salary': 'الراتب السنوي', 'Annual tax': 'الضريبة السنوية', 'Total salary': 'إجمالي الراتب', 'Total tax': 'إجمالي الضريبة',
   // duplicate detection
   'Already logged': 'مُسجّل مسبقاً', 'Skip likely duplicates (recommended)': 'تخطّي التكرارات المحتملة (موصى به)',
   // expense method advisor

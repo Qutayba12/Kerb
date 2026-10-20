@@ -111,6 +111,7 @@ const DEFAULTS = {
   expenseMethod: 'mileage',      // 'mileage' | 'actual'
   taxYear: currentTaxYear().label,
   payeSource: 'manual',          // 'manual' | 'payslips' (auto-derive from scanned payslips)
+  payeFinished: false,           // PAYE job has ended → use actual year total, don't project to 12 months
   payeSalary: 0,                 // annual gross from an employed (PAYE) job
   payeTaxPaid: 0,                // income tax already deducted via PAYE (optional)
   otherIncome: 0,                // other taxable income (rent, etc.)
