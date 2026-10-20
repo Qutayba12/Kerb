@@ -104,6 +104,9 @@ const AR = {
   'I\'ve left this job': 'لقد تركت هذه الوظيفة',
   'Use the actual total earned (from your P45 / last payslip) — don\'t project it to a full year.': 'استخدم الإجمالي الفعلي المكتسب (من P45 / آخر قسيمة راتب) — دون توقّعه لسنة كاملة.',
   'Annual salary': 'الراتب السنوي', 'Annual tax': 'الضريبة السنوية', 'Total salary': 'إجمالي الراتب', 'Total tax': 'إجمالي الضريبة',
+  // PDF export
+  'PDF': 'PDF', 'Save as PDF': 'حفظ كـ PDF', 'Save report (PDF)': 'حفظ التقرير (PDF)', 'Save full records (PDF)': 'حفظ السجلات الكاملة (PDF)',
+  'Nothing to export for this period': 'لا شيء للتصدير في هذه الفترة', 'No records to export yet': 'لا توجد سجلات للتصدير بعد',
   // duplicate detection
   'Already logged': 'مُسجّل مسبقاً', 'Skip likely duplicates (recommended)': 'تخطّي التكرارات المحتملة (موصى به)',
   // expense method advisor

@@ -2,14 +2,15 @@
 // ui/expenses.js — expenses list with period filter & totals,
 // plus a claimable-vs-paid summary.
 // ============================================================
-import { el, fmtGBP, groupByDay, fmtDate, dowName } from '../util.js';
+import { el, fmtGBP, fmtNum, groupByDay, fmtDate, dowName, todayISO } from '../util.js';
 import { earnings, expenses } from '../db.js';
 import { getSettings, categoryById } from '../store.js';
 import { deductibleAmount } from '../tax.js';
-import { icon, emptyState, searchBox } from './shared.js';
+import { icon, emptyState, searchBox, toast } from './shared.js';
 import { expenseItem } from './items.js';
 import { openExpenseForm } from './forms.js';
-import { header, periodChips, rangeFor, miniTile, getPeriod } from './income.js';
+import { header, periodChips, rangeFor, miniTile, getPeriod, pdfButton } from './income.js';
+import { printSheet, docSheet, docSection, dataTable, docFoot } from '../pdf.js';
 import { bus } from '../bus.js';
 
 export async function render() {
@@ -17,11 +18,14 @@ export async function render() {
   const allX = await expenses.all();
   const root = el('div');
 
-  root.append(header('Expenses', () => openExpenseForm()));
-  root.append(periodChips(() => bus.refresh()));
-
   const { start, end, label } = rangeFor(getPeriod(), s);
   const periodList = allX.filter(x => x.date >= start && x.date <= end);
+
+  root.append(header('Expenses', () => openExpenseForm(), pdfButton(() => {
+    if (!periodList.length) { toast('Nothing to export for this period', 'warn'); return; }
+    exportExpensesPdf(periodList, label, s);
+  })));
+  root.append(periodChips(() => bus.refresh()));
 
   const paid = periodList.reduce((t, x) => t + (x.amount || 0), 0);
   const claimable = periodList.reduce((t, x) => t + deductibleAmount(x, s), 0);
@@ -74,4 +78,24 @@ export async function render() {
   search.input.addEventListener('input', renderList);
   renderList();
   return root;
+}
+
+// Export the given expense list as a clean PDF (print dialog → Save as PDF).
+function exportExpensesPdf(list, label, s) {
+  const rows = list.slice().sort((a, b) => (a.date < b.date ? -1 : 1)).map(x => {
+    const cat = categoryById(x.category);
+    const bizPct = (x.bizPct != null ? x.bizPct : cat.defaultBizPct);
+    const covered = s.expenseMethod === 'mileage' && cat.vehicle;
+    const claim = deductibleAmount(x, s);
+    return [fmtDate(x.date, { withYear: true }), cat.label, (x.vendor || '').slice(0, 22), fmtGBP(x.amount || 0), bizPct + '%', covered ? '— mileage' : fmtGBP(claim)];
+  });
+  let paid = 0, claim = 0;
+  list.forEach(x => { paid += x.amount || 0; claim += deductibleAmount(x, s); });
+  rows.push(['Total', '', '', fmtGBP(paid), '', fmtGBP(claim)]);
+  const sheet = docSheet({ title: 'Expenses', subtitle: `${label} · ${s.expenseMethod === 'mileage' ? 'simplified mileage' : 'actual costs'} · prepared ${fmtDate(todayISO(), { withYear: true })}` });
+  sheet.append(docSection(`Expenses — ${list.length} entr${list.length === 1 ? 'y' : 'ies'}`));
+  sheet.append(dataTable(['Date', 'Category', 'Vendor', 'Paid', 'Biz%', 'Claimable'], rows, { lastStrong: true }));
+  if (s.expenseMethod === 'mileage') sheet.append(docFoot('Vehicle running costs show “— mileage” because you claim the simplified per-mile rate instead. Kept here for your cash records. Keep for at least 5 years.'));
+  else sheet.append(docFoot('Claimable is the business-use share of each cost. Keep records for at least 5 years after the filing deadline.'));
+  printSheet(sheet, { title: `Kerb expenses ${label}` });
 }

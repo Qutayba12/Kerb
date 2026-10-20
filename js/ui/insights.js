@@ -4,7 +4,7 @@
 // ============================================================
 import { el, fmtGBP, fmtNum, fmtPct, taxYearFromLabel, parseISO, daysBetween, todayISO } from '../util.js';
 import { earnings, expenses } from '../db.js';
-import { getSettings, saveSettings, categoryById, VEHICLE_LABELS } from '../store.js';
+import { getSettings, saveSettings, getConfig, categoryById, VEHICLE_LABELS } from '../store.js';
 import { computeTaxYear, compareExpenseMethods } from '../tax.js';
 import { groupedBars, barChart, PALETTE } from '../charts.js';
 import { icon, emptyState, toast } from './shared.js';
@@ -169,9 +169,10 @@ function monthlyBuckets(yE, allX, ty, s) {
   const idx = (iso) => { const d = parseISO(iso); return (d.getMonth() + 12 - 3) % 12; }; // Apr=0
   yE.forEach(e => { income[idx(e.date)] += (e.amount || 0) + (e.tips || 0); });
   const useMileage = s.expenseMethod === 'mileage';
-  // Approximate monthly deduction = that month's mileage (at the first-band rate,
-  // for the visual only) + that month's deductible expenses.
-  if (useMileage) yE.forEach(e => { deductions[idx(e.date)] += (e.miles || 0) * 0.55; });
+  // Approximate monthly deduction = that month's mileage (at this vehicle/year's
+  // first-band rate, for the visual only) + that month's deductible expenses.
+  const mileRate = (getConfig(s.taxYear).mileage[s.vehicle] || getConfig(s.taxYear).mileage.car).firstRate;
+  if (useMileage) yE.forEach(e => { deductions[idx(e.date)] += (e.miles || 0) * mileRate; });
   allX.filter(x => x.date >= ty.start && x.date <= ty.end).forEach(x => {
     deductions[idx(x.date)] += deductibleForMonthly(x, s);
   });

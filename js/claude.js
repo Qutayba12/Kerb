@@ -63,7 +63,7 @@ export async function extractReceipt(dataUrl, settings) {
 
   const body = {
     model,
-    max_tokens: 700,
+    max_tokens: 1400, // itemised receipts can be long — a low cap truncates the JSON
     messages: [{
       role: 'user',
       content: [
