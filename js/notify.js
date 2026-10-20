@@ -27,6 +27,12 @@ function onceToday(key) {
   if (l[key] === today) return false;
   l[key] = today; saveLog(l); return true;
 }
+// Fire a given notification key at most once ever (for deadline milestones).
+function onceEver(key) {
+  const l = log();
+  if (l[key]) return false;
+  l[key] = 1; saveLog(l); return true;
+}
 
 export async function showNotification(title, body, tag = 'kerb') {
   if (!canNotify()) return false;
@@ -46,9 +52,12 @@ export async function runChecks() {
   if (!s.notifyEnabled || !canNotify()) return;
   const [allE, allX] = await Promise.all([earnings.all(), expenses.all()]);
 
-  // 1) HMRC deadline approaching (within 30 days)
+  // 1) HMRC deadlines — nudge once at each milestone (≈2 months, 1 month,
+  //    2 weeks, 1 week, 3 days, 1 day, due day), then once if it slips overdue.
+  //    Each milestone fires only once ever, so no daily nagging.
   const sum = computeTaxYear(allE, allX, s);
   const d = sum.deadlines;
+  const BUCKETS = [0, 1, 3, 7, 14, 30, 60];
   const candidates = [
     ['register', 'Register with HMRC as self-employed', d.registerBy],
     ['file', 'File & pay your Self Assessment', d.onlineFileAndPay],
@@ -57,9 +66,19 @@ export async function runChecks() {
   for (const [key, label, date, only] of candidates) {
     if (only === false) continue;
     const days = daysBetween(todayISO(), date);
-    if (days >= 0 && days <= 30 && onceToday('deadline-' + key + '-' + date)) {
-      await showNotification('Kerb reminder', `${label} — due ${fmtDate(date, { withYear: true })} (${days}d left).`, 'kerb-deadline');
-      break; // one deadline reminder a day is enough
+    if (days < 0) {
+      // Overdue — one nudge in the first 45 days past the deadline.
+      if (days >= -45 && onceEver('deadline-overdue-' + key + '-' + date)) {
+        await showNotification('Kerb — action needed', `${label} is overdue (was ${fmtDate(date, { withYear: true })}). File as soon as you can to limit penalties.`, 'kerb-deadline');
+        break;
+      }
+      continue;
+    }
+    const bucket = BUCKETS.find(b => days <= b); // tightest milestone still ahead
+    if (bucket != null && onceEver('deadline-' + key + '-' + date + '-' + bucket)) {
+      const when = days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} left`;
+      await showNotification('Kerb reminder', `${label} — due ${fmtDate(date, { withYear: true })} (${when}).`, 'kerb-deadline');
+      break; // one deadline reminder per run is enough
     }
   }
 

@@ -57,6 +57,17 @@ export async function render() {
   ]);
   root.append(hero);
 
+  // ---- Self Assessment filing reminder (shows as the deadline approaches) ----
+  const fileDate = sum.deadlines.onlineFileAndPay;
+  const fileDays = daysBetween(todayISO(), fileDate);
+  if (fileDays <= 60) {
+    const overdue = fileDays < 0;
+    const owe = sum.totalSETax > 0 ? ` — about <b>${fmtGBP(sum.totalSETax)}</b> to pay` : '';
+    const banner = el('div', { class: 'callout callout--warn', style: 'cursor:pointer', html: `${icon('calendar')}<div><b>Self Assessment ${overdue ? 'is overdue' : 'due ' + humanUntil(fileDate)}.</b> File &amp; pay your ${sum.taxYear} return by <b>${fmtDate(fileDate, { withYear: true })}</b>${owe}. Tap for your report &amp; the step-by-step dates.</div>` });
+    banner.onclick = () => bus.navigate('tax');
+    root.append(banner);
+  }
+
   // ---- "Getting set up" progress (for a newly-registered driver) ----
   if (!s.setupDismissed) {
     const checks = [!!s.seStartDate, !!(s.utr && String(s.utr).trim()), allE.length > 0, (s.potTaxSaved || 0) > 0, !!s.lastBackupAt];
