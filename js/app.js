@@ -11,6 +11,7 @@ import { resumeIfActive } from './shift.js';
 import { runChecks, registerPeriodicSync } from './notify.js';
 import { applyDir, translate, isRTL } from './i18n.js';
 import { ensureUnlocked, installAutoLock } from './lock.js';
+import { ensurePersistentStorage } from './storage.js';
 
 import * as home from './ui/dashboard.js';
 import * as income from './ui/income.js';
@@ -174,6 +175,8 @@ async function boot() {
   if (isRTL()) { translate(document.querySelector('.topbar')); translate(document.querySelector('.tabbar')); }
   lockZoom();
   registerSW();
+  // Ask the browser to keep all on-device records permanently (never auto-evicted).
+  ensurePersistentStorage().catch(() => {});
 
   // If a PIN lock is set, hold here (behind the splash) until it's entered.
   await ensureUnlocked();

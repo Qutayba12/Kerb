@@ -8,6 +8,7 @@ import {
   VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS,
 } from '../store.js';
 import { importAll, wipeAll } from '../db.js';
+import { ensurePersistentStorage, storageStatus, fmtBytes } from '../storage.js';
 import { icon, field, selectInput, moneyInput, toast, confirmDialog, openSheet, closeSheet, downloadBackup } from './shared.js';
 import { testKey } from '../claude.js';
 import { setLang } from '../i18n.js';
@@ -302,6 +303,29 @@ function securityCard() {
 // ---------------- Data ----------------
 function dataCard() {
   const wrap = el('div', { class: 'card' });
+
+  // Storage durability: show whether the browser will keep the data permanently.
+  const storageRow = el('div', { style: 'margin-bottom:10px' });
+  wrap.append(storageRow);
+  (async () => {
+    const st = await storageStatus();
+    storageRow.replaceChildren();
+    if (!st.supported) {
+      storageRow.append(el('div', { class: 'callout callout--info', style: 'margin:0', html: `${icon('info')}<div>Your records are stored on this device. Export a backup now and then so nothing is lost.</div>` }));
+      return;
+    }
+    const used = st.usage ? ` · ${fmtBytes(st.usage)} used` : '';
+    if (st.persisted) {
+      storageRow.append(el('div', { class: 'callout callout--brand', style: 'margin:0', html: `${icon('check')}<div><b>Storage is permanent.</b> Your records won't be auto-deleted by the browser${used}. Still export a backup occasionally — it's the only copy off this device.</div>` }));
+    } else {
+      const box = el('div', { class: 'callout callout--warn', style: 'margin:0', html: `${icon('warn')}<div><b>Make storage permanent.</b> The browser could clear this app's data under storage pressure${used}. Tap below to protect it — on iPhone, also add Kerb to your Home Screen.</div>` });
+      const b = el('button', { class: 'btn btn--primary btn--sm', type: 'button', style: 'margin-top:10px', text: 'Protect my data' });
+      b.onclick = async () => { const r = await ensurePersistentStorage(); toast(r === 'persisted' ? 'Storage is now permanent' : 'Add Kerb to your Home Screen, then try again', r === 'persisted' ? 'ok' : 'warn'); bus.refresh(); };
+      box.append(b);
+      storageRow.append(box);
+    }
+  })();
+
   const csvBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
   csvBtn.innerHTML = icon('upload') + '<span>Import platform CSV</span>';
   csvBtn.onclick = () => bus.navigate('import');
