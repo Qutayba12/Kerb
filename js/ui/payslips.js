@@ -31,6 +31,21 @@ export async function render() {
   });
   root.append(el('div', { class: 'card' }, [toggleRow]));
 
+  // "job ended" toggle — when on, PAYE figures are the actual year total, not projected.
+  if (s.payeSource === 'payslips') {
+    const finToggle = el('input', { type: 'checkbox' }); finToggle.checked = !!s.payeFinished;
+    const finRow = el('label', { class: 'switch-row' }, [
+      el('div', {}, [el('div', { style: 'font-weight:700', text: 'I\'ve left this job' }), el('div', { class: 'tiny faint', text: 'Use the actual total earned (from your P45 / last payslip) — don\'t project it to a full year.' })]),
+      el('span', { class: 'switch' }, [finToggle, el('span', { class: 'track' })]),
+    ]);
+    finToggle.addEventListener('change', async () => {
+      saveSettings({ payeFinished: finToggle.checked });
+      applyDerivedPaye(await payslips.all());
+      toast('Saved', 'ok'); bus.refresh();
+    });
+    root.append(el('div', { class: 'card' }, [finRow]));
+  }
+
   // derived summary (this tax year)
   if (s.payeSource === 'payslips') {
     const d = derivePaye(all, s.taxYear);
@@ -38,10 +53,14 @@ export async function render() {
       el('div', { class: 'section-title', style: 'margin:0 0 8px', text: `From payslips · ${s.taxYear}` }),
       el('div', { class: 'grid-3' }, [
         tile('Payslips', String(d.count)),
-        tile('Annual salary', fmtGBP(d.annualSalary, { round: true })),
-        tile('Annual tax', fmtGBP(d.annualTax, { round: true })),
+        tile(d.final ? 'Total salary' : 'Annual salary', fmtGBP(d.annualSalary, { round: true })),
+        tile(d.final ? 'Total tax' : 'Annual tax', fmtGBP(d.annualTax, { round: true })),
       ]),
-      d.count ? el('div', { class: 'tiny muted', style: 'margin-top:8px', text: `Annualised from ${d.count} ${d.frequency} payslip(s). YTD gross so far ${fmtGBP(d.sumGross)}, tax ${fmtGBP(d.sumTax)}.` }) : el('div', { class: 'tiny muted', style: 'margin-top:8px', text: 'Add a payslip to populate your PAYE figures.' }),
+      d.count
+        ? el('div', { class: 'tiny muted', style: 'margin-top:8px', text: d.final
+            ? `Final total from ${d.count} payslip(s) — job ended, so figures aren't projected to a full year.`
+            : `Annualised from ${d.count} ${d.frequency} payslip(s). YTD gross so far ${fmtGBP(d.sumGross)}, tax ${fmtGBP(d.sumTax)}.` })
+        : el('div', { class: 'tiny muted', style: 'margin-top:8px', text: 'Add a payslip to populate your PAYE figures.' }),
     ]));
   }
 
