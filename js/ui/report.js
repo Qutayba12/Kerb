@@ -85,8 +85,11 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
   } else {
     addRow(tEnter, 'Total allowable business expenses', fmtGBP(sum.rawDeductions), 'Box 20');
   }
-  addRow(tEnter, 'Net profit', fmtGBP(sum.netProfit), 'Box 21', true);
-  addRow(tEnter, 'Taxable profit', fmtGBP(sum.netProfit), 'Box 31');
+  addRow(tEnter, 'Net profit', fmtGBP(Math.max(0, sum.netProfit)), 'Box 21', true);
+  if (sum.lossThisYear > 0) addRow(tEnter, 'Net loss for the year', fmtGBP(sum.lossThisYear), 'losses section');
+  if (sum.lossUsed > 0) addRow(tEnter, 'Loss brought forward, set against this year', fmtGBP(sum.lossUsed), 'losses section');
+  addRow(tEnter, 'Taxable profit', fmtGBP(sum.taxableProfit), 'Box 31');
+  if (sum.lossCarriedForward > 0) addRow(tEnter, 'Total loss to carry forward', fmtGBP(sum.lossCarriedForward), 'losses section');
   addRow(tEnter, sum.class2.credited ? 'Class 2 NIC — profits above Small Profits Threshold' : 'Class 2 NIC', sum.class2.credited ? 'Treated as paid' : 'Voluntary', 'Box 36');
   sheet.append(tEnter);
   sheet.append(el('div', { class: 'report__note', text: sum.usedTradingAllowance
@@ -100,15 +103,31 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
   if (sum.usedTradingAllowance) {
     addRow(t1, 'Trading income allowance', '−' + fmtGBP(sum.effectiveDeduction), 'Box 10.1');
   } else {
-    if (sum.mileageDed) addRow(t1, `Business mileage (${fmtNum(sum.businessMiles)} miles)`, '−' + fmtGBP(sum.mileageDed), 'in Box 20');
+    if (sum.mileageDed && (sum.mileageRows || []).length > 1) {
+      sum.mileageRows.forEach(r => addRow(t1, `Business mileage — ${r.label} (${fmtNum(r.miles)} miles)`, '−' + fmtGBP(r.amount), 'in Box 20'));
+    } else if (sum.mileageDed) {
+      addRow(t1, `Business mileage (${fmtNum(sum.businessMiles)} miles)`, '−' + fmtGBP(sum.mileageDed), 'in Box 20');
+    }
     if (sum.otherDeductible) addRow(t1, 'Other allowable expenses', '−' + fmtGBP(sum.otherDeductible), 'in Box 20');
     if (sum.homeDed) addRow(t1, 'Use of home (simplified)', '−' + fmtGBP(sum.homeDed), 'in Box 20');
     addRow(t1, 'Total allowable expenses', '−' + fmtGBP(sum.rawDeductions), 'Box 20', true);
   }
-  addRow(t1, 'Net profit (taxable)', fmtGBP(sum.netProfit), 'Box 21 / 31', true);
+  if (sum.lossUsed > 0 || sum.lossThisYear > 0) {
+    addRow(t1, sum.lossThisYear > 0 ? 'Net loss for the year' : 'Net profit', fmtGBP(sum.lossThisYear > 0 ? sum.lossThisYear : sum.netProfit), 'Box 21', true);
+    if (sum.lossUsed > 0) addRow(t1, 'Less: loss brought forward from earlier years', '−' + fmtGBP(sum.lossUsed));
+    addRow(t1, 'Taxable profit', fmtGBP(sum.taxableProfit), 'Box 31', true);
+  } else {
+    addRow(t1, 'Net profit (taxable)', fmtGBP(sum.netProfit), 'Box 21 / 31', true);
+  }
   sheet.append(t1);
+  if (sum.lossCarriedForward > 0) {
+    sheet.append(el('div', { class: 'report__note', text: `A trading loss of ${fmtGBP(sum.lossCarriedForward)} remains to carry forward against profits of the same trade in future years. Record it in the losses section of your SA103S so HMRC carries it over.` }));
+  }
   if (s.expenseMethod === 'mileage') {
-    sheet.append(el('div', { class: 'report__note', text: `Mileage is claimed at HMRC's simplified rate for a ${(VEHICLE_LABELS[s.vehicle] || 'vehicle').toLowerCase()}. For a car that is 55p/mile for the first 10,000 business miles and 25p after. When you claim mileage you cannot also claim fuel, insurance or repairs for the same vehicle.` }));
+    const perVeh = (sum.mileageRows || []).length > 1
+      ? ' Each vehicle has its own first 10,000 business miles at the higher rate, which is why they are listed separately.'
+      : '';
+    sheet.append(el('div', { class: 'report__note', text: `Mileage is claimed at HMRC's simplified rate. For a car that is 55p/mile for the first 10,000 business miles and 25p after.${perVeh} When you claim mileage you cannot also claim fuel, insurance or repairs for the same vehicle.` }));
   }
 
   // expense breakdown by category (for records / to justify box 20)

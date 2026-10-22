@@ -104,6 +104,14 @@ const AR = {
   'I\'ve left this job': 'لقد تركت هذه الوظيفة',
   'Use the actual total earned (from your P45 / last payslip) — don\'t project it to a full year.': 'استخدم الإجمالي الفعلي المكتسب (من P45 / آخر قسيمة راتب) — دون توقّعه لسنة كاملة.',
   'Annual salary': 'الراتب السنوي', 'Annual tax': 'الضريبة السنوية', 'Total salary': 'إجمالي الراتب', 'Total tax': 'إجمالي الضريبة',
+  // vehicles, losses, terms
+  'Vehicles': 'المركبات', 'Add a vehicle': 'إضافة مركبة', 'Add vehicle': 'إضافة مركبة', 'Type': 'النوع',
+  'Remove': 'إزالة', 'Remove vehicle?': 'إزالة المركبة؟', 'Vehicle added': 'أُضيفت المركبة', 'Vehicle removed': 'أُزيلت المركبة',
+  'Vehicle': 'المركبة', 'Carry losses forward': 'ترحيل الخسائر',
+  'Net profit': 'صافي الربح', 'Taxable profit': 'الربح الخاضع للضريبة', 'Loss this year': 'خسارة هذه السنة',
+  'Less: loss brought forward': 'ناقص: خسارة مُرحّلة', 'Trading losses:': 'الخسائر التجارية:',
+  'Terms of use & privacy': 'شروط الاستخدام والخصوصية', 'Terms & privacy': 'الشروط والخصوصية',
+  'Back to Settings': 'العودة للإعدادات',
   // PDF export
   'PDF': 'PDF', 'Save as PDF': 'حفظ كـ PDF', 'Save report (PDF)': 'حفظ التقرير (PDF)', 'Save full records (PDF)': 'حفظ السجلات الكاملة (PDF)',
   'Nothing to export for this period': 'لا شيء للتصدير في هذه الفترة', 'No records to export yet': 'لا توجد سجلات للتصدير بعد',
