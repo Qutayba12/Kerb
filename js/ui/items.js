@@ -42,7 +42,7 @@ export function expenseItem(x) {
   if (nonDeductible) subBits.push('not deductible');
   else if (ded < (x.amount || 0)) subBits.push(`${fmtGBP(ded)} claimable`);
   const node = el('div', { class: 'item' }, [
-    el('div', { class: 'item__icon', style: `background:var(--neg-tint);color:var(--neg)`, html: icon(cat.icon) }),
+    el('div', { class: 'item__icon', style: `background:var(--neg-tint);color:var(--neg-text)`, html: icon(cat.icon) }),
     el('div', { class: 'item__main' }, [
       el('div', { class: 'item__title', text: cat.label + (x.source === 'claude' ? '  ✨' : '') }),
       el('div', { class: 'item__sub', text: subBits.join('  ·  ') }),

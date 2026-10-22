@@ -138,7 +138,7 @@ export function openExpenseForm(existing = null, opts = {}) {
   const updateVehNote = () => {
     const cat = categoryById(catSel.value);
     if (s.expenseMethod === 'mileage' && cat.vehicle) {
-      vehNote.innerHTML = `<span style="color:var(--warn)">⚠ Covered by the mileage rate — not separately deductible. Tracked for your cash records only.</span>`;
+      vehNote.innerHTML = `<span style="color:var(--warn-text)">⚠ Covered by the mileage rate — not separately deductible. Tracked for your cash records only.</span>`;
     } else vehNote.textContent = 'Deductible business expense.';
   };
   catSel.addEventListener('change', () => { bizPct.value = categoryById(catSel.value).defaultBizPct; updateVehNote(); });
@@ -309,7 +309,7 @@ function dateFieldWithYearCheck(label, dateInput) {
     const out = !!(d && (d < ty.start || d > ty.end));
     warn.hidden = !out;
     if (!out) return;
-    warn.append(el('div', { style: 'color:var(--warn)', html: `⚠ This date is in another tax year — it won't show in your <b>${yr}</b> totals.` }));
+    warn.append(el('div', { style: 'color:var(--warn-text)', html: `⚠ This date is in another tax year — it won't show in your <b>${yr}</b> totals.` }));
     const fix = suggestInYear(d, ty);
     if (fix) {
       const btn = el('button', { class: 'btn btn--sub btn--sm', type: 'button', style: 'margin-top:6px', text: `Use ${fmtDate(fix, { withYear: true })} instead` });
