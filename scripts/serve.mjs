@@ -20,11 +20,16 @@ const server = createServer(async (req, res) => {
   try {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (path === '/') path = '/index.html';
-    const filePath = normalize(join(ROOT, path));
+    let filePath = normalize(join(ROOT, path));
     if (!filePath.startsWith(ROOT)) { res.writeHead(403).end('Forbidden'); return; }
     let s;
     try { s = await stat(filePath); } catch { res.writeHead(404).end('Not found'); return; }
-    if (s.isDirectory()) { res.writeHead(404).end('Not found'); return; }
+    // Serve a directory's index.html, so local dev matches the static host
+    // (e.g. /welcome -> welcome/index.html).
+    if (s.isDirectory()) {
+      const idx = join(filePath, 'index.html');
+      try { await stat(idx); filePath = idx; } catch { res.writeHead(404).end('Not found'); return; }
+    }
     const body = await readFile(filePath);
     res.writeHead(200, { 'content-type': TYPES[extname(filePath)] || 'application/octet-stream', 'cache-control': 'no-cache' });
     res.end(body);

@@ -2,7 +2,7 @@
 // service-worker.js — offline app shell for the Kerb PWA.
 // Bump CACHE when any precached file changes.
 // ============================================================
-const CACHE = 'kerb-v34';
+const CACHE = 'kerb-v35';
 
 const ASSETS = [
   './',
@@ -92,6 +92,10 @@ self.addEventListener('fetch', (event) => {
 
   // Never touch cross-origin requests (e.g. the Anthropic API).
   if (url.origin !== self.location.origin) return;
+
+  // The marketing page lives outside the app shell — always let the network
+  // serve it, so it is never replaced by the app's cached index.html.
+  if (url.pathname.startsWith('/welcome')) return;
 
   // Navigations: network-first for a fresh shell, fall back to cache offline.
   if (req.mode === 'navigate') {
