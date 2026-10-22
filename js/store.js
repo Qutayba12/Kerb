@@ -173,6 +173,98 @@ const DEFAULTS = {
   rateOverrides: {},             // { '2026/27': { personalAllowance: 12570, ... } }
 };
 
+// ---------------------------------------------------------------
+// Validate settings arriving from a backup file. A backup is a plain
+// JSON file a driver may be handed, so nothing in it can be trusted:
+// previously it was merged wholesale, which let a crafted file put
+// markup into values that are printed into the UI. Unknown keys are
+// dropped and every known key is coerced to its expected shape.
+// ---------------------------------------------------------------
+const SECRET_KEYS = ['apiKey', 'pinHash', 'pinSalt', 'lockEnabled'];
+const ENUMS = {
+  region: ['ruk', 'scotland'],
+  vehicle: ['car', 'motorcycle', 'bicycle'],
+  expenseMethod: ['mileage', 'actual'],
+  payeSource: ['manual', 'payslips'],
+  taxPotMode: ['auto', 'manual'],
+  goalMetric: ['income', 'profit'],
+  goalPeriod: ['day', 'week', 'month'],
+  theme: ['system', 'light', 'dark'],
+  lang: ['en', 'ar'],
+  studentLoanPlan: ['none', 'plan1', 'plan2', 'plan4', 'plan5', 'postgrad'],
+};
+const sNum = (v, lo, hi, d = 0) => { const n = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+// Values that end up on screen never need angle brackets.
+const sText = (v, n = 120) => (typeof v === 'string' ? v : '').replace(/[<>]/g, '').slice(0, n);
+const sDate = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '');
+const sColour = (v) => (typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : '#8a8a8a');
+const sYear = (v) => (typeof v === 'string' && /^\d{4}\/\d{2}$/.test(v) ? v : DEFAULTS.taxYear);
+
+export function sanitiseSettings(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  const has = (k) => Object.prototype.hasOwnProperty.call(raw, k);
+  const put = (k, v) => { if (has(k)) out[k] = v; };
+
+  for (const [k, allowed] of Object.entries(ENUMS)) put(k, allowed.includes(raw[k]) ? raw[k] : DEFAULTS[k]);
+  put('taxYear', sYear(raw.taxYear));
+  for (const k of ['payeSalary', 'payeTaxPaid', 'otherIncome', 'vehiclePotPerWeek', 'savingsGoalPerWeek',
+                   'potTaxSaved', 'potVehicleSaved', 'potSavingsSaved', 'goalAmount']) put(k, sNum(raw[k], 0, 1e9));
+  put('taxPotManualPct', sNum(raw.taxPotManualPct, 0, 100, 30));
+  put('homeOfficeHoursPerMonth', sNum(raw.homeOfficeHoursPerMonth, 0, 744));
+  put('autoLockMins', sNum(raw.autoLockMins, 0, 1440, 2));
+  for (const k of ['payeFinished', 'lossRelief', 'goalEnabled', 'notifyEnabled', 'setupDismissed', 'onboarded']) put(k, !!raw[k]);
+  put('seStartDate', sDate(raw.seStartDate));
+  put('lastBackupAt', sText(raw.lastBackupAt, 40));
+  put('traderName', sText(raw.traderName, 80));
+  put('utr', sText(raw.utr, 20));
+  put('claudeModel', sText(raw.claudeModel, 60));
+
+  if (Array.isArray(raw.customPlatforms)) {
+    out.customPlatforms = raw.customPlatforms.slice(0, 50).filter(p => p && typeof p === 'object').map(p => ({
+      id: sText(p.id, 40) || 'p' + Math.random().toString(36).slice(2, 8),
+      name: sText(p.name, 40) || 'Platform',
+      color: sColour(p.color),
+      kind: sText(p.kind, 20) || 'other',
+    }));
+  }
+  if (Array.isArray(raw.vehicles)) {
+    out.vehicles = raw.vehicles.slice(0, 20).filter(v => v && typeof v === 'object').map(v => ({
+      id: sText(v.id, 40) || 'v' + Math.random().toString(36).slice(2, 8),
+      label: sText(v.label, 40) || 'Vehicle',
+      type: ENUMS.vehicle.includes(v.type) ? v.type : 'car',
+    }));
+  }
+  if (Array.isArray(raw.hmrcPayments)) {
+    out.hmrcPayments = raw.hmrcPayments.slice(0, 500).filter(p => p && typeof p === 'object').map(p => ({
+      id: sText(p.id, 40) || 'h' + Math.random().toString(36).slice(2, 8),
+      taxYear: sYear(p.taxYear), date: sDate(p.date) || DEFAULTS.taxYear.slice(0, 4) + '-04-06',
+      amount: sNum(p.amount, 0, 1e9), note: sText(p.note, 120),
+    }));
+  }
+  // Rate overrides only ever hold numbers; keep the numeric leaves, drop the rest.
+  if (raw.rateOverrides && typeof raw.rateOverrides === 'object') {
+    const ro = {};
+    for (const [year, obj] of Object.entries(raw.rateOverrides).slice(0, 20)) {
+      if (!/^\d{4}\/\d{2}$/.test(year) || !obj || typeof obj !== 'object') continue;
+      ro[year] = numbersOnly(obj, 0);
+    }
+    out.rateOverrides = ro;
+  }
+  for (const k of SECRET_KEYS) delete out[k];
+  return out;
+}
+function numbersOnly(obj, depth) {
+  if (depth > 3) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(obj).slice(0, 40)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    else if (Array.isArray(v)) out[k] = v.slice(0, 20).map(x => (x && typeof x === 'object' ? numbersOnly(x, depth + 1) : (Number.isFinite(x) ? x : 0)));
+    else if (v && typeof v === 'object') out[k] = numbersOnly(v, depth + 1);
+  }
+  return out;
+}
+
 let _settings = null;
 
 export function loadSettings() {
