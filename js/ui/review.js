@@ -1,0 +1,226 @@
+// ============================================================
+// ui/review.js — "Check before you file": the review an accountant
+// would do. It reads your records for the working tax year and
+// flags what looks wrong, missing or worth a second look BEFORE
+// the figures reach HMRC. Nothing here changes your data.
+// ============================================================
+import { el, fmtGBP, fmtNum, fmtDate, todayISO, daysBetween, taxYearFromLabel } from '../util.js';
+import { earnings, expenses } from '../db.js';
+import { getSettings, categoryById, platformById } from '../store.js';
+import { computeTaxYear } from '../tax.js';
+import { icon, downloadBackup } from './shared.js';
+import { setPeriod as setIncomePeriod } from './income.js';
+import { bus } from '../bus.js';
+
+export async function render() {
+  const s = getSettings();
+  const [allE, allX] = await Promise.all([earnings.all(), expenses.all()]);
+  const sum = computeTaxYear(allE, allX, s);
+  const ty = taxYearFromLabel(s.taxYear);
+  const E = allE.filter(e => e.date >= ty.start && e.date <= ty.end);
+  const X = allX.filter(x => x.date >= ty.start && x.date <= ty.end);
+
+  const root = el('div');
+  root.append(el('h2', { style: 'font-size:22px;margin:4px 2px 4px', text: 'Check before you file' }));
+  root.append(el('div', { class: 'tiny muted', style: 'margin:0 2px 14px', text: `A review of your ${s.taxYear} records — the things an accountant would look at.` }));
+
+  const checks = buildChecks({ s, sum, ty, E, X, allE, allX });
+  const problems = checks.filter(c => c.level === 'bad' || c.level === 'warn');
+  const infos = checks.filter(c => c.level === 'info');
+  const good = checks.filter(c => c.level === 'ok');
+
+  // headline
+  const clean = problems.length === 0;
+  root.append(el('div', {
+    class: 'callout callout--' + (clean ? 'brand' : problems.some(p => p.level === 'bad') ? 'warn' : 'warn'),
+    html: `${icon(clean ? 'check' : 'warn')}<div>${clean
+      ? `<b>Nothing looks wrong.</b> ${E.length} income ${E.length === 1 ? 'entry' : 'entries'} and ${X.length} ${X.length === 1 ? 'expense' : 'expenses'} recorded for ${s.taxYear}. Open your report when you're ready to file.`
+      : `<b>${problems.length} thing${problems.length === 1 ? '' : 's'} to look at</b> before you file your ${s.taxYear} return.`}</div>`,
+  }));
+
+  if (problems.length) { root.append(sectionTitle('Worth fixing')); problems.forEach(c => root.append(checkCard(c))); }
+  if (infos.length) { root.append(sectionTitle('Good to know')); infos.forEach(c => root.append(checkCard(c))); }
+  if (good.length) { root.append(sectionTitle('Looks fine')); const ok = el('div', { class: 'card card--flush' }); good.forEach(c => ok.append(okRow(c))); root.append(ok); }
+
+  const go = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:16px' });
+  go.innerHTML = icon('note') + '<span>Open my Self Assessment report</span>';
+  go.onclick = () => bus.navigate('report');
+  root.append(go);
+  root.append(el('div', { class: 'tiny faint center', style: 'margin-top:12px', text: 'This review looks for common mistakes. It cannot catch everything — you are responsible for the figures you file.' }));
+  return root;
+}
+
+// ---------------- the checks ----------------
+function buildChecks({ s, sum, ty, E, X, allE, allX }) {
+  const out = [];
+  const add = (level, title, detail, action) => out.push({ level, title, detail, action });
+
+  // 1) entries dated outside the working tax year
+  const outside = [...allE, ...allX].filter(r => r.date < ty.start || r.date > ty.end);
+  if (outside.length) {
+    add('bad', `${outside.length} entr${outside.length === 1 ? 'y is' : 'ies are'} dated outside ${s.taxYear}`,
+      `They are excluded from this year's totals. The usual cause is the date picker landing on the wrong year. Check them and fix the date if needed.`,
+      { label: 'Review all entries', run: () => { setIncomePeriod('all'); bus.navigate('income'); } });
+  } else if (E.length) add('ok', 'All entries fall inside the tax year', '');
+
+  // 2) nothing recorded at all
+  if (!E.length) {
+    add('bad', 'No income recorded for this tax year', 'There is nothing to file yet. Log your shifts, or import a statement.',
+      { label: 'Add earnings', run: () => bus.navigate('income') });
+    return out;
+  }
+
+  // 3) no expenses at all → likely missing claims
+  if (!X.length) {
+    add('warn', 'No expenses recorded', 'Almost every driver has costs — phone, insurance, repairs, parking, bags. Without them you may pay more tax than you need to.',
+      { label: 'Add an expense', run: () => bus.navigate('expenses') });
+  }
+
+  // 4) mileage method with no miles
+  if (s.expenseMethod === 'mileage' && sum.businessMiles <= 0) {
+    add('bad', 'You claim mileage, but no business miles are logged',
+      'Your biggest deduction is missing. Add the miles to each shift, or switch to the actual-costs method.',
+      { label: 'Open Income', run: () => bus.navigate('income') });
+  } else if (s.expenseMethod === 'mileage') {
+    add('ok', `${fmtNum(sum.businessMiles)} business miles claimed`, '');
+  }
+
+  // 5) likely duplicates
+  const dupE = findDuplicates(E, e => `${e.date}|${e.platform}|${Math.round(((e.amount || 0) + (e.tips || 0)) * 100)}`);
+  const dupX = findDuplicates(X, x => `${x.date}|${Math.round((x.amount || 0) * 100)}`);
+  const dupN = dupE + dupX;
+  if (dupN) {
+    add('warn', `${dupN} possible duplicate ${dupN === 1 ? 'entry' : 'entries'}`,
+      'Some entries share the same date and amount. If a payout was added twice, your figures will be overstated. Worth a quick look.',
+      { label: 'Review entries', run: () => { setIncomePeriod('ty'); bus.navigate('income'); } });
+  } else add('ok', 'No duplicate-looking entries', '');
+
+  // 6) missing details needed on the report
+  const missing = [];
+  if (!s.traderName || !String(s.traderName).trim()) missing.push('your name');
+  if (!s.utr || !String(s.utr).trim()) missing.push('your UTR');
+  if (missing.length) {
+    add('warn', `Your report is missing ${missing.join(' and ')}`,
+      'These appear on the Self Assessment report. Add them so the document is complete.',
+      { label: 'Open Settings', run: () => bus.navigate('settings') });
+  }
+  if (!s.seStartDate) {
+    add('warn', 'No self-employment start date set',
+      'Kerb uses it to work out your HMRC registration deadline and to date your first return correctly.',
+      { label: 'Set it now', run: () => bus.navigate('settings') });
+  }
+
+  // 7) backup
+  const days = s.lastBackupAt ? daysBetween(s.lastBackupAt.slice(0, 10), todayISO()) : Infinity;
+  if (days >= 30) {
+    add('warn', s.lastBackupAt ? 'Your last backup is over a month old' : 'You have never exported a backup',
+      'Your records live only on this device, and HMRC expects you to keep them for 5 years after filing.',
+      { label: 'Export a backup', run: () => downloadBackup().then(() => bus.refresh()) });
+  } else add('ok', 'Records backed up recently', '');
+
+  // 8) zero business-use expenses
+  const zeroBiz = X.filter(x => (x.bizPct != null ? x.bizPct : categoryById(x.category).defaultBizPct) === 0);
+  if (zeroBiz.length) {
+    add('info', `${zeroBiz.length} expense${zeroBiz.length === 1 ? ' is' : 's are'} set to 0% business use`,
+      'They are recorded but claim nothing. If any is genuinely a business cost, raise its business-use percentage.',
+      { label: 'Open Expenses', run: () => bus.navigate('expenses') });
+  }
+
+  // 9) vehicle costs logged while on the mileage method
+  if (s.expenseMethod === 'mileage') {
+    const veh = X.filter(x => categoryById(x.category).vehicle);
+    const vehTotal = veh.reduce((t, x) => t + (x.amount || 0), 0);
+    if (veh.length) {
+      add('info', `${fmtGBP(vehTotal)} of vehicle running costs are not separately claimed`,
+        'That is correct while you use simplified mileage — the per-mile rate already covers fuel, insurance and repairs. They are kept for your cash records. Kerb checks the other method for you in Insights.');
+    }
+  }
+
+  // 10) outliers worth double-checking
+  const amounts = E.map(e => (e.amount || 0) + (e.tips || 0)).filter(n => n > 0);
+  const med = median(amounts);
+  const big = E.filter(e => med > 0 && ((e.amount || 0) + (e.tips || 0)) > med * 6);
+  if (big.length) {
+    const b = big[0];
+    add('info', `${big.length} unusually large income ${big.length === 1 ? 'entry' : 'entries'}`,
+      `For example ${fmtGBP((b.amount || 0) + (b.tips || 0))} on ${fmtDate(b.date, { withYear: true })} (${platformById(b.platform).name}), against a typical ${fmtGBP(med)}. Might be a weekly total entered as one day — fine if so, worth checking if not.`,
+      { label: 'Review entries', run: () => { setIncomePeriod('ty'); bus.navigate('income'); } });
+  }
+
+  // 11) trading allowance in play
+  if (sum.usedTradingAllowance) {
+    add('info', 'The £1,000 trading allowance is being used',
+      'It beats your recorded expenses this year, so Kerb claims it instead. You cannot claim both — if you have costs you have not logged yet, add them and this may flip.');
+  }
+
+  // 12) losses
+  if (sum.lossCarriedForward > 0) {
+    add('info', `${fmtGBP(sum.lossCarriedForward)} of losses carried forward`,
+      'Declare this in the losses section of your return so HMRC carries it into future years. If you miss it, you lose the relief.');
+  }
+
+  // 13) VAT threshold
+  if (sum.grossIncome > sum.vat.threshold * 0.85) {
+    const over = sum.grossIncome > sum.vat.threshold;
+    add(over ? 'bad' : 'warn', over ? 'Your turnover is over the VAT threshold' : 'Your turnover is close to the VAT threshold',
+      `Turnover is ${fmtGBP(sum.grossIncome)} against a ${fmtGBP(sum.vat.threshold)} threshold. ${over ? 'You are likely required to register for VAT — check this urgently.' : 'Keep an eye on it; registration becomes compulsory once you pass it.'}`);
+  }
+
+  // 14) filing window
+  const d = sum.deadlines;
+  const toDeadline = daysBetween(todayISO(), d.onlineFileAndPay);
+  if (todayISO() <= ty.end) {
+    add('info', 'This tax year has not ended yet', `It runs to ${fmtDate(ty.end, { withYear: true })}. You can file from 6 April, and the deadline is ${fmtDate(d.onlineFileAndPay, { withYear: true })}.`);
+  } else if (toDeadline < 0) {
+    add('bad', 'The filing deadline has passed', `It was ${fmtDate(d.onlineFileAndPay, { withYear: true })}. File as soon as you can — penalties and interest build up.`);
+  } else {
+    add(toDeadline <= 30 ? 'warn' : 'info', `${toDeadline} day${toDeadline === 1 ? '' : 's'} until the filing deadline`, `File and pay by ${fmtDate(d.onlineFileAndPay, { withYear: true })}.`);
+  }
+
+  return out;
+}
+
+// ---------------- helpers ----------------
+function findDuplicates(list, keyOf) {
+  const seen = new Map();
+  let n = 0;
+  for (const r of list) {
+    const k = keyOf(r);
+    const c = (seen.get(k) || 0) + 1;
+    seen.set(k, c);
+    if (c > 1) n++;
+  }
+  return n;
+}
+function median(arr) {
+  if (!arr.length) return 0;
+  const a = arr.slice().sort((x, y) => x - y);
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+function sectionTitle(t) { return el('div', { class: 'section-title', text: t }); }
+const TONE = { bad: 'neg', warn: 'warn', info: 'info', ok: 'pos' };
+function checkCard(c) {
+  const tone = TONE[c.level];
+  const card = el('div', { class: 'card' }, [
+    el('div', { class: 'row', style: 'gap:10px;align-items:flex-start' }, [
+      el('div', { class: 'item__icon', style: `background:var(--${tone}-tint);color:var(--${tone});flex:none`, html: icon(c.level === 'bad' || c.level === 'warn' ? 'warn' : 'info') }),
+      el('div', { style: 'min-width:0' }, [
+        el('div', { style: 'font-weight:750', text: c.title }),
+        c.detail ? el('div', { class: 'tiny muted', style: 'margin-top:4px;line-height:1.55', text: c.detail }) : null,
+      ]),
+    ]),
+  ]);
+  if (c.action) {
+    const b = el('button', { class: 'btn btn--sub btn--block btn--sm', type: 'button', style: 'margin-top:10px', text: c.action.label });
+    b.onclick = c.action.run;
+    card.append(b);
+  }
+  return card;
+}
+function okRow(c) {
+  return el('div', { class: 'item' }, [
+    el('div', { class: 'item__icon', style: 'background:var(--pos-tint);color:var(--pos)', html: icon('check') }),
+    el('div', { class: 'item__main' }, [el('div', { class: 'item__title', text: c.title })]),
+  ]);
+}

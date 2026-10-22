@@ -146,5 +146,30 @@ const Lbig = computeTaxYear(earnL, bigLoss, sL);
 eq('big loss: all profit covered', Lbig.taxableProfit, 0);
 eq('big loss: remainder carried on', Lbig.lossCarriedForward, 38000 - 28000);
 
+
+console.log('\n--- MTD quarterly summary ---');
+const { quarterlySummary } = await import('../js/tax.js');
+const sQ = { region:'ruk', vehicle:'car', expenseMethod:'mileage', taxYear:'2026/27', payeSalary:0,
+  otherIncome:0, studentLoanPlan:'none', homeOfficeHoursPerMonth:0 };
+const earnQ = [
+  { id:'q1', date:'2026-05-01', platform:'amazonflex', amount:5000, tips:0, miles:6000 },  // Q1
+  { id:'q2', date:'2026-08-01', platform:'amazonflex', amount:4000, tips:0, miles:6000 },  // Q2 crosses 10k
+  { id:'q3', date:'2026-11-01', platform:'amazonflex', amount:3000, tips:0, miles:1000 },  // Q3 all at 25p
+];
+const q = quarterlySummary(earnQ, [], sQ);
+eq('4 quarters', q.quarters.length, 4);
+eq('Q1 income', q.quarters[0].income, 5000);
+eq('Q1 mileage (6,000 @55p)', q.quarters[0].mileage, 6000*0.55);
+// Q2: 4,000 miles finish the 10k band @55p, next 2,000 @25p
+eq('Q2 mileage (rate steps mid-quarter)', q.quarters[1].mileage, 4000*0.55 + 2000*0.25);
+eq('Q3 mileage (all @25p)', q.quarters[2].mileage, 1000*0.25);
+eq('cumulative income to Q3', q.quarters[2].cumIncome, 12000);
+eq('Q1 due date', q.quarters[0].due === '2026-08-07' ? 1 : 0, 1);
+eq('Q4 due date', q.quarters[3].due === '2027-05-07' ? 1 : 0, 1);
+// total mileage must equal the annual per-vehicle calculation
+const ann = computeTaxYear(earnQ, [], sQ);
+eq('quarters sum to the annual mileage claim',
+   q.quarters.reduce((t,r)=>t+r.mileage,0), ann.mileageDed);
+
 console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'} — ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

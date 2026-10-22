@@ -6,7 +6,7 @@
 // method: tax(base + profit) − tax(base). Class 4 NIC is charged on
 // self-employment profit against its own thresholds.
 // ============================================================
-import { round2, clamp, taxYearFromLabel, taxYearFromStart, taxYearOf, inRange, saDeadlines } from './util.js';
+import { round2, clamp, taxYearFromLabel, taxYearFromStart, taxYearOf, inRange, todayISO, saDeadlines } from './util.js';
 import { getConfig, categoryById, platformById } from './store.js';
 
 // Income tax on a total income figure, using cumulative taxable-income bands.
@@ -169,8 +169,43 @@ export function deductibleAmount(x, settings) {
   return (x.amount || 0) * bizPct;
 }
 
-// Full tax-year computation.
+// A tiny memo cache. computeTaxYear is pure for a given (data, settings, year),
+// so repeated calls inside one render reuse the result. The key is cheap to
+// build: record counts + a running checksum of the fields that affect tax.
+const _memo = new Map();
+function cacheKey(allEarnings, allExpenses, settings, yearLabel) {
+  let h = 0;
+  const mix = (v) => { h = (h * 31 + v) | 0; };
+  for (const e of allEarnings) {
+    mix(e.date ? e.date.charCodeAt(8) + e.date.charCodeAt(5) * 31 : 0);
+    mix(Math.round(((e.amount || 0) + (e.tips || 0)) * 100));
+    mix(Math.round((e.miles || 0) * 10));
+    mix((e.vehicleId || '').length);
+  }
+  for (const x of allExpenses) {
+    mix(Math.round((x.amount || 0) * 100));
+    mix(x.bizPct == null ? -1 : x.bizPct);
+    mix((x.category || '').length);
+    mix(x.date ? x.date.charCodeAt(8) : 0);
+  }
+  const st = settings;
+  return [yearLabel, allEarnings.length, allExpenses.length, h, st.expenseMethod, st.region,
+    st.vehicle, st.payeSalary, st.otherIncome, st.studentLoanPlan, st.homeOfficeHoursPerMonth,
+    st.lossRelief === false ? 0 : 1, JSON.stringify(st.vehicles || [])].join('|');
+}
+
+// Full tax-year computation (memoised — see cacheKey above).
 export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = settings.taxYear) {
+  const key = cacheKey(allEarnings, allExpenses, settings, yearLabel);
+  const hit = _memo.get(key);
+  if (hit) return hit;
+  const out = computeTaxYearUncached(allEarnings, allExpenses, settings, yearLabel);
+  if (_memo.size > 24) _memo.clear();
+  _memo.set(key, out);
+  return out;
+}
+
+function computeTaxYearUncached(allEarnings, allExpenses, settings, yearLabel = settings.taxYear) {
   const config = getConfig(yearLabel);
   const ty = taxYearFromLabel(yearLabel);
   const E = allEarnings.filter(e => inRange(e.date, ty.start, ty.end));
@@ -287,6 +322,75 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
     poa, deadlines,
     vat: { threshold: config.vatThreshold, ratio: config.vatThreshold ? grossIncome / config.vatThreshold : 0, near: grossIncome > config.vatThreshold * 0.85 },
     counts: { shifts: E.length, expenseEntries: X.length },
+  };
+}
+
+// ---------------------------------------------------------------
+// Making Tax Digital: the four standard quarterly update periods.
+// MTD for Income Tax reports income and expenses for each quarter
+// (cumulatively from 6 April), with the update due on the 7th of
+// the month after the quarter ends. Kerb cannot submit these, but
+// it produces exactly the figures each update needs.
+// ---------------------------------------------------------------
+export function quarterlySummary(allEarnings, allExpenses, settings, yearLabel = settings.taxYear) {
+  const config = getConfig(yearLabel);
+  const ty = taxYearFromLabel(yearLabel);
+  const Y = ty.startYear;
+  const periods = [
+    { n: 1, start: `${Y}-04-06`, end: `${Y}-07-05`, due: `${Y}-08-07` },
+    { n: 2, start: `${Y}-07-06`, end: `${Y}-10-05`, due: `${Y}-11-07` },
+    { n: 3, start: `${Y}-10-06`, end: `${Y + 1}-01-05`, due: `${Y + 1}-02-07` },
+    { n: 4, start: `${Y + 1}-01-06`, end: `${Y + 1}-04-05`, due: `${Y + 1}-05-07` },
+  ];
+  const E = allEarnings.filter(e => inRange(e.date, ty.start, ty.end)).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+  const X = allExpenses.filter(x => inRange(x.date, ty.start, ty.end));
+  const useMileage = settings.expenseMethod === 'mileage';
+
+  // Work out each shift's mileage claim in DATE ORDER, tracking every vehicle's
+  // running total, so the rate steps from 55p to 25p at the right point in the
+  // year rather than being averaged across quarters.
+  const vehicles = vehiclesFrom(settings);
+  const ids = new Set(vehicles.map(v => v.id));
+  const running = new Map();
+  const claimFor = new Map();
+  if (useMileage) {
+    for (const e of E) {
+      const m = e.miles || 0;
+      if (!m) continue;
+      const id = (e.vehicleId && ids.has(e.vehicleId)) ? e.vehicleId : vehicles[0].id;
+      const v = vehicles.find(x => x.id === id) || vehicles[0];
+      const before = running.get(id) || 0;
+      const after = before + m;
+      claimFor.set(e, round2(mileageDeduction(after, v.type, config) - mileageDeduction(before, v.type, config)));
+      running.set(id, after);
+    }
+  }
+
+  const today = todayISO();
+  const rows = periods.map(q => {
+    const qe = E.filter(e => inRange(e.date, q.start, q.end));
+    const qx = X.filter(x => inRange(x.date, q.start, q.end));
+    const income = round2(qe.reduce((t, e) => t + (e.amount || 0) + (e.tips || 0), 0));
+    const miles = round2(qe.reduce((t, e) => t + (e.miles || 0), 0));
+    const mileage = useMileage ? round2(qe.reduce((t, e) => t + (claimFor.get(e) || 0), 0)) : 0;
+    const other = round2(qx.reduce((t, x) => t + deductibleAmount(x, settings), 0));
+    const expenses = round2(mileage + other);
+    const status = today > q.end ? 'done' : (today >= q.start ? 'current' : 'future');
+    return { ...q, status, income, miles, mileage, otherExpenses: other, expenses,
+      profit: round2(income - expenses), entries: qe.length + qx.length };
+  });
+
+  // MTD updates are year-to-date, so carry the running totals too.
+  let ci = 0, cx = 0;
+  for (const r of rows) {
+    ci = round2(ci + r.income); cx = round2(cx + r.expenses);
+    r.cumIncome = ci; r.cumExpenses = cx; r.cumProfit = round2(ci - cx);
+  }
+  const totalIncome = ci;
+  return {
+    yearLabel: ty.label, quarters: rows, totalIncome, totalExpenses: cx,
+    current: rows.find(r => r.status === 'current') || null,
+    nextDue: rows.find(r => r.status !== 'done') || null,
   };
 }
 
