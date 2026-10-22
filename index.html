@@ -16,6 +16,10 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
   <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <!-- The app loads no third-party code, so a strict policy is possible.
+       script-src 'self' also blocks inline event handlers (onerror=...), which
+       neutralises an injected payload even if an escape is ever missed. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>

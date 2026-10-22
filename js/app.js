@@ -1,7 +1,7 @@
 // ============================================================
 // app.js — boot, hash router, navigation, theme, add-menu, SW.
 // ============================================================
-import { $, $$, el } from './util.js';
+import { $, $$, el, escapeHtml } from './util.js';
 import { getSettings } from './store.js';
 import { setBus, bus } from './bus.js';
 import { openSheet, closeSheet, icon, toast } from './ui/shared.js';
@@ -59,7 +59,7 @@ async function renderRoute(route) {
     node = await view.render({ registerCleanup });
   } catch (err) {
     console.error('render error', err);
-    node = el('div', { class: 'callout callout--warn', html: `${icon('warn')}<div>Something went wrong rendering this screen.<br><span class="tiny">${(err && err.message) || err}</span></div>` });
+    node = el('div', { class: 'callout callout--warn', html: `${icon('warn')}<div>Something went wrong rendering this screen.<br><span class="tiny">${escapeHtml((err && err.message) || err)}</span></div>` });
   }
   container.replaceChildren(node);
   if (isRTL()) translate(container);

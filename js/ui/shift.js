@@ -88,7 +88,7 @@ function livePanel(ctx) {
   const timerEl = el('div', { class: 'hero__value', style: 'font-variant-numeric:tabular-nums', text: fmtDuration(elapsedMs(s0)) });
   const rateEl = el('div', { class: 'hero__sub', text: '—' });
   root.append(el('div', { class: 'hero' }, [
-    el('div', { class: 'hero__label', html: `${p.name} · started ${new Date(s0.startedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` }),
+    el('div', { class: 'hero__label', text: `${p.name} · started ${new Date(s0.startedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` }),
     timerEl, rateEl,
   ]));
 

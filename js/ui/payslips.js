@@ -3,7 +3,7 @@
 // let Claude extract every field, store them, and (optionally)
 // drive the tax engine's PAYE figures automatically.
 // ============================================================
-import { el, uid, todayISO, fmtGBP, fmtNum, fmtDate, parseMoney, fileToResizedDataURL, fileToBase64 } from '../util.js';
+import { el, uid, todayISO, fmtGBP, fmtNum, fmtDate, parseMoney, fileToResizedDataURL, fileToBase64, escapeHtml } from '../util.js';
 import { payslips } from '../db.js';
 import { getSettings, saveSettings } from '../store.js';
 import { extractPayslip, hasApiKey } from '../claude.js';
@@ -93,7 +93,7 @@ export async function render() {
       openPayslipForm({ ...r, image, source: 'claude' }, { asNew: true });
     } catch (e) {
       const quiet = /cancelled/i.test(e.message);
-      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${e.message}`;
+      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${escapeHtml(e.message)}`;
       status.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
     } finally { photoBtn.disabled = pdfBtn.disabled = false; photoInput.value = ''; fileInput.value = ''; }
   }

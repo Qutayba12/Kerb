@@ -4,7 +4,7 @@
 // classifies each one. You confirm income vs expense vs skip,
 // then bulk-add them to your books.
 // ============================================================
-import { el, uid, todayISO, fmtGBP, fmtDate, fileToResizedDataURL, fileToBase64 } from '../util.js';
+import { el, uid, todayISO, fmtGBP, fmtDate, fileToResizedDataURL, fileToBase64, escapeHtml } from '../util.js';
 import { earnings, expenses } from '../db.js';
 import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
 import { extractBankTransactions, hasApiKey } from '../claude.js';
@@ -67,7 +67,7 @@ export async function render() {
       if (truncated) toast(`Long statement — showing the first ${transactions.length}. Import the rest a page at a time.`, 'warn');
     } catch (e) {
       const quiet = /cancelled/i.test(e.message);
-      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${e.message}`;
+      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${escapeHtml(e.message)}`;
       status.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
     }
     finally { photoBtn.disabled = pdfBtn.disabled = false; photoInput.value = ''; fileInput.value = ''; }

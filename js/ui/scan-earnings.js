@@ -3,7 +3,7 @@
 // platform earnings statement (Amazon Flex, Uber Eats, …);
 // Claude extracts the shifts and you bulk-add them.
 // ============================================================
-import { el, uid, todayISO, fmtGBP, fmtNum, fmtDate, fileToResizedDataURL, fileToBase64 } from '../util.js';
+import { el, uid, todayISO, fmtGBP, fmtNum, fmtDate, fileToResizedDataURL, fileToBase64, escapeHtml } from '../util.js';
 import { earnings } from '../db.js';
 import { getSettings, allPlatforms, platformById } from '../store.js';
 import { extractEarnings, hasApiKey } from '../claude.js';
@@ -61,7 +61,7 @@ export async function render() {
       renderPreview();
     } catch (e) {
       const quiet = /cancelled/i.test(e.message);
-      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${e.message}`;
+      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${escapeHtml(e.message)}`;
       status.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
     }
     finally { photoBtn.disabled = pdfBtn.disabled = false; photoInput.value = ''; fileInput.value = ''; }

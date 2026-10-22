@@ -2,7 +2,7 @@
 // ui/forms.js — add/edit sheets for earnings, expenses, bills.
 // Shared by the Add screen and the list edit actions.
 // ============================================================
-import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate } from '../util.js';
+import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate, escapeHtml } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, getConfig, allVehicles, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog, scanCanceller } from './shared.js';
@@ -192,7 +192,7 @@ export function openExpenseForm(existing = null, opts = {}) {
     } catch (err) {
       // Cancelling is a normal thing to do, not a failure — say so calmly.
       const quiet = /cancelled/i.test(err.message);
-      scanStatus.innerHTML = quiet ? 'Scan cancelled — the photo is still attached, and you can type the details in.' : `${icon('warn')} ${err.message}`;
+      scanStatus.innerHTML = quiet ? 'Scan cancelled — the photo is still attached, and you can type the details in.' : `${icon('warn')} ${escapeHtml(err.message)}`;
       scanStatus.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
     } finally { scanBtn.disabled = false; }
   });

@@ -223,7 +223,14 @@ export async function render() {
     const card = el('div', { class: 'card' });
     card.innerHTML = donut(data, { centerTop: fmtGBP(sum.grossIncome, { round: true }), centerSub: sum.taxYear });
     const legend = el('div', { class: 'chart-legend', style: 'justify-content:center' });
-    data.forEach(d => legend.insertAdjacentHTML('beforeend', `<span class="k"><span class="dot" style="background:${d.color}"></span>${d.label} · ${fmtGBP(d.value, { round: true })}</span>`));
+    // Platform names are user-settable and can arrive from an imported backup,
+    // so they are added as TEXT, never interpolated into HTML.
+    data.forEach(d => {
+      const k = el('span', { class: 'k' });
+      k.append(el('span', { class: 'dot', style: `background:${d.color}` }));
+      k.append(document.createTextNode(`${d.label} · ${fmtGBP(d.value, { round: true })}`));
+      legend.append(k);
+    });
     card.append(legend);
     root.append(card);
   }
