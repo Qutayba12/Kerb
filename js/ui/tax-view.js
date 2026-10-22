@@ -1,12 +1,12 @@
 // ============================================================
 // ui/tax-view.js — full Self Assessment breakdown for the year.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline, round2 } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline, round2, uid, parseMoney } from '../util.js';
 import { earnings, expenses, payslips } from '../db.js';
 import { getSettings, saveSettings, availableYears, VEHICLE_LABELS, REGION_LABELS } from '../store.js';
-import { computeTaxYear } from '../tax.js';
+import { computeTaxYear, quarterlySummary } from '../tax.js';
 import { derivePaye } from '../payslips.js';
-import { icon } from './shared.js';
+import { icon, openSheet, closeSheet, field, moneyInput, toast, confirmDialog } from './shared.js';
 import { bus } from '../bus.js';
 
 export async function render() {
@@ -130,6 +130,67 @@ export async function render() {
     root.append(el('div', { class: 'card' }, [ct]));
   }
 
+  // ---- Quarterly updates (Making Tax Digital) ----
+  const q = quarterlySummary(allE, allX, s);
+  root.append(sectionTitle('Quarterly updates (MTD-ready)'));
+  const qCard = el('div', { class: 'card card--flush' });
+  q.quarters.forEach(r => {
+    const tone = r.status === 'done' ? 'info' : r.status === 'current' ? 'warn' : 'info';
+    const faded = r.status === 'future';
+    const row = el('div', { class: 'item', style: faded ? 'opacity:.55' : '' }, [
+      el('div', { class: 'item__icon', style: `background:var(--${tone}-tint);color:var(--${tone})`, html: icon('calendar') }),
+      el('div', { class: 'item__main' }, [
+        el('div', { class: 'item__title', text: `Q${r.n} · ${fmtDate(r.start)} – ${fmtDate(r.end, { withYear: true })}` }),
+        el('div', { class: 'item__sub', text: `Income ${fmtGBP(r.income)} · Expenses ${fmtGBP(r.expenses)} · due ${fmtDate(r.due, { withYear: true })}` }),
+      ]),
+      el('div', { style: 'text-align:right' }, [
+        el('div', { class: 'item__amt', text: fmtGBP(r.profit) }),
+        el('div', { class: 'tiny faint', text: r.status === 'current' ? 'in progress' : r.status === 'done' ? 'complete' : 'upcoming' }),
+      ]),
+    ]);
+    qCard.append(row);
+  });
+  root.append(qCard);
+  root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div>These are the four standard MTD periods. If you become required to send quarterly updates, these are the <b>income and expense totals</b> each update needs (reported cumulatively). Kerb prepares them — it cannot submit them.</div>` }));
+
+  // ---- What you've actually paid HMRC ----
+  root.append(sectionTitle('Paid to HMRC'));
+  const payments = (s.hmrcPayments || []).filter(p => p.taxYear === s.taxYear).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const paid = round2(payments.reduce((t, p) => t + (p.amount || 0), 0));
+  const outstanding = round2(Math.max(0, sum.totalSETax - paid));
+  const payCard = el('div', { class: 'card' });
+  payCard.append(el('div', { class: 'row row--between' }, [
+    el('div', {}, [el('div', { class: 'tile__k', text: 'Paid so far' }), el('div', { class: 'tile__v', style: 'color:var(--pos)', text: fmtGBP(paid) })]),
+    el('div', { style: 'text-align:right' }, [el('div', { class: 'tile__k', text: 'Still to pay (est.)' }), el('div', { class: 'tile__v', style: 'color:var(--warn)', text: fmtGBP(outstanding) })]),
+  ]));
+  if (payments.length) {
+    const list = el('div', { class: 'card card--flush', style: 'margin:12px 0 0' });
+    payments.forEach(p => {
+      const it = el('div', { class: 'item' }, [
+        el('div', { class: 'item__icon', style: 'background:var(--pos-tint);color:var(--pos)', html: icon('check') }),
+        el('div', { class: 'item__main' }, [
+          el('div', { class: 'item__title', text: p.note || 'Payment to HMRC' }),
+          el('div', { class: 'item__sub', text: fmtDate(p.date, { withYear: true }) }),
+        ]),
+        el('div', { class: 'item__amt', text: fmtGBP(p.amount) }),
+      ]);
+      it.style.cursor = 'pointer';
+      it.onclick = async () => {
+        const ok = await confirmDialog({ title: 'Remove this payment?', message: 'It will no longer count towards what you have paid.', confirmText: 'Remove', danger: true });
+        if (!ok) return;
+        saveSettings({ hmrcPayments: (getSettings().hmrcPayments || []).filter(x => x.id !== p.id) });
+        toast('Payment removed', 'ok'); bus.refresh();
+      };
+      list.append(it);
+    });
+    payCard.append(list);
+  }
+  const addPay = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-top:12px' });
+  addPay.innerHTML = icon('plus') + '<span>Record a payment to HMRC</span>';
+  addPay.onclick = () => openPaymentForm(s.taxYear);
+  payCard.append(addPay);
+  root.append(payCard);
+
   // Payments on account
   root.append(sectionTitle('Payments on account'));
   const poaCard = el('div', { class: 'card' });
@@ -193,6 +254,11 @@ export async function render() {
   exp.append(csvBtn, txnBtn);
   root.append(exp);
 
+  const reviewBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-top:10px' });
+  reviewBtn.innerHTML = icon('check') + '<span>Check before you file</span>';
+  reviewBtn.onclick = () => bus.navigate('review');
+  root.append(reviewBtn);
+
   const reportBtn = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:10px' });
   reportBtn.innerHTML = icon('note') + '<span>Self Assessment report (print / PDF)</span>';
   reportBtn.onclick = () => bus.navigate('report');
@@ -201,6 +267,32 @@ export async function render() {
   root.append(el('div', { class: 'callout callout--brand', style: 'margin-top:14px', html: `${icon('info')}<div>Estimates for guidance using ${sum.taxYear} rates (${VEHICLE_LABELS[s.vehicle]}, ${s.expenseMethod === 'mileage' ? 'simplified mileage' : 'actual costs'}). Always confirm figures on your HMRC Self Assessment. Adjust rates or your PAYE salary in Settings.</div>` }));
 
   return root;
+}
+
+// Record money actually sent to HMRC, so the Tax screen can show what is
+// genuinely left to pay rather than only the full estimated bill.
+function openPaymentForm(taxYear) {
+  const form = el('form', { class: 'kform', autocomplete: 'off' });
+  const amount = moneyInput({ value: '', placeholder: '0.00' });
+  const date = el('input', { class: 'input', type: 'date', value: todayISO(), max: todayISO() });
+  const note = el('input', { class: 'input', type: 'text', placeholder: 'e.g. Balancing payment, 1st payment on account' });
+  form.append(
+    field('Amount paid', amount),
+    field('Date paid', date),
+    field('What was it for?', note, 'Optional — helps you match it to your HMRC statement.'),
+  );
+  const save = () => {
+    const amt = parseMoney(amount.input.value);
+    if (!amt) { toast('Enter the amount', 'err'); return; }
+    const cur = getSettings();
+    const list = Array.isArray(cur.hmrcPayments) ? cur.hmrcPayments.slice() : [];
+    list.push({ id: uid(), taxYear, date: date.value || todayISO(), amount: amt, note: note.value.trim() });
+    saveSettings({ hmrcPayments: list });
+    closeSheet(); toast('Payment recorded', 'ok'); bus.refresh();
+  };
+  form.append(el('div', { style: 'margin-top:16px' }, [el('button', { class: 'btn btn--primary btn--block', type: 'submit', text: 'Save payment' })]));
+  form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
+  openSheet({ title: `Payment to HMRC · ${taxYear}`, node: form });
 }
 
 function cell(k, v) { return el('div', { class: 'hero__cell' }, [el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v })]); }

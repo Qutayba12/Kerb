@@ -104,6 +104,14 @@ const AR = {
   'I\'ve left this job': 'لقد تركت هذه الوظيفة',
   'Use the actual total earned (from your P45 / last payslip) — don\'t project it to a full year.': 'استخدم الإجمالي الفعلي المكتسب (من P45 / آخر قسيمة راتب) — دون توقّعه لسنة كاملة.',
   'Annual salary': 'الراتب السنوي', 'Annual tax': 'الضريبة السنوية', 'Total salary': 'إجمالي الراتب', 'Total tax': 'إجمالي الضريبة',
+  // quarterly updates, payments, pre-filing review
+  'Quarterly updates (MTD-ready)': 'التحديثات الربع سنوية (جاهزة لـ MTD)', 'Paid to HMRC': 'المدفوع لـ HMRC',
+  'Paid so far': 'المدفوع حتى الآن', 'Still to pay (est.)': 'المتبقّي للدفع (تقديري)',
+  'Record a payment to HMRC': 'تسجيل دفعة لـ HMRC', 'Payment recorded': 'سُجّلت الدفعة', 'Payment removed': 'حُذفت الدفعة',
+  'Amount paid': 'المبلغ المدفوع', 'Date paid': 'تاريخ الدفع', 'Save payment': 'حفظ الدفعة',
+  'Check before you file': 'تحقّق قبل التقديم', 'Check & file': 'تحقّق وقدّم',
+  'Worth fixing': 'يستحق الإصلاح', 'Good to know': 'معلومات مفيدة', 'Looks fine': 'يبدو سليماً',
+  'Open my Self Assessment report': 'افتح تقرير الإقرار الذاتي',
   // vehicles, losses, terms
   'Vehicles': 'المركبات', 'Add a vehicle': 'إضافة مركبة', 'Add vehicle': 'إضافة مركبة', 'Type': 'النوع',
   'Remove': 'إزالة', 'Remove vehicle?': 'إزالة المركبة؟', 'Vehicle added': 'أُضيفت المركبة', 'Vehicle removed': 'أُزيلت المركبة',

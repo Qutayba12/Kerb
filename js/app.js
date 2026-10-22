@@ -30,8 +30,9 @@ import * as scanearn from './ui/scan-earnings.js';
 import * as bankimport from './ui/bank-import.js';
 import * as guide from './ui/guide.js';
 import * as terms from './ui/terms.js';
+import * as review from './ui/review.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn, bankimport, guide, terms };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn, bankimport, guide, terms, review };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 

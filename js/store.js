@@ -131,6 +131,7 @@ const DEFAULTS = {
   vehicles: [],                  // [{id,label,type}] — empty = one vehicle of type `vehicle`
   expenseMethod: 'mileage',      // 'mileage' | 'actual'
   lossRelief: true,              // carry a trading loss forward against later profits
+  hmrcPayments: [],              // [{id,taxYear,date,amount,note}] money actually sent to HMRC
   taxYear: currentTaxYear().label,
   payeSource: 'manual',          // 'manual' | 'payslips' (auto-derive from scanned payslips)
   payeFinished: false,           // PAYE job has ended → use actual year total, don't project to 12 months

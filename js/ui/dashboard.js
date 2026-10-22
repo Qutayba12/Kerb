@@ -125,6 +125,7 @@ export async function render() {
   };
   root.append(el('div', { class: 'chips', style: 'margin:2px 0 2px;flex-wrap:wrap' }, [
     link('check', 'Guide', 'guide'),
+    link('note', 'Check & file', 'review'),
     link('chart', 'Insights', 'insights'),
     link('wallet', 'Pots', 'pots'),
     link('target', 'Goals', 'goals'),
