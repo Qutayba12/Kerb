@@ -228,7 +228,7 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
 
 // ---- helpers ----
 function yearSelect(s) {
-  const sel = el('select', { class: 'select', style: 'min-height:36px;padding:6px 30px 6px 10px;font-size:13px' });
+  const sel = el('select', { class: 'select', 'aria-label': 'Tax year', style: 'min-height:36px;padding:6px 30px 6px 10px;font-size:13px' });
   availableYears().forEach(y => { const o = el('option', { value: y, text: y }); if (y === s.taxYear) o.selected = true; sel.append(o); });
   sel.onchange = () => { import('../store.js').then(m => { m.saveSettings({ taxYear: sel.value }); bus.refresh(); }); };
   return sel;

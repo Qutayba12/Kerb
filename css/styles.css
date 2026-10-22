@@ -234,7 +234,7 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .btn--sub { background: var(--surface-2); }
 .btn--danger { background: var(--neg-tint); border-color: transparent; color: var(--neg); }
 .btn--block { width: 100%; }
-.btn--sm { min-height: 36px; padding: 7px 12px; font-size: 13px; border-radius: 10px; }
+.btn--sm { min-height: 40px; padding: 8px 14px; font-size: 13px; border-radius: 10px; }
 .btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .btn[disabled] { opacity: .55; cursor: not-allowed; }
 
@@ -244,7 +244,9 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip {
   border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted);
-  padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
+  /* comfortable thumb target on a phone */
+  min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
 .chip.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
 
@@ -437,7 +439,12 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .kdetails[open] > summary::before { content: "▾"; }
 .kdetails[open] > summary { margin-bottom: 4px; }
 
-.link { color: var(--brand); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; font: inherit; }
+.link {
+  color: var(--brand); text-decoration: underline; cursor: pointer; background: none; border: none;
+  font: inherit;
+  /* keep the text where it is but give thumbs a 40px-tall target */
+  padding: 10px 4px; margin: -10px -4px; display: inline-block;
+}
 .divider { height: 1px; background: var(--border); margin: 14px 0; border: none; }
 hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 

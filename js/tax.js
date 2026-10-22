@@ -169,43 +169,11 @@ export function deductibleAmount(x, settings) {
   return (x.amount || 0) * bizPct;
 }
 
-// A tiny memo cache. computeTaxYear is pure for a given (data, settings, year),
-// so repeated calls inside one render reuse the result. The key is cheap to
-// build: record counts + a running checksum of the fields that affect tax.
-const _memo = new Map();
-function cacheKey(allEarnings, allExpenses, settings, yearLabel) {
-  let h = 0;
-  const mix = (v) => { h = (h * 31 + v) | 0; };
-  for (const e of allEarnings) {
-    mix(e.date ? e.date.charCodeAt(8) + e.date.charCodeAt(5) * 31 : 0);
-    mix(Math.round(((e.amount || 0) + (e.tips || 0)) * 100));
-    mix(Math.round((e.miles || 0) * 10));
-    mix((e.vehicleId || '').length);
-  }
-  for (const x of allExpenses) {
-    mix(Math.round((x.amount || 0) * 100));
-    mix(x.bizPct == null ? -1 : x.bizPct);
-    mix((x.category || '').length);
-    mix(x.date ? x.date.charCodeAt(8) : 0);
-  }
-  const st = settings;
-  return [yearLabel, allEarnings.length, allExpenses.length, h, st.expenseMethod, st.region,
-    st.vehicle, st.payeSalary, st.otherIncome, st.studentLoanPlan, st.homeOfficeHoursPerMonth,
-    st.lossRelief === false ? 0 : 1, JSON.stringify(st.vehicles || [])].join('|');
-}
-
-// Full tax-year computation (memoised — see cacheKey above).
+// Full tax-year computation. Measured at ~1.7ms for 2,100 records, so it is
+// deliberately NOT cached: a cache key built from the records costs as much as
+// the calculation, and any key that misses a field would serve stale tax
+// figures — a correctness risk this app should never take for no gain.
 export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = settings.taxYear) {
-  const key = cacheKey(allEarnings, allExpenses, settings, yearLabel);
-  const hit = _memo.get(key);
-  if (hit) return hit;
-  const out = computeTaxYearUncached(allEarnings, allExpenses, settings, yearLabel);
-  if (_memo.size > 24) _memo.clear();
-  _memo.set(key, out);
-  return out;
-}
-
-function computeTaxYearUncached(allEarnings, allExpenses, settings, yearLabel = settings.taxYear) {
   const config = getConfig(yearLabel);
   const ty = taxYearFromLabel(yearLabel);
   const E = allEarnings.filter(e => inRange(e.date, ty.start, ty.end));

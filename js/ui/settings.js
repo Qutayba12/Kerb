@@ -201,8 +201,8 @@ function platformsCard() {
   });
   wrap.append(list);
 
-  const name = el('input', { class: 'input', type: 'text', placeholder: 'Add platform (e.g. Stuart)' });
-  const color = el('input', { type: 'color', value: '#0f8a74', style: 'width:44px;height:44px;border:none;background:none;padding:0' });
+  const name = el('input', { class: 'input', type: 'text', placeholder: 'Add platform (e.g. Stuart)', 'aria-label': 'New platform name' });
+  const color = el('input', { type: 'color', value: '#0f8a74', 'aria-label': 'New platform colour', style: 'width:44px;height:44px;border:none;background:none;padding:0' });
   const add = el('button', { class: 'btn btn--sm btn--primary', type: 'button', text: 'Add' });
   add.onclick = () => {
     const nm = name.value.trim(); if (!nm) return;
@@ -343,7 +343,7 @@ function dataCard() {
   exportBtn.innerHTML = icon('download') + '<span>Export backup (JSON)</span>';
   exportBtn.onclick = () => downloadBackup();
 
-  const importInput = el('input', { type: 'file', accept: 'application/json,.json', style: 'display:none' });
+  const importInput = el('input', { type: 'file', accept: 'application/json,.json', 'aria-label': 'Choose a backup file to import', style: 'display:none' });
   const importBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-top:8px' });
   importBtn.innerHTML = icon('upload') + '<span>Import backup</span>';
   importBtn.onclick = () => importInput.click();
