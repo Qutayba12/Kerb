@@ -141,7 +141,7 @@ export function openPayslipForm(existing = null, opts = {}) {
     hours: b.hours ?? '', hourlyRate: b.hourlyRate ?? '', annualSalary: b.annualSalary ?? '',
     employeeName: b.employeeName || '', employeeAddress: b.employeeAddress || '', payrollNumber: b.payrollNumber || '',
     employerName: b.employerName || '', employerAddress: b.employerAddress || '', payeReference: b.payeReference || '',
-    paymentMethod: b.paymentMethod || '', notes: b.notes || '', image: b.image || '', source: b.source || 'manual',
+    paymentMethod: b.paymentMethod || '', notes: b.notes || '', image: b.image || '', hasImage: !!b.hasImage, imageChanged: !!(b.image), source: b.source || 'manual',
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
   const txt = (v, ph) => el('input', { class: 'input', type: 'text', value: v, placeholder: ph || '' });
@@ -175,7 +175,12 @@ export function openPayslipForm(existing = null, opts = {}) {
     section('Employer', [field('Employer name', F.employerName), field('Employer address', F.employerAddress), el('div', { class: 'grid-2' }, [field('PAYE reference', F.payeReference), field('Payment method', F.paymentMethod)])]),
     field('Note', F.notes),
   );
-  if (p.image) { const img = el('img', { class: 'scan-preview', src: p.image, alt: 'payslip' }); form.append(img); }
+  if (p.image) { form.append(el('img', { class: 'scan-preview', src: p.image, alt: 'payslip' })); }
+  else if (p.hasImage) {
+    const img = el('img', { class: 'scan-preview', alt: 'payslip', hidden: true });
+    form.append(img);
+    payslips.image(p.id).then(src => { if (src) { img.src = src; img.hidden = false; } }).catch(() => {});
+  }
 
   const val = (k) => F[k].input ? parseMoney(F[k].input.value) : (F[k].value || '');
   const save = async () => {
@@ -189,8 +194,10 @@ export function openPayslipForm(existing = null, opts = {}) {
       hours: parseFloat(F.hours.value) || 0, hourlyRate: val('hourlyRate'), annualSalary: val('annualSalary'),
       employeeName: F.employeeName.value.trim(), employeeAddress: F.employeeAddress.value.trim(), payrollNumber: F.payrollNumber.value.trim(),
       employerName: F.employerName.value.trim(), employerAddress: F.employerAddress.value.trim(), payeReference: F.payeReference.value.trim(),
-      paymentMethod: F.paymentMethod.value.trim(), notes: F.notes.value.trim(), image: p.image || '', source: p.source || 'manual',
+      paymentMethod: F.paymentMethod.value.trim(), notes: F.notes.value.trim(), source: p.source || 'manual',
     };
+    if (p.imageChanged) rec.image = p.image || '';
+    else rec.hasImage = p.hasImage;
     if (!rec.gross && !rec.incomeTax) { toast('Enter at least the gross pay', 'err'); return; }
     await payslips.save(rec);
     applyDerivedPaye(await payslips.all());

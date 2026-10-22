@@ -8,20 +8,51 @@
 //   payslips : { id, payDate, frequency, gross, net, incomeTax, ... employer/employee }
 // ============================================================
 const DB_NAME = 'kerb';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORES = ['earnings', 'expenses', 'bills', 'payslips'];
+// Receipt and payslip photos live in their own store, keyed by the record id.
+// Keeping them inside the records meant every screen that asked for expenses
+// pulled tens of megabytes of base64 it never looked at (150 receipts =
+// ~44MB per call, a 136MB JS heap). Only the edit forms need the picture, so
+// it is fetched on demand.
+const IMAGES = 'images';
+const IMAGE_OWNERS = ['expenses', 'payslips'];
+const ALL_STORES = [...STORES, IMAGES];
 
 let _dbP = null;
 function open() {
   if (_dbP) return _dbP;
   _dbP = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (ev) => {
       const db = req.result;
+      const upgradeTx = req.transaction;
       for (const name of STORES) {
         if (!db.objectStoreNames.contains(name)) {
           const os = db.createObjectStore(name, { keyPath: 'id' });
           os.createIndex('date', 'date', { unique: false });
+        }
+      }
+      if (!db.objectStoreNames.contains(IMAGES)) db.createObjectStore(IMAGES, { keyPath: 'id' });
+
+      // v2 -> v3: lift any photo already stored inside a record into the new
+      // image store, so existing installs get the speed-up without losing a
+      // single receipt.
+      if (ev.oldVersion > 0 && ev.oldVersion < 3 && upgradeTx) {
+        const imgs = upgradeTx.objectStore(IMAGES);
+        for (const name of IMAGE_OWNERS) {
+          if (!db.objectStoreNames.contains(name)) continue;
+          upgradeTx.objectStore(name).openCursor().onsuccess = (e) => {
+            const cur = e.target.result;
+            if (!cur) return;
+            const rec = cur.value;
+            if (rec && typeof rec.image === 'string' && rec.image.length) {
+              imgs.put({ id: rec.id, data: rec.image });
+              const { image, ...rest } = rec;
+              cur.update({ ...rest, hasImage: true });
+            }
+            cur.continue();
+          };
         }
       }
     };
@@ -51,6 +82,41 @@ export async function put(store, obj) { await reqP((await tx(store, 'readwrite')
 export async function del(store, id) { await reqP((await tx(store, 'readwrite')).delete(id)); }
 export async function clearStore(store) { await reqP((await tx(store, 'readwrite')).clear()); }
 
+// ---------- photos (loaded only when a form actually shows one) ----------
+export async function getImage(id) {
+  if (!id) return '';
+  const r = await reqP((await tx(IMAGES)).get(id));
+  return (r && r.data) || '';
+}
+export async function putImage(id, data) {
+  if (!id) return;
+  if (!data) return delImage(id);
+  await reqP((await tx(IMAGES, 'readwrite')).put({ id, data }));
+}
+export async function delImage(id) {
+  if (!id) return;
+  await reqP((await tx(IMAGES, 'readwrite')).delete(id));
+}
+
+// Save a record that may carry a photo. `image` is only acted on when the
+// caller actually provides it, so editing a record without touching its
+// picture never silently drops the picture.
+async function saveWithImage(store, obj) {
+  const rec = { ...obj };
+  if ('image' in rec) {
+    const img = rec.image;
+    delete rec.image;
+    if (typeof img === 'string' && img) { await putImage(rec.id, img); rec.hasImage = true; }
+    else { await delImage(rec.id); rec.hasImage = false; }
+  }
+  await put(store, rec);
+  return rec;
+}
+async function removeWithImage(store, id) {
+  await del(store, id);
+  await delImage(id);
+}
+
 // Convenience accessors
 export const earnings = {
   all: () => getAll('earnings'),
@@ -61,8 +127,9 @@ export const earnings = {
 export const expenses = {
   all: () => getAll('expenses'),
   get: (id) => get('expenses', id),
-  save: (o) => put('expenses', o),
-  remove: (id) => del('expenses', id),
+  save: (o) => saveWithImage('expenses', o),
+  remove: (id) => removeWithImage('expenses', id),
+  image: (id) => getImage(id),
 };
 export const bills = {
   all: () => getAll('bills'),
@@ -73,8 +140,9 @@ export const bills = {
 export const payslips = {
   all: async () => (await getAll('payslips')).sort((a, b) => (a.payDate < b.payDate ? 1 : a.payDate > b.payDate ? -1 : 0)),
   get: (id) => get('payslips', id),
-  save: (o) => put('payslips', o),
-  remove: (id) => del('payslips', id),
+  save: (o) => saveWithImage('payslips', o),
+  remove: (id) => removeWithImage('payslips', id),
+  image: (id) => getImage(id),
 };
 
 
@@ -125,7 +193,13 @@ const CLEANERS = { earnings: cleanEarning, expenses: cleanExpense, bills: cleanB
 
 // ---------- backup / restore ----------
 export async function exportAll() {
-  const [e, x, b, ps] = await Promise.all([getAll('earnings'), getAll('expenses'), getAll('bills'), getAll('payslips')]);
+  let [e, x, b, ps] = await Promise.all([getAll('earnings'), getAll('expenses'), getAll('bills'), getAll('payslips')]);
+  // Photos live apart at rest, but a backup must still be a complete copy, so
+  // re-attach them here. The file format is unchanged.
+  const imgRows = await reqP((await tx(IMAGES)).getAll());
+  const imgs = new Map((imgRows || []).map(r => [r.id, r.data]));
+  const attach = (rows) => rows.map(r => (imgs.has(r.id) ? { ...r, image: imgs.get(r.id) } : r));
+  x = attach(x); ps = attach(ps);
   let settings = {};
   try { settings = JSON.parse(localStorage.getItem('kerb.settings.v1') || '{}'); } catch {}
   // Never include the API key or the device PIN in an exported backup file.
@@ -150,8 +224,19 @@ export async function importAll(data, { replace = true } = {}) {
   const kept = STORES.reduce((t, n) => t + clean[n].length, 0);
   if (offered > 0 && kept === 0) throw new Error('No readable records in that file — nothing was changed.');
 
-  if (replace) await Promise.all(STORES.map(clearStore));
-  for (const name of STORES) for (const o of clean[name]) await put(name, o);
+  if (replace) await Promise.all(ALL_STORES.map(clearStore));
+  for (const name of STORES) {
+    for (const o of clean[name]) {
+      const rec = { ...o };
+      const img = rec.image;
+      delete rec.image;
+      if (IMAGE_OWNERS.includes(name) && typeof img === 'string' && img) {
+        await putImage(rec.id, img);
+        rec.hasImage = true;
+      }
+      await put(name, rec);
+    }
+  }
 
   if (data.settings && typeof data.settings === 'object') {
     // Preserve this device's own API key and PIN lock; backups never carry them.
@@ -169,5 +254,5 @@ export async function importAll(data, { replace = true } = {}) {
 }
 
 export async function wipeAll() {
-  await Promise.all(STORES.map(clearStore));
+  await Promise.all(ALL_STORES.map(clearStore));
 }
