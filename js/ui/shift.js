@@ -3,7 +3,7 @@
 // and mileage tick up, log earnings/deliveries as you go, then
 // stop to save it as a normal earnings entry.
 // ============================================================
-import { el, fmtGBP, fmtNum, todayISO, round2, parseMoney } from '../util.js';
+import { el, fmtGBP, fmtNum, todayISO, toISO, round2, parseMoney, fmtDate } from '../util.js';
 import { earnings } from '../db.js';
 import { getSettings, allPlatforms, platformById } from '../store.js';
 import { icon, field, selectInput, moneyInput, toast, confirmDialog } from './shared.js';
@@ -210,15 +210,33 @@ function livePanel(ctx) {
     const miles = effectiveMiles(s);
     if (!s.earnings && !miles) { toast('Add earnings or miles first', 'err'); return; }
     const hrs = round2(elapsedHours(s));
+
+    // A shift left running overnight would otherwise be filed with wildly
+    // inflated hours, which quietly skews every £/hour figure.
+    if (hrs > 16) {
+      const keep = await confirmDialog({
+        title: 'That is a very long shift',
+        message: `This one has been running for ${fmtDuration(elapsedMs(s))}. If you forgot to stop it, save anyway and correct the hours in Income.`,
+        confirmText: 'Save anyway',
+      });
+      if (!keep) return;
+    }
+
+    // Date the shift by the day the WORK BEGAN, not the moment Stop was
+    // pressed. A night shift that ends after midnight belongs to the day it
+    // started — otherwise it lands on the wrong day, and at 5/6 April it
+    // would land in the wrong tax year.
+    const workDate = s.startedAt ? toISO(new Date(s.startedAt)) : todayISO();
     const rec = {
-      id: s.id, date: todayISO(), platform: s.platform,
+      id: s.id, date: workDate, platform: s.platform,
       amount: round2(s.earnings || 0), tips: round2(s.tips || 0),
       hours: hrs, deliveries: s.deliveries || 0, miles: round2(miles),
       notes: 'Live shift',
     };
     await earnings.save(rec);
     stopShift();
-    toast(`Shift saved · ${fmtDuration(elapsedMs({ startedAt: s.startedAt }))} · ${fmtGBP(rec.amount)}`, 'ok');
+    const crossedMidnight = workDate !== todayISO();
+    toast(`Shift saved to ${fmtDate(workDate, { withYear: true })}${crossedMidnight ? ' (the day it started)' : ''} · ${fmtDuration(elapsedMs({ startedAt: s.startedAt }))} · ${fmtGBP(rec.amount)}`, 'ok');
     bus.navigate('income');
   }
 
