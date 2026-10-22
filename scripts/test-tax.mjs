@@ -1,5 +1,5 @@
 // Quick correctness checks for the tax engine (run with: node scripts/test-tax.mjs)
-import { computeTaxYear, incomeTaxOn, class4On } from '../js/tax.js';
+import { computeTaxYear, incomeTaxOn, class4On, mileageDeduction, studentLoanOn } from '../js/tax.js';
 import { getConfig } from '../js/store.js';
 
 let pass = 0, fail = 0;
@@ -195,6 +195,76 @@ eq('every headline figure is finite',
 const stringy = computeTaxYear([{ id:'s1', date:'2026-05-01', platform:'amazonflex', amount:'100', tips:'0', miles:'50' }], [], sR);
 eq('numeric strings are read, not discarded', stringy.grossIncome, 100);
 eq('numeric string miles are read', stringy.businessMiles, 50);
+
+// ============================================================
+// Boundary exactness — every threshold AT the line, and either side.
+// An off-by-one here is a wrong tax bill, so these are permanent.
+// ============================================================
+const bcfg = getConfig('2026/27');
+const BS={region:'ruk',vehicle:'car',expenseMethod:'actual',taxYear:'2026/27',payeSalary:0,otherIncome:0,studentLoanPlan:'none',homeOfficeHoursPerMonth:0};
+const bearn=(amount,date='2026-06-01',extra={})=>[{id:'e',date,platform:'amazonflex',amount,tips:0,miles:0,hours:0,...extra}];
+
+console.log('\n--- Personal allowance edge ---');
+eq('income tax at exactly £12,570', incomeTaxOn(12570,bcfg,'ruk'), 0);
+eq('income tax at £12,570.01', incomeTaxOn(12570.01,bcfg,'ruk'), 0.01*0.20);
+eq('income tax at £12,571', incomeTaxOn(12571,bcfg,'ruk'), 0.20);
+
+console.log('\n--- Basic/higher boundary (£50,270) ---');
+eq('tax at exactly £50,270', incomeTaxOn(50270,bcfg,'ruk'), 37700*0.20);
+eq('tax at £50,271', incomeTaxOn(50271,bcfg,'ruk'), 37700*0.20+0.40);
+
+console.log('\n--- Personal allowance taper ---');
+eq('no taper at exactly £100,000', incomeTaxOn(100000,bcfg,'ruk'), 37700*0.20+(100000-50270)*0.40);
+eq('taper removes £1 per £2 at £100,002', incomeTaxOn(100002,bcfg,'ruk'), incomeTaxOn(100000,bcfg,'ruk')+2*0.40+1*0.40);
+eq('allowance gone at £125,140: nothing at 45% yet', incomeTaxOn(125140,bcfg,'ruk'), 37700*0.20+(125140-37700)*0.40);
+eq('£150,000 matches the published figure', incomeTaxOn(150000,bcfg,'ruk'), 37700*0.20+(125140-37700)*0.40+(150000-125140)*0.45);
+
+console.log('\n--- Class 4 NIC thresholds ---');
+eq('class4 at exactly £12,570 (LPL)', class4On(12570,bcfg), 0);
+eq('class4 at £12,570.01', class4On(12570.01,bcfg), 0.01*0.06);
+eq('class4 at exactly £50,270 (UPL)', class4On(50270,bcfg), (50270-12570)*0.06);
+eq('class4 at £50,271', class4On(50271,bcfg), (50270-12570)*0.06+1*0.02);
+
+console.log('\n--- Class 2 Small Profits Threshold (£7,105) ---');
+const exp2k=[{id:'x',date:'2026-06-01',category:'phone',amount:2000,bizPct:100}];
+const justUnder=computeTaxYear(bearn(9104.99),exp2k,BS), atSpt=computeTaxYear(bearn(9105),exp2k,BS);
+eq('(profit is exactly the SPT)', atSpt.netProfit, 7105);
+eq('below SPT -> not credited', justUnder.class2.credited?1:0, 0);
+eq('exactly at SPT -> credited', atSpt.class2.credited?1:0, 1);
+
+console.log('\n--- Mileage band (10,000 miles) ---');
+eq('exactly 10,000 miles', mileageDeduction(10000,'car',bcfg), 10000*0.55);
+eq('10,001 miles', mileageDeduction(10001,'car',bcfg), 10000*0.55+1*0.25);
+eq('9,999.9 miles', mileageDeduction(9999.9,'car',bcfg), 9999.9*0.55);
+
+console.log('\n--- Trading allowance vs expenses at exactly £1,000 ---');
+const ta=computeTaxYear(bearn(5000),[{id:'x',date:'2026-06-01',category:'phone',amount:1000,bizPct:100}],BS);
+eq('£1,000 of expenses: profit is the same either way', ta.netProfit, 4000);
+
+console.log('\n--- Tax-year boundaries (6 Apr – 5 Apr) ---');
+const y=(d)=>computeTaxYear(bearn(1000,d),[],{...BS,taxYear:'2026/27'}).grossIncome;
+eq('5 Apr 2026 is the PREVIOUS year', y('2026-04-05'), 0);
+eq('6 Apr 2026 is the first day', y('2026-04-06'), 1000);
+eq('5 Apr 2027 is the last day', y('2027-04-05'), 1000);
+eq('6 Apr 2027 is the NEXT year', y('2027-04-06'), 0);
+eq('29 Feb 2028 counts in 2027/28', computeTaxYear(bearn(1000,'2028-02-29'),[],{...BS,taxYear:'2027/28'}).grossIncome, 1000);
+
+console.log('\n--- Student loan threshold (Plan 2, £29,385) ---');
+eq('at exactly the threshold', studentLoanOn(29385,'plan2',bcfg), 0);
+eq('one pound over', studentLoanOn(29386,'plan2',bcfg), 0.09);
+
+console.log('\n--- Scottish band edges ---');
+eq('scot at exactly £12,570', incomeTaxOn(12570,bcfg,'scotland'), 0);
+eq('scot starter->basic at £16,537', incomeTaxOn(16537,bcfg,'scotland'), 3967*0.19);
+eq('scot basic->intermediate at £29,526', incomeTaxOn(29526,bcfg,'scotland'), 3967*0.19+(16956-3967)*0.20);
+
+console.log('\n--- Penny accuracy over a full year of small amounts ---');
+const many=Array.from({length:1000},(_,i)=>({id:'m'+i,date:'2026-06-01',platform:'amazonflex',amount:12.34,tips:0.07,miles:0}));
+const m=computeTaxYear(many,[],BS);
+eq('1,000 × £12.34 + £0.07 sums exactly', m.grossIncome, 12410);
+const pennies=Array.from({length:777},(_,i)=>({id:'p'+i,date:'2026-06-01',platform:'amazonflex',amount:0.01,tips:0,miles:0}));
+eq('777 × 1p sums exactly', computeTaxYear(pennies,[],BS).grossIncome, 7.77);
+
 
 console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'} — ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
