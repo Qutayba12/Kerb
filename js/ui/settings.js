@@ -5,7 +5,7 @@
 import { el, uid, todayISO, fmtGBP } from '../util.js';
 import {
   getSettings, saveSettings, resetSettings, getConfig, availableYears,
-  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS,
+  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles,
 } from '../store.js';
 import { importAll, wipeAll } from '../db.js';
 import { ensurePersistentStorage, storageStatus, fmtBytes } from '../storage.js';
@@ -43,10 +43,15 @@ export async function render() {
     field('Expense method', bindSelect('expenseMethod', [{ value: 'mileage', label: 'Simplified mileage' }, { value: 'actual', label: 'Actual costs' }], true),
       s.expenseMethod === 'mileage' ? 'Claim a flat rate per business mile.' : 'Claim the business share of real vehicle costs.'),
     field('Working tax year', bindSelect('taxYear', availableYears().map(y => ({ value: y, label: y })), true)),
+    lossReliefRow(),
     field('Self-employment start date', bindDate('seStartDate'), 'Used for your HMRC registration reminder.'),
     field('Your name (for SA report)', bindText('traderName'), 'Optional — appears on the printable report.'),
     field('UTR (for SA report)', bindText('utr'), 'Optional Unique Taxpayer Reference.'),
   ]));
+
+  // ---------- Vehicles ----------
+  root.append(sec('Vehicles'));
+  root.append(vehiclesCard());
 
   // ---------- Income context ----------
   root.append(sec('Your income context'));
@@ -107,6 +112,10 @@ export async function render() {
 
   // ---------- About ----------
   root.append(el('div', { class: 'callout callout--brand', style: 'margin-top:16px', html: `${icon('info')}<div><b>Kerb</b> keeps everything on this device — your entries never leave it, except a receipt image you choose to scan, which goes only to Anthropic via your own key. Figures are estimates to help you budget; confirm on your HMRC Self Assessment.</div>` }));
+  const termsBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-top:10px' });
+  termsBtn.innerHTML = icon('note') + '<span>Terms of use & privacy</span>';
+  termsBtn.onclick = () => bus.navigate('terms');
+  root.append(termsBtn);
 
   return root;
 }
@@ -361,6 +370,79 @@ function dataCard() {
 
   wrap.append(exportBtn, importInput, importBtn, wipeBtn);
   return wrap;
+}
+
+// ---------------- Loss relief ----------------
+function lossReliefRow() {
+  const s = getSettings();
+  const cb = el('input', { type: 'checkbox' }); cb.checked = s.lossRelief !== false;
+  cb.addEventListener('change', () => { saveSettings({ lossRelief: cb.checked }); toast('Saved', 'ok'); bus.refresh(); });
+  return el('label', { class: 'switch-row' }, [
+    el('div', {}, [
+      el('div', { style: 'font-weight:700', text: 'Carry losses forward' }),
+      el('div', { class: 'tiny faint', text: 'A loss-making year is set against later profits of the same trade, cutting Income Tax and Class 4 NIC.' }),
+    ]),
+    el('span', { class: 'switch' }, [cb, el('span', { class: 'track' })]),
+  ]);
+}
+
+// ---------------- Vehicles ----------------
+function vehiclesCard() {
+  const s = getSettings();
+  const wrap = el('div', { class: 'card' });
+  const list = allVehicles();
+  const explicit = Array.isArray(s.vehicles) && s.vehicles.length > 0;
+
+  wrap.append(el('div', { class: 'callout callout--info', style: 'margin:0 0 10px', html: `${icon('info')}<div>HMRC gives <b>each vehicle</b> its own first 10,000 business miles at the higher rate. Add a vehicle if you changed car or use more than one — then pick the vehicle when you log a shift.</div>` }));
+
+  const rows = el('div', { class: 'card card--flush', style: 'margin:0 0 10px' });
+  list.forEach(v => {
+    const item = el('div', { class: 'item' }, [
+      el('div', { class: 'item__icon', style: 'background:var(--brand-tint);color:var(--brand)', html: icon('route') }),
+      el('div', { class: 'item__main' }, [
+        el('div', { class: 'item__title', text: v.label }),
+        el('div', { class: 'item__sub', text: VEHICLE_LABELS[v.type] || v.type }),
+      ]),
+    ]);
+    if (explicit && list.length > 1) {
+      const del = el('button', { class: 'link tiny', type: 'button', text: 'Remove' });
+      del.onclick = async () => {
+        const ok = await confirmDialog({ title: 'Remove vehicle?', message: 'Shifts logged against it will fall back to your first vehicle.', confirmText: 'Remove', danger: true });
+        if (!ok) return;
+        saveSettings({ vehicles: (getSettings().vehicles || []).filter(x => x.id !== v.id) });
+        toast('Vehicle removed', 'ok'); bus.refresh();
+      };
+      item.append(del);
+    }
+    rows.append(item);
+  });
+  wrap.append(rows);
+
+  const add = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
+  add.innerHTML = icon('plus') + '<span>Add a vehicle</span>';
+  add.onclick = () => openVehicleForm();
+  wrap.append(add);
+  return wrap;
+}
+
+function openVehicleForm() {
+  const form = el('form', { class: 'kform', autocomplete: 'off' });
+  const label = el('input', { class: 'input', type: 'text', placeholder: 'e.g. Corsa (AB12 CDE)' });
+  const type = selectInput(Object.entries(VEHICLE_LABELS).map(([v, l]) => ({ value: v, label: l })), 'car');
+  form.append(field('Name', label, 'Anything that helps you tell them apart.'), field('Type', type));
+  const save = () => {
+    const cur = getSettings();
+    const list = Array.isArray(cur.vehicles) ? cur.vehicles.slice() : [];
+    // The first explicit vehicle keeps the existing default as vehicle #1, so
+    // shifts already logged stay attached to the same vehicle.
+    if (!list.length) list.push({ id: 'default', label: VEHICLE_LABELS[cur.vehicle] || 'Vehicle', type: cur.vehicle || 'car' });
+    list.push({ id: 'v' + Date.now().toString(36), label: label.value.trim() || (VEHICLE_LABELS[type.value] || 'Vehicle'), type: type.value });
+    saveSettings({ vehicles: list });
+    closeSheet(); toast('Vehicle added', 'ok'); bus.refresh();
+  };
+  form.append(el('div', { style: 'margin-top:16px' }, [el('button', { class: 'btn btn--primary btn--block', type: 'submit', text: 'Add vehicle' })]));
+  form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
+  openSheet({ title: 'Add a vehicle', node: form });
 }
 
 // ---------------- small helpers ----------------

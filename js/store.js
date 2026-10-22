@@ -2,8 +2,8 @@
 // store.js — settings (localStorage) + UK tax rate tables.
 // All rates live here and are editable in Settings, so the app
 // stays correct when HMRC changes figures in future years.
-// Figures verified for 2026/27 (England/Wales/NI). Scotland &
-// student-loan thresholds are seeded and flagged "verify".
+// Figures verified for 2026/27: England/Wales/NI, Scotland (six
+// bands) and student-loan thresholds, all editable in Settings.
 // ============================================================
 import { currentTaxYear } from './util.js';
 
@@ -16,21 +16,41 @@ const RUK_BANDS = [
   { upTo: 112570, rate: 0.40 },     // Higher: £50,271–£125,140
   { upTo: Infinity, rate: 0.45 },   // Additional: over £125,140
 ];
-// Scotland (seeded from 2025/26 published bands — verify per year in Settings)
-const SCOT_BANDS = [
-  { upTo: 2827, rate: 0.19 },       // Starter
-  { upTo: 14921, rate: 0.20 },      // Basic
-  { upTo: 31092, rate: 0.21 },      // Intermediate
-  { upTo: 62430, rate: 0.42 },      // Higher
-  { upTo: 112570, rate: 0.45 },     // Advanced
-  { upTo: Infinity, rate: 0.48 },   // Top
+// Scotland — six bands, set by the Scottish Parliament. Thresholds below are
+// CUMULATIVE TAXABLE income (gross salary minus the UK-wide £12,570 allowance).
+// 2025/26: Starter to £15,397, Basic to £27,491, Intermediate to £43,662.
+const SCOT_BANDS_2025 = [
+  { upTo: 2827, rate: 0.19 },       // Starter:      £12,571–£15,397
+  { upTo: 14921, rate: 0.20 },      // Basic:        £15,398–£27,491
+  { upTo: 31092, rate: 0.21 },      // Intermediate: £27,492–£43,662
+  { upTo: 62430, rate: 0.42 },      // Higher:       £43,663–£75,000
+  { upTo: 112570, rate: 0.45 },     // Advanced:     £75,001–£125,140
+  { upTo: Infinity, rate: 0.48 },   // Top:          over £125,140
+];
+// 2026/27: Starter & Basic thresholds up 7.4%; Higher/Advanced/Top frozen.
+const SCOT_BANDS_2026 = [
+  { upTo: 3967, rate: 0.19 },       // Starter:      £12,571–£16,537
+  { upTo: 16956, rate: 0.20 },      // Basic:        £16,538–£29,526
+  { upTo: 31092, rate: 0.21 },      // Intermediate: £29,527–£43,662
+  { upTo: 62430, rate: 0.42 },      // Higher:       £43,663–£75,000
+  { upTo: 112570, rate: 0.45 },     // Advanced:     £75,001–£125,140
+  { upTo: Infinity, rate: 0.48 },   // Top:          over £125,140
 ];
 
-const STUDENT_LOANS = {
+// Student loan repayment thresholds are set per tax year.
+const STUDENT_LOANS_2025 = {
   none: { label: 'None', threshold: Infinity, rate: 0 },
   plan1: { label: 'Plan 1', threshold: 26065, rate: 0.09 },
   plan2: { label: 'Plan 2', threshold: 28470, rate: 0.09 },
   plan4: { label: 'Plan 4 (Scotland)', threshold: 32745, rate: 0.09 },
+  plan5: { label: 'Plan 5', threshold: 25000, rate: 0.09 },
+  postgrad: { label: 'Postgraduate', threshold: 21000, rate: 0.06 },
+};
+const STUDENT_LOANS_2026 = {
+  none: { label: 'None', threshold: Infinity, rate: 0 },
+  plan1: { label: 'Plan 1', threshold: 26900, rate: 0.09 },
+  plan2: { label: 'Plan 2', threshold: 29385, rate: 0.09 },
+  plan4: { label: 'Plan 4 (Scotland)', threshold: 33795, rate: 0.09 },
   plan5: { label: 'Plan 5', threshold: 25000, rate: 0.09 },
   postgrad: { label: 'Postgraduate', threshold: 21000, rate: 0.06 },
 };
@@ -39,7 +59,7 @@ export const TAX_YEARS = {
   '2025/26': {
     label: '2025/26', startYear: 2025,
     personalAllowance: 12570, paTaper: 100000,
-    bands: { ruk: RUK_BANDS, scotland: SCOT_BANDS },
+    bands: { ruk: RUK_BANDS, scotland: SCOT_BANDS_2025 },
     class4: { lpl: 12570, upl: 50270, mainRate: 0.06, upperRate: 0.02 },
     class2: { spt: 6845, weekly: 3.50 },
     tradingAllowance: 1000,
@@ -52,12 +72,12 @@ export const TAX_YEARS = {
     homeOffice: [ // simplified flat rate £/month by hours worked at home
       { minHours: 25, rate: 10 }, { minHours: 51, rate: 18 }, { minHours: 101, rate: 26 },
     ],
-    studentLoans: STUDENT_LOANS,
+    studentLoans: STUDENT_LOANS_2025,
   },
   '2026/27': {
     label: '2026/27', startYear: 2026,
     personalAllowance: 12570, paTaper: 100000,
-    bands: { ruk: RUK_BANDS, scotland: SCOT_BANDS },
+    bands: { ruk: RUK_BANDS, scotland: SCOT_BANDS_2026 },
     class4: { lpl: 12570, upl: 50270, mainRate: 0.06, upperRate: 0.02 },
     class2: { spt: 7105, weekly: 3.65 },
     tradingAllowance: 1000,
@@ -70,7 +90,7 @@ export const TAX_YEARS = {
     homeOffice: [
       { minHours: 25, rate: 10 }, { minHours: 51, rate: 18 }, { minHours: 101, rate: 26 },
     ],
-    studentLoans: STUDENT_LOANS,
+    studentLoans: STUDENT_LOANS_2026,
   },
 };
 
@@ -107,8 +127,10 @@ export function categoryById(id) {
 
 const DEFAULTS = {
   region: 'ruk',
-  vehicle: 'car',
+  vehicle: 'car',                // the default/only vehicle's type
+  vehicles: [],                  // [{id,label,type}] — empty = one vehicle of type `vehicle`
   expenseMethod: 'mileage',      // 'mileage' | 'actual'
+  lossRelief: true,              // carry a trading loss forward against later profits
   taxYear: currentTaxYear().label,
   payeSource: 'manual',          // 'manual' | 'payslips' (auto-derive from scanned payslips)
   payeFinished: false,           // PAYE job has ended → use actual year total, don't project to 12 months
@@ -173,6 +195,20 @@ export function allPlatforms() {
   const s = loadSettings();
   return [...DEFAULT_PLATFORMS, ...(s.customPlatforms || [])];
 }
+// The driver's vehicles. Older installs have just the single `vehicle` type,
+// which is returned here as one default vehicle so everything keeps working.
+// HMRC applies the simplified-mileage bands PER VEHICLE, so each needs an id.
+export function allVehicles() {
+  const s = loadSettings();
+  const list = Array.isArray(s.vehicles) ? s.vehicles.filter(v => v && v.id) : [];
+  if (list.length) return list.map(v => ({ id: v.id, label: v.label || VEHICLE_LABELS[v.type] || 'Vehicle', type: v.type || 'car' }));
+  return [{ id: 'default', label: VEHICLE_LABELS[s.vehicle] || 'Vehicle', type: s.vehicle || 'car' }];
+}
+export function vehicleById(id) {
+  const list = allVehicles();
+  return list.find(v => v.id === id) || list[0];
+}
+
 export function platformById(id) {
   return allPlatforms().find(p => p.id === id) || { id, name: id, color: '#888', kind: 'other' };
 }

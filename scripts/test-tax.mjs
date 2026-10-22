@@ -66,5 +66,85 @@ const d = computeTaxYear(earnD, [], settingsD);
 console.log('   D net profit', round(d.netProfit), '| SE tax', round(d.totalSETax), '| POA applies', d.poa.applies, '| each', round(d.poa.each));
 eq('D POA applies', d.poa.applies ? 1 : 0, 1);
 
-console.log(`\n${pass} passed, ${fail} failed`);
+
+// ============================================================
+// Scotland bands, per-vehicle mileage and loss carry-forward
+// ============================================================
+const scot26 = getConfig('2026/27');
+const scot25 = getConfig('2025/26');
+console.log('\n--- Scottish bands 2026/27 (cumulative taxable thresholds) ---');
+eq('starter ends', scot26.bands.scotland[0].upTo, 3967);
+eq('basic ends', scot26.bands.scotland[1].upTo, 16956);
+eq('intermediate ends', scot26.bands.scotland[2].upTo, 31092);
+eq('higher rate', scot26.bands.scotland[3].rate, 0.42);
+eq('top rate', scot26.bands.scotland[5].rate, 0.48);
+eq('2025/26 differs from 2026/27 (starter)', scot25.bands.scotland[0].upTo, 2827);
+// £30,000 salary in Scotland: 19% on first 3,967, 20% to 16,956, 21% on the rest
+eq('scot tax on 30000', incomeTaxOn(30000, scot26, 'scotland'),
+  3967 * 0.19 + (16956 - 3967) * 0.20 + ((30000 - 12570) - 16956) * 0.21);
+
+console.log('\n--- student loan thresholds are per-year ---');
+eq('plan2 2026/27', scot26.studentLoans.plan2.threshold, 29385);
+eq('plan2 2025/26', scot25.studentLoans.plan2.threshold, 28470);
+eq('plan4 2026/27', scot26.studentLoans.plan4.threshold, 33795);
+
+console.log('\n--- per-vehicle mileage: two cars get two 10k bands ---');
+const sV = { region: 'ruk', expenseMethod: 'mileage', taxYear: '2026/27', payeSalary: 0, otherIncome: 0,
+  studentLoanPlan: 'none', homeOfficeHoursPerMonth: 0,
+  vehicles: [{ id: 'c1', label: 'Car 1', type: 'car' }, { id: 'c2', label: 'Car 2', type: 'car' }] };
+const earnV = [
+  { id: 'v1', date: '2026-06-01', platform: 'amazonflex', amount: 20000, tips: 0, miles: 10000, vehicleId: 'c1' },
+  { id: 'v2', date: '2026-06-02', platform: 'amazonflex', amount: 0, tips: 0, miles: 10000, vehicleId: 'c2' },
+];
+const v = computeTaxYear(earnV, [], sV);
+// Each vehicle: 10,000 miles @ 55p = £5,500 → £11,000 total (NOT 10k@55p + 10k@25p)
+eq('two vehicles × 10k miles', v.mileageDed, 11000);
+eq('mileage rows', v.mileageRows.length, 2);
+// Same 20,000 miles on ONE vehicle is capped: 10k@55p + 10k@25p = £8,000
+const sOne = { ...sV, vehicles: [{ id: 'c1', label: 'Car 1', type: 'car' }] };
+const one = computeTaxYear(earnV, [], sOne);
+eq('one vehicle × 20k miles', one.mileageDed, 10000 * 0.55 + 10000 * 0.25);
+
+console.log('\n--- loss carry-forward ---');
+const sL = { region: 'ruk', vehicle: 'car', expenseMethod: 'actual', taxYear: '2026/27', payeSalary: 0,
+  otherIncome: 0, studentLoanPlan: 'none', homeOfficeHoursPerMonth: 0, lossRelief: true };
+// 2025/26: £2,000 income, £7,000 costs -> £5,000 loss.
+// 2026/27: £30,000 income, £2,000 costs -> £28,000 profit (expenses beat the
+// £1,000 trading allowance, so the allowance stays out of the way here).
+const earnL = [
+  { id: 'l1', date: '2025-06-01', platform: 'amazonflex', amount: 2000, tips: 0, miles: 0 },
+  { id: 'l2', date: '2026-06-01', platform: 'amazonflex', amount: 30000, tips: 0, miles: 0 },
+];
+const expL = [
+  { id: 'x1', date: '2025-06-02', category: 'repairs', amount: 7000, bizPct: 100 },
+  { id: 'x2', date: '2026-06-02', category: 'repairs', amount: 2000, bizPct: 100 },
+];
+const L = computeTaxYear(earnL, expL, sL);
+eq('net profit before loss relief', L.netProfit, 28000);
+eq('loss brought forward', L.lossBroughtForward, 5000);
+eq('loss used this year', L.lossUsed, 5000);
+eq('taxable profit after loss', L.taxableProfit, 23000);
+eq('loss carried forward', L.lossCarriedForward, 0);
+eq('class4 on taxable profit', L.class4, (23000 - 12570) * 0.06);
+eq('income tax on taxable profit', L.incomeTaxSE, (23000 - 12570) * 0.20);
+// the loss year itself reports the loss and nothing taxable
+const Lyr = computeTaxYear(earnL, expL, { ...sL, taxYear: '2025/26' });
+eq('loss year: loss recorded', Lyr.lossThisYear, 5000);
+eq('loss year: taxable profit 0', Lyr.taxableProfit, 0);
+eq('loss year: no tax', Lyr.totalSETax, 0);
+// relief off -> the pool is ignored and the whole profit is taxed
+const Loff = computeTaxYear(earnL, expL, { ...sL, lossRelief: false });
+eq('relief off: no loss used', Loff.lossUsed, 0);
+eq('relief off: full profit taxed', Loff.taxableProfit, 28000);
+// a loss bigger than the later profit carries the remainder onward
+// keep the 2026/27 expense so the trading allowance stays out of the way
+const bigLoss = [
+  { id: 'b1', date: '2025-06-02', category: 'repairs', amount: 40000, bizPct: 100 },
+  { id: 'x2', date: '2026-06-02', category: 'repairs', amount: 2000, bizPct: 100 },
+];
+const Lbig = computeTaxYear(earnL, bigLoss, sL);
+eq('big loss: all profit covered', Lbig.taxableProfit, 0);
+eq('big loss: remainder carried on', Lbig.lossCarriedForward, 38000 - 28000);
+
+console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'} — ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

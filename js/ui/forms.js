@@ -4,7 +4,7 @@
 // ============================================================
 import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
-import { getSettings, allPlatforms, getConfig, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
+import { getSettings, allPlatforms, getConfig, allVehicles, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog } from './shared.js';
 import { extractReceipt, hasApiKey, estimateScanCost } from '../claude.js';
 import { bus } from '../bus.js';
@@ -17,6 +17,7 @@ export function openEarningsForm(existing = null, opts = {}) {
   const e = {
     id: isEdit ? b.id : uid(), date: b.date || todayISO(), platform: b.platform || allPlatforms()[0].id,
     amount: b.amount ?? '', tips: b.tips ?? '', hours: b.hours ?? '', deliveries: b.deliveries ?? '', miles: b.miles ?? '', notes: b.notes || '',
+    vehicleId: b.vehicleId || '',
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
@@ -29,9 +30,15 @@ export function openEarningsForm(existing = null, opts = {}) {
   const miles = el('input', { class: 'input', type: 'number', step: '0.1', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
   const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
 
+  // Only ask which vehicle when the driver actually has more than one.
+  const vehicles = allVehicles();
+  const vehicleSel = vehicles.length > 1
+    ? selectInput(vehicles.map(v => ({ value: v.id, label: v.label })), e.vehicleId || vehicles[0].id)
+    : null;
+
+  form.append(dateFieldWithYearCheck('Date', dateInput), field('Platform', platformSel));
+  if (vehicleSel) form.append(field('Vehicle', vehicleSel, 'Each vehicle has its own first 10,000 business miles at the higher rate.'));
   form.append(
-    dateFieldWithYearCheck('Date', dateInput),
-    field('Platform', platformSel),
     field('Earnings (before tips)', amount, 'What the app/platform paid you for the work.'),
     field('Tips', tips, 'Tips are taxable income — kept separate for your records.'),
     el('div', { class: 'grid-2' }, [field('Hours worked', hours), field('Deliveries', deliveries)]),
@@ -47,6 +54,7 @@ export function openEarningsForm(existing = null, opts = {}) {
       amount: parseMoney(amount.input.value), tips: parseMoney(tips.input.value),
       hours: parseFloat(hours.value) || 0, deliveries: parseInt(deliveries.value) || 0,
       miles: parseFloat(miles.value) || 0, notes: notes.value.trim(),
+      vehicleId: vehicleSel ? vehicleSel.value : (e.vehicleId || ''),
     };
     if (!rec.amount && !rec.tips && !rec.miles) { toast('Enter earnings, tips or miles', 'err'); return; }
     await earnings.save(rec);

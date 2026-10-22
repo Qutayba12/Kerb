@@ -54,11 +54,25 @@ export async function render() {
   if (sum.usedTradingAllowance) {
     trow('Less: £1,000 trading allowance', '−' + fmtGBP(sum.effectiveDeduction));
   } else {
-    if (sum.mileageDed) trow(`Less: mileage (${fmtNum(sum.businessMiles)} mi)`, '−' + fmtGBP(sum.mileageDed));
+    // With more than one vehicle, show each one — each has its own 10k band.
+    if (sum.mileageDed && (sum.mileageRows || []).length > 1) {
+      sum.mileageRows.forEach(r => trow(`Less: mileage — ${r.label} (${fmtNum(r.miles)} mi)`, '−' + fmtGBP(r.amount)));
+    } else if (sum.mileageDed) {
+      trow(`Less: mileage (${fmtNum(sum.businessMiles)} mi)`, '−' + fmtGBP(sum.mileageDed));
+    }
     if (sum.otherDeductible) trow('Less: allowable expenses', '−' + fmtGBP(sum.otherDeductible));
     if (sum.homeDed) trow('Less: use of home', '−' + fmtGBP(sum.homeDed));
   }
-  trow('Taxable profit', fmtGBP(sum.netProfit), 'total');
+  if (sum.lossBroughtForward > 0) {
+    trow('Net profit', fmtGBP(sum.netProfit), 'total');
+    trow('Less: loss brought forward', '−' + fmtGBP(sum.lossUsed));
+    trow('Taxable profit', fmtGBP(sum.taxableProfit), 'total');
+  } else if (sum.lossThisYear > 0) {
+    trow('Loss this year', '−' + fmtGBP(sum.lossThisYear), 'total');
+    trow('Taxable profit', fmtGBP(0), 'total');
+  } else {
+    trow('Taxable profit', fmtGBP(sum.netProfit), 'total');
+  }
   t.append(spacer());
 
   trow('Income tax on profit', fmtGBP(sum.incomeTaxSE));
@@ -72,6 +86,15 @@ export async function render() {
 
   // class 2 note
   root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div><b>Class 2 NIC:</b> ${sum.class2.status}. ${sum.class2.credited ? 'Your profit is above the Small Profits Threshold, so you get National Insurance credits toward your State Pension at no cost.' : `You can pay voluntarily (£${sum.class2.voluntaryWeekly.toFixed(2)}/week) to protect your State Pension.`}</div>` }));
+
+  // ---- Losses ----
+  if (sum.lossCarriedForward > 0 || sum.lossUsed > 0) {
+    const bits = [];
+    if (sum.lossUsed > 0) bits.push(`<b>${fmtGBP(sum.lossUsed)}</b> of earlier losses has been set against this year's profit, cutting your Income Tax and Class 4 NIC.`);
+    if (sum.lossThisYear > 0) bits.push(`This year made a loss of <b>${fmtGBP(sum.lossThisYear)}</b>, so there is no tax to pay on self-employment.`);
+    if (sum.lossCarriedForward > 0) bits.push(`<b>${fmtGBP(sum.lossCarriedForward)}</b> is left to carry forward to future years.`);
+    root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div><b>Trading losses:</b> ${bits.join(' ')} Declare these in the losses section of your SA103S.</div>` }));
+  }
 
   // ---- Employment (PAYE) — kept clearly separate from self-employment ----
   const hasPaye = sum.base > 0 || paye.count > 0;
