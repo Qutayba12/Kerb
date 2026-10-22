@@ -130,6 +130,6 @@ export function rangeFor(p, s) {
 export function miniTile(k, v, tone) {
   return el('div', { class: 'tile', style: 'padding:10px 11px' }, [
     el('div', { class: 'tile__k', style: 'font-size:11px', text: k }),
-    el('div', { class: 'tile__v', style: 'font-size:17px;' + (tone === 'pos' ? 'color:var(--pos)' : tone === 'neg' ? 'color:var(--neg)' : ''), text: v }),
+    el('div', { class: 'tile__v', style: 'font-size:17px;' + (tone === 'pos' ? 'color:var(--pos)' : tone === 'neg' ? 'color:var(--neg-text)' : ''), text: v }),
   ]);
 }

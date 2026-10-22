@@ -161,7 +161,7 @@ export async function render() {
   const payCard = el('div', { class: 'card' });
   payCard.append(el('div', { class: 'row row--between' }, [
     el('div', {}, [el('div', { class: 'tile__k', text: 'Paid so far' }), el('div', { class: 'tile__v', style: 'color:var(--pos)', text: fmtGBP(paid) })]),
-    el('div', { style: 'text-align:right' }, [el('div', { class: 'tile__k', text: 'Still to pay (est.)' }), el('div', { class: 'tile__v', style: 'color:var(--warn)', text: fmtGBP(outstanding) })]),
+    el('div', { style: 'text-align:right' }, [el('div', { class: 'tile__k', text: 'Still to pay (est.)' }), el('div', { class: 'tile__v', style: 'color:var(--warn-text)', text: fmtGBP(outstanding) })]),
   ]));
   if (payments.length) {
     const list = el('div', { class: 'card card--flush', style: 'margin:12px 0 0' });

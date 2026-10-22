@@ -188,9 +188,9 @@ function platformsCard() {
   const s = getSettings();
   const wrap = el('div', { class: 'card' });
   const list = el('div', { class: 'chips', style: 'margin-bottom:12px' });
-  DEFAULT_PLATFORMS.forEach(p => list.append(el('span', { class: 'chip', style: `border-color:${p.color};color:${p.color}`, text: p.name })));
+  DEFAULT_PLATFORMS.forEach(p => list.append(el('span', { class: 'chip', style: `border-color:${p.color};color:var(--text)`, html: `<span style="width:9px;height:9px;border-radius:50%;background:${p.color};display:inline-block"></span>${p.name}` })));
   (s.customPlatforms || []).forEach(p => {
-    const chip = el('span', { class: 'chip', style: `border-color:${p.color};color:${p.color}` });
+    const chip = el('span', { class: 'chip', style: `border-color:${p.color};color:var(--text)` });
     chip.append(document.createTextNode(p.name + '  '));
     const x = el('button', { class: 'link', type: 'button', text: '✕', style: 'color:inherit' });
     x.onclick = async () => {

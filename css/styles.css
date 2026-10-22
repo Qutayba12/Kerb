@@ -3,10 +3,12 @@
    Mobile-first, light + dark, no external dependencies.
    ============================================================ */
 :root {
-  --brand: #0f8a74;
+  --brand: #0c7a66;   /* darkened so brand-coloured text clears AA */
   --brand-600: #0c7a66;
   --brand-700: #0a6355;
   --brand-tint: #e6f4f0;
+  --brand-solid: #0a6355;  /* solid brand fill behind small text (7.1:1 on white) */
+  --on-brand: #ffffff;
   --gold: #f5b042;
   --gold-tint: #fdf1dc;
 
@@ -14,8 +16,11 @@
   --pos-tint: #e2f5ec;
   --neg: #d24b4b;     /* expense / negative */
   --neg-tint: #fbe9e9;
+  --neg-text: #b32d2d;   /* --neg is 4.3:1 as text — too low */
   --warn: #d98a12;
   --warn-tint: #fdf1dc;
+  --warn-text: #8a5600;  /* --warn is 2.8:1 as text — far too low */
+  --pos-text: #12855f;
   --info: #2b6cb0;
   --info-tint: #e7f0fa;
 
@@ -27,8 +32,8 @@
   --border-strong: #d3d8dd;
 
   --text: #0f1b2d;
-  --muted: #5c6b7a;
-  --faint: #8a97a4;
+  --muted: #4e5c6b;   /* 6.8:1 on white */
+  --faint: #5f6d7a;   /* 5.2:1 on white, 4.7:1 on --bg */
 
   --radius: 16px;
   --radius-sm: 11px;
@@ -53,12 +58,15 @@
     --brand-600: #33c4a6;
     --brand-700: #26a48b;
     --brand-tint: #12312c;
+    --brand-solid: #2bb89b;
+    --on-brand: #06211c;  /* dark text on the light green reads far better than white */
     --gold: #f5b042;
     --gold-tint: #33280f;
 
     --pos: #3ecf8e; --pos-tint: #12312a;
     --neg: #f0736f; --neg-tint: #3a1c1c;
     --warn: #f0b45e; --warn-tint: #352913;
+    --neg-text: #f0736f; --warn-text: #f0b45e; --pos-text: #3ecf8e;
     --info: #6bb0f0; --info-tint: #152534;
 
     --bg: #0b1220;
@@ -70,7 +78,7 @@
 
     --text: #eaf0f6;
     --muted: #9fb0c2;
-    --faint: #6d7f92;
+    --faint: #8b9bad;   /* was #6d7f92 — only 4.2:1 on the dark surface */
   }
 }
 :root[data-theme="dark"] {
@@ -84,7 +92,9 @@
   --bg: #0b1220; --surface: #131c2b; --surface-2: #0f1826;
   --card-shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 26px rgba(0,0,0,.35);
   --border: #253247; --border-strong: #33425a;
-  --text: #eaf0f6; --muted: #9fb0c2; --faint: #6d7f92;
+  --text: #eaf0f6; --muted: #9fb0c2; --faint: #8b9bad;
+  --neg-text: #f0736f; --warn-text: #f0b45e; --pos-text: #3ecf8e;
+  --brand-solid: #2bb89b; --on-brand: #06211c;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -155,6 +165,15 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   padding: 14px 14px calc(var(--tabbar-h) + var(--safe-bottom) + 22px);
   outline: none;
 }
+
+/* Keyboard focus: a clear, high-contrast ring on every interactive element.
+   :focus-visible keeps it off for mouse/touch, so it never looks noisy. */
+:focus-visible {
+  outline: 3px solid var(--brand-solid);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.hero :focus-visible, .btn--primary:focus-visible { outline-color: #fff; }
 
 /* ---------- Tab bar ---------- */
 .tabbar {
@@ -232,7 +251,7 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .btn--primary { background: linear-gradient(160deg, var(--brand), var(--brand-700)); border-color: transparent; color: #fff; }
 .btn--ghost { background: transparent; border-color: transparent; color: var(--brand); }
 .btn--sub { background: var(--surface-2); }
-.btn--danger { background: var(--neg-tint); border-color: transparent; color: var(--neg); }
+.btn--danger { background: var(--neg-tint); border-color: transparent; color: var(--neg-text); }
 .btn--block { width: 100%; }
 .btn--sm { min-height: 40px; padding: 8px 14px; font-size: 13px; border-radius: 10px; }
 .btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -248,7 +267,7 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   /* comfortable thumb target on a phone */
   min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-.chip.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.chip.is-active { background: var(--brand-solid); border-color: var(--brand-solid); color: var(--on-brand); }
 
 /* ---------- Forms ---------- */
 .field { margin-bottom: 13px; }
@@ -287,7 +306,7 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .item__sub { font-size: 12px; color: var(--faint); margin-top: 1px; }
 .item__amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .amt-pos { color: var(--pos); }
-.amt-neg { color: var(--neg); }
+.amt-neg { color: var(--neg-text); }
 
 .day-head { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 4px 6px; }
 .day-head .d { font-weight: 800; font-size: 13px; }
@@ -311,10 +330,10 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 
 .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
 .pill--ok { background: var(--pos-tint); color: var(--pos); }
-.pill--warn { background: var(--warn-tint); color: var(--warn); }
+.pill--warn { background: var(--warn-tint); color: var(--warn-text); }
 .pill--neg { background: var(--neg-tint); color: var(--neg); }
 .pill--info { background: var(--info-tint); color: var(--info); }
-.pill--brand { background: var(--brand-tint); color: var(--brand); }
+.pill--brand { background: var(--brand-tint); color: var(--brand-700); }
 
 /* ---------- Empty state ---------- */
 .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
@@ -367,7 +386,7 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .callout { display: flex; gap: 10px; padding: 12px 13px; border-radius: 12px; font-size: 13px; line-height: 1.4; margin-bottom: 12px; }
 .callout svg { width: 18px; height: 18px; flex: none; margin-top: 1px; fill: none; stroke: currentColor; stroke-width: 2; }
 .callout--info { background: var(--info-tint); color: var(--info); }
-.callout--warn { background: var(--warn-tint); color: var(--warn); }
+.callout--warn { background: var(--warn-tint); color: var(--warn-text); }
 .callout--brand { background: var(--brand-tint); color: var(--brand-700); }
 .callout b { font-weight: 800; }
 

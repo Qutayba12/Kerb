@@ -141,7 +141,7 @@ export async function render() {
     el('div', { class: 'row row--between' }, [
       el('div', {}, [
         el('div', { class: 'tile__k', html: icon('wallet') + '<span>Tax pot — set this aside</span>' }),
-        el('div', { class: 'tile__v', style: 'color:var(--warn)', text: fmtGBP(reserve) }),
+        el('div', { class: 'tile__v', style: 'color:var(--warn-text)', text: fmtGBP(reserve) }),
         el('div', { class: 'tile__s', text: `≈ ${fmtPct(rate)} of profit${s.taxPotMode === 'manual' ? ' (manual)' : ' (live estimate)'}` }),
       ]),
       el('div', {}, [
@@ -253,7 +253,7 @@ function rowTitle(t, action, onAction) {
 function tile(k, v, s, tone) {
   return el('div', { class: 'tile' }, [
     el('div', { class: 'tile__k', text: k }),
-    el('div', { class: 'tile__v', style: tone === 'pos' ? 'color:var(--pos)' : tone === 'neg' ? 'color:var(--neg)' : '', text: v }),
+    el('div', { class: 'tile__v', style: tone === 'pos' ? 'color:var(--pos)' : tone === 'neg' ? 'color:var(--neg-text)' : '', text: v }),
     el('div', { class: 'tile__s', text: s }),
   ]);
 }
@@ -275,7 +275,7 @@ function buildUpcoming(sum, allB) {
     any = true;
     const near = daysBetween(today, nextDeadline.date) < 45;
     wrap.append(el('div', { class: 'item' }, [
-      el('div', { class: 'item__icon', style: `background:var(--warn-tint);color:var(--warn)`, html: icon('calendar') }),
+      el('div', { class: 'item__icon', style: `background:var(--warn-tint);color:var(--warn-text)`, html: icon('calendar') }),
       el('div', { class: 'item__main' }, [
         el('div', { class: 'item__title', text: nextDeadline.label }),
         el('div', { class: 'item__sub', text: `${fmtDate(nextDeadline.date, { withYear: true })} · ${humanUntil(nextDeadline.date)}` }),

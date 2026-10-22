@@ -122,7 +122,7 @@ function reminderCard(s) {
   card.append(row);
 
   if (perm === 'denied') {
-    card.append(el('div', { class: 'tiny', style: 'color:var(--warn)', text: 'Notifications are blocked in your browser settings — allow them for Kerb to enable reminders.' }));
+    card.append(el('div', { class: 'tiny', style: 'color:var(--warn-text)', text: 'Notifications are blocked in your browser settings — allow them for Kerb to enable reminders.' }));
   }
   const test = el('button', { class: 'btn btn--sub btn--sm', type: 'button', text: 'Send test notification', style: 'margin-top:8px' });
   test.onclick = async () => {
