@@ -171,5 +171,30 @@ const ann = computeTaxYear(earnQ, [], sQ);
 eq('quarters sum to the annual mileage claim',
    q.quarters.reduce((t,r)=>t+r.mileage,0), ann.mileageDed);
 
+
+console.log('\n--- resilience: one bad record must not poison the year ---');
+const sR = { region:'ruk', vehicle:'car', expenseMethod:'mileage', taxYear:'2026/27', payeSalary:0,
+  otherIncome:0, studentLoanPlan:'none', homeOfficeHoursPerMonth:0 };
+const good = { id:'g1', date:'2026-05-01', platform:'amazonflex', amount:100, tips:0, miles:50, hours:4 };
+const clean = computeTaxYear([good], [], sR);
+// the same year, with garbage records mixed in alongside the good one
+const dirty = computeTaxYear([
+  good,
+  { id:'b1', date:'2026-05-02', platform:'amazonflex', amount:'abc', tips:0, miles:'x' },
+  { id:'b2', date:'2026-05-03', platform:'amazonflex', amount:null, tips:undefined, miles:null },
+  { id:'b3', date:'2026-05-04', platform:'amazonflex', amount:NaN, tips:NaN, miles:NaN },
+], [{ id:'x1', date:'2026-05-01', category:'fuel', amount:'not a number', bizPct:'oops' }], sR);
+eq('gross income survives bad rows', dirty.grossIncome, clean.grossIncome);
+eq('miles survive bad rows', dirty.businessMiles, clean.businessMiles);
+eq('mileage claim survives', dirty.mileageDed, clean.mileageDed);
+eq('net profit survives', dirty.netProfit, clean.netProfit);
+eq('every headline figure is finite',
+   [dirty.grossIncome,dirty.businessMiles,dirty.mileageDed,dirty.netProfit,dirty.totalSETax,dirty.taxableProfit]
+     .every(Number.isFinite) ? 1 : 0, 1);
+// numeric strings are a legitimate shape from older backups and must still count
+const stringy = computeTaxYear([{ id:'s1', date:'2026-05-01', platform:'amazonflex', amount:'100', tips:'0', miles:'50' }], [], sR);
+eq('numeric strings are read, not discarded', stringy.grossIncome, 100);
+eq('numeric string miles are read', stringy.businessMiles, 50);
+
 console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'} — ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

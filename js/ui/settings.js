@@ -353,8 +353,8 @@ function dataCard() {
     if (!ok) return;
     try {
       const data = JSON.parse(await file.text());
-      await importAll(data, { replace: true });
-      toast('Backup imported', 'ok');
+      const r = await importAll(data, { replace: true });
+      toast(r && r.skipped ? `Imported ${r.imported} records · ${r.skipped} unreadable skipped` : 'Backup imported', r && r.skipped ? 'warn' : 'ok');
       // reload so imported settings (held in memory) take effect cleanly
       setTimeout(() => location.reload(), 600);
     } catch (e) { toast('Import failed: ' + e.message, 'err'); }

@@ -9,6 +9,15 @@
 import { round2, clamp, taxYearFromLabel, taxYearFromStart, taxYearOf, inRange, todayISO, saDeadlines } from './util.js';
 import { getConfig, categoryById, platformById } from './store.js';
 
+// Read a record field as a number. Records can predate validation, come from a
+// hand-edited backup, or carry an odd value from a scan; a single bad field
+// must never make a whole year's totals NaN (which round2 would then silently
+// turn into 0). Anything unusable reads as 0.
+function num(v) {
+  const x = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, ''));
+  return Number.isFinite(x) ? x : 0;
+}
+
 // Income tax on a total income figure, using cumulative taxable-income bands.
 export function incomeTaxOn(total, config, region = 'ruk') {
   total = Math.max(0, total);
@@ -66,7 +75,7 @@ export function mileageByVehicle(E, settings, config) {
   const ids = new Set(vehicles.map(v => v.id));
   const miles = new Map();
   for (const e of E) {
-    const m = e.miles || 0;
+    const m = num(e.miles);
     if (!m) continue;
     const id = (e.vehicleId && ids.has(e.vehicleId)) ? e.vehicleId : vehicles[0].id;
     miles.set(id, (miles.get(id) || 0) + m);
@@ -90,7 +99,7 @@ function rawTradingResult(allEarnings, allExpenses, settings, yearLabel) {
   const ty = taxYearFromLabel(yearLabel);
   const E = allEarnings.filter(e => inRange(e.date, ty.start, ty.end));
   const X = allExpenses.filter(x => inRange(x.date, ty.start, ty.end));
-  const gross = round2(E.reduce((t, e) => t + (e.amount || 0) + (e.tips || 0), 0));
+  const gross = round2(E.reduce((t, e) => t + num(e.amount) + num(e.tips), 0));
   const method = settings.expenseMethod;
   const mileageDed = method === 'mileage' ? mileageByVehicle(E, settings, config).total : 0;
   const homeDed = round2(homeOfficeDeduction(settings.homeOfficeHoursPerMonth, config));
@@ -149,12 +158,12 @@ export function summariseRange(allEarnings, allExpenses, start, end, settings) {
   const config = getConfig(settings.taxYear);
   const E = allEarnings.filter(e => inRange(e.date, start, end));
   const X = allExpenses.filter(x => inRange(x.date, start, end));
-  const income = round2(E.reduce((s, e) => s + (e.amount || 0) + (e.tips || 0), 0));
-  const tips = round2(E.reduce((s, e) => s + (e.tips || 0), 0));
-  const miles = round2(E.reduce((s, e) => s + (e.miles || 0), 0));
-  const hours = round2(E.reduce((s, e) => s + (e.hours || 0), 0));
-  const deliveries = E.reduce((s, e) => s + (e.deliveries || 0), 0);
-  const expensesPaid = round2(X.reduce((s, x) => s + (x.amount || 0), 0));
+  const income = round2(E.reduce((s, e) => s + num(e.amount) + num(e.tips), 0));
+  const tips = round2(E.reduce((s, e) => s + num(e.tips), 0));
+  const miles = round2(E.reduce((s, e) => s + num(e.miles), 0));
+  const hours = round2(E.reduce((s, e) => s + num(e.hours), 0));
+  const deliveries = E.reduce((s, e) => s + num(e.deliveries), 0);
+  const expensesPaid = round2(X.reduce((s, x) => s + num(x.amount), 0));
   const deductible = round2(X.reduce((s, x) => s + deductibleAmount(x, settings), 0));
   const mileageDed = round2(mileageDeduction(miles, settings.vehicle, config));
   return { income, tips, miles, hours, deliveries, expensesPaid, deductible, mileageDed, count: E.length, expenseCount: X.length };
@@ -164,9 +173,9 @@ export function summariseRange(allEarnings, allExpenses, start, end, settings) {
 // under the simplified mileage method.
 export function deductibleAmount(x, settings) {
   const cat = categoryById(x.category);
-  const bizPct = (x.bizPct != null ? x.bizPct : cat.defaultBizPct) / 100;
+  const bizPct = num(x.bizPct != null ? x.bizPct : cat.defaultBizPct) / 100;
   if (settings.expenseMethod === 'mileage' && cat.vehicle) return 0; // covered by the mileage rate
-  return (x.amount || 0) * bizPct;
+  return num(x.amount) * bizPct;
 }
 
 // Full tax-year computation. Measured at ~1.7ms for 2,100 records, so it is
@@ -180,15 +189,15 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
   const X = allExpenses.filter(x => inRange(x.date, ty.start, ty.end));
 
   // ---- income ----
-  const grossIncome = round2(E.reduce((s, e) => s + (e.amount || 0) + (e.tips || 0), 0));
-  const tips = round2(E.reduce((s, e) => s + (e.tips || 0), 0));
-  const businessMiles = round2(E.reduce((s, e) => s + (e.miles || 0), 0));
-  const totalHours = round2(E.reduce((s, e) => s + (e.hours || 0), 0));
-  const totalDeliveries = E.reduce((s, e) => s + (e.deliveries || 0), 0);
+  const grossIncome = round2(E.reduce((s, e) => s + num(e.amount) + num(e.tips), 0));
+  const tips = round2(E.reduce((s, e) => s + num(e.tips), 0));
+  const businessMiles = round2(E.reduce((s, e) => s + num(e.miles), 0));
+  const totalHours = round2(E.reduce((s, e) => s + num(e.hours), 0));
+  const totalDeliveries = E.reduce((s, e) => s + num(e.deliveries), 0);
 
   const byPlatformMap = new Map();
   for (const e of E) {
-    const amt = (e.amount || 0) + (e.tips || 0);
+    const amt = num(e.amount) + num(e.tips);
     byPlatformMap.set(e.platform, (byPlatformMap.get(e.platform) || 0) + amt);
   }
   const byPlatform = Array.from(byPlatformMap.entries())
@@ -197,7 +206,7 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
 
   // ---- expenses / deductions ----
   const method = settings.expenseMethod;
-  const expensesPaidTotal = round2(X.reduce((s, x) => s + (x.amount || 0), 0));
+  const expensesPaidTotal = round2(X.reduce((s, x) => s + num(x.amount), 0));
   const mileageSplit = mileageByVehicle(E, settings, config);
   const mileageDed = method === 'mileage' ? mileageSplit.total : 0;
   const homeDed = round2(homeOfficeDeduction(settings.homeOfficeHoursPerMonth, config));
@@ -206,7 +215,7 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
     const cat = categoryById(x.category);
     const ded = deductibleAmount(x, settings);
     otherDeductible += ded;
-    if (method === 'mileage' && cat.vehicle) vehicleTracked += (x.amount || 0);
+    if (method === 'mileage' && cat.vehicle) vehicleTracked += num(x.amount);
   }
   otherDeductible = round2(otherDeductible);
   vehicleTracked = round2(vehicleTracked);
@@ -323,7 +332,7 @@ export function quarterlySummary(allEarnings, allExpenses, settings, yearLabel =
   const claimFor = new Map();
   if (useMileage) {
     for (const e of E) {
-      const m = e.miles || 0;
+      const m = num(e.miles);
       if (!m) continue;
       const id = (e.vehicleId && ids.has(e.vehicleId)) ? e.vehicleId : vehicles[0].id;
       const v = vehicles.find(x => x.id === id) || vehicles[0];
@@ -338,8 +347,8 @@ export function quarterlySummary(allEarnings, allExpenses, settings, yearLabel =
   const rows = periods.map(q => {
     const qe = E.filter(e => inRange(e.date, q.start, q.end));
     const qx = X.filter(x => inRange(x.date, q.start, q.end));
-    const income = round2(qe.reduce((t, e) => t + (e.amount || 0) + (e.tips || 0), 0));
-    const miles = round2(qe.reduce((t, e) => t + (e.miles || 0), 0));
+    const income = round2(qe.reduce((t, e) => t + num(e.amount) + num(e.tips), 0));
+    const miles = round2(qe.reduce((t, e) => t + num(e.miles), 0));
     const mileage = useMileage ? round2(qe.reduce((t, e) => t + (claimFor.get(e) || 0), 0)) : 0;
     const other = round2(qx.reduce((t, x) => t + deductibleAmount(x, settings), 0));
     const expenses = round2(mileage + other);
@@ -378,8 +387,8 @@ export function compareExpenseMethods(allEarnings, allExpenses, settings, yearLa
   for (const x of X) {
     const cat = categoryById(x.category);
     if (cat.vehicle) {
-      const bizPct = (x.bizPct != null ? x.bizPct : cat.defaultBizPct) / 100;
-      vehicleActual += (x.amount || 0) * bizPct;
+      const bizPct = num(x.bizPct != null ? x.bizPct : cat.defaultBizPct) / 100;
+      vehicleActual += num(x.amount) * bizPct;
     }
   }
   vehicleActual = round2(vehicleActual);
