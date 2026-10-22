@@ -6,6 +6,16 @@
   "outputDirectory": ".",
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'none'" },
+        { "key": "Permissions-Policy", "value": "geolocation=(self), camera=(self), microphone=(), payment=(), interest-cohort=()" }
+      ]
+    },
+    {
       "source": "/service-worker.js",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache" },
