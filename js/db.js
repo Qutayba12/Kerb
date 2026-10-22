@@ -7,6 +7,8 @@
 //   bills    : { id, name, amount, freq, category, bizPct, business, nextDue }
 //   payslips : { id, payDate, frequency, gross, net, incomeTax, ... employer/employee }
 // ============================================================
+import { sanitiseSettings } from './store.js';
+
 const DB_NAME = 'kerb';
 const DB_VERSION = 3;
 const STORES = ['earnings', 'expenses', 'bills', 'payslips'];
@@ -243,7 +245,7 @@ export async function importAll(data, { replace = true } = {}) {
     let cur = {};
     try { cur = JSON.parse(localStorage.getItem('kerb.settings.v1') || '{}'); } catch {}
     const merged = {
-      ...data.settings,
+      ...sanitiseSettings(data.settings),
       apiKey: cur.apiKey || '',
       pinHash: cur.pinHash || '', pinSalt: cur.pinSalt || '', lockEnabled: !!cur.lockEnabled,
       autoLockMins: cur.autoLockMins != null ? cur.autoLockMins : (data.settings.autoLockMins != null ? data.settings.autoLockMins : 2),

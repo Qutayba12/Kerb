@@ -329,7 +329,7 @@ function exportSummaryCSV(sum, s) {
     ['Payments on account apply', sum.poa.applies ? 'yes' : 'no'],
     ['Each payment on account', sum.poa.each.toFixed(2)],
   ];
-  download(`kerb-tax-summary-${sum.taxYear.replace('/', '-')}.csv`, rows.map(r => r.join(',')).join('\n'));
+  download(`kerb-tax-summary-${sum.taxYear.replace('/', '-')}.csv`, rows.map(r => r.map(csv).join(',')).join('\n'));
 }
 function exportTransactionsCSV(allE, allX, sum, s) {
   const inRange = (dt) => dt >= sum.ty.start && dt <= sum.ty.end;
@@ -338,4 +338,13 @@ function exportTransactionsCSV(allE, allX, sum, s) {
   allX.filter(x => inRange(x.date)).forEach(x => lines.push(['Expense', x.date, x.category, (x.amount || 0).toFixed(2), '', '', '', '', csv(x.vendor), csv(x.notes)].join(',')));
   download(`kerb-transactions-${sum.taxYear.replace('/', '-')}.csv`, lines.join('\n'));
 }
-function csv(v) { const s = String(v || ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+// A CSV cell. Besides quoting, a value that begins with =, +, -, @, tab or CR
+// is prefixed with an apostrophe: spreadsheets treat those as FORMULAS, and
+// these cells carry vendor names and notes that came from a scanned receipt
+// or an imported backup. Without this, opening the export in Excel could run
+// something like =HYPERLINK(...) and leak the row.
+function csv(v) {
+  let s = String(v == null ? '' : v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\n\r']/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
