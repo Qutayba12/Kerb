@@ -7,7 +7,7 @@ import { el, uid, todayISO, fmtGBP, fmtNum, fmtDate, fileToResizedDataURL, fileT
 import { earnings } from '../db.js';
 import { getSettings, allPlatforms, platformById } from '../store.js';
 import { extractEarnings, hasApiKey } from '../claude.js';
-import { icon, toast } from './shared.js';
+import { icon, toast, scanCanceller } from './shared.js';
 import { makeDupChecker } from '../dedupe.js';
 import { bus } from '../bus.js';
 
@@ -45,19 +45,25 @@ export async function render() {
     if (!file) return;
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     status.hidden = false; status.style.color = 'var(--muted)';
-    status.innerHTML = `<span class="splash__spin"></span> Claude is reading the statement…`;
+    const cancel = scanCanceller();
+    status.innerHTML = `<span class="splash__spin"></span> Claude is reading the statement… `;
+    status.append(cancel.btn);
     photoBtn.disabled = pdfBtn.disabled = true; preview.replaceChildren();
     try {
       let source;
       if (isPdf) { const { base64 } = await fileToBase64(file); source = { kind: 'pdf', base64 }; }
       else { source = { kind: 'image', dataUrl: await fileToResizedDataURL(file, 1600, 0.85) }; }
       const context = { today: todayISO(), platforms: allPlatforms().map(p => ({ id: p.id, name: p.name })) };
-      const rows = await extractEarnings(source, context, getSettings());
+      const rows = await extractEarnings(source, context, getSettings(), { signal: cancel.signal });
       status.hidden = true;
       if (!rows.length) { toast('No shifts found in that statement', 'warn'); return; }
       extracted = rows.map(r => ({ ...r, id: uid() }));
       renderPreview();
-    } catch (e) { status.innerHTML = `${icon('warn')} ${e.message}`; status.style.color = 'var(--neg)'; }
+    } catch (e) {
+      const quiet = /cancelled/i.test(e.message);
+      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${e.message}`;
+      status.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
+    }
     finally { photoBtn.disabled = pdfBtn.disabled = false; photoInput.value = ''; fileInput.value = ''; }
   }
   photoInput.addEventListener('change', () => handle(photoInput.files[0]));

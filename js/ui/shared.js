@@ -152,6 +152,17 @@ export function moneyInput(attrs = {}) {
   wrap.input = wrap.querySelector('input');
   return wrap;
 }
+// A Cancel button for a scan in flight. Scans used to be uninterruptible:
+// a stalled connection left the spinner going with the buttons disabled and
+// nothing the driver could do. Returns the button and the AbortSignal to pass
+// to the API call.
+export function scanCanceller(label = 'Cancel') {
+  const ctl = new AbortController();
+  const btn = el('button', { class: 'btn btn--sub btn--sm', type: 'button', text: label, style: 'margin-left:10px' });
+  btn.onclick = () => { btn.disabled = true; btn.textContent = 'Cancelling…'; ctl.abort(); };
+  return { btn, signal: ctl.signal, controller: ctl };
+}
+
 export function searchBox(placeholder = 'Search…') {
   const input = el('input', { class: 'input', type: 'search', placeholder, autocomplete: 'off', 'aria-label': placeholder });
   const wrap = el('div', { class: 'input-prefix', style: 'margin-bottom:12px' }, [

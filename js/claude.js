@@ -45,6 +45,61 @@ Rules:
 - Numbers (amount/subtotal/vat/vatRate/confidence) must be JSON numbers, not strings.`;
 }
 
+
+const DEFAULT_TIMEOUT_MS = 90000; // generous: a multi-page PDF genuinely takes a while
+
+// Every call to the API goes through here, so they all share one offline
+// check, one timeout, cancellation, and the same error messages. Without a
+// timeout a stalled connection left a scan spinning forever with no way out
+// (verified still pending past 35s, with the buttons disabled).
+async function callApi(body, settings, { timeoutMs = DEFAULT_TIMEOUT_MS, signal } = {}) {
+  if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new Error('You are offline. Scanning needs a connection — everything else in Kerb works without one.');
+  }
+  const ctl = new AbortController();
+  let timedOut = false;
+  const onAbort = () => ctl.abort();
+  if (signal) {
+    if (signal.aborted) throw new Error('Cancelled.');
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
+  const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': settings.apiKey.trim(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(body),
+      signal: ctl.signal,
+    });
+  } catch (err) {
+    if (timedOut) throw new Error(`That took longer than ${Math.round(timeoutMs / 1000)} seconds — the connection looks weak. Try again, or enter it manually.`);
+    if (signal && signal.aborted) throw new Error('Cancelled.');
+    throw new Error('Network error reaching Anthropic. Check your connection and try again.');
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', onAbort);
+  }
+
+  if (!response.ok) {
+    let detail = '';
+    try { const j = await response.json(); detail = (j.error && j.error.message) || ''; } catch {}
+    if (response.status === 401) throw new Error('Invalid API key (401). Check the key in Settings.');
+    if (response.status === 429) throw new Error('Rate limited (429). Wait a moment and try again.');
+    if (response.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit. Add a little balance in the Anthropic console.');
+    if (response.status >= 500) throw new Error(`Anthropic is having trouble (${response.status}). Try again shortly.`);
+    throw new Error(`Anthropic error ${response.status}${detail ? ': ' + detail : ''}`);
+  }
+  return response.json();
+}
+
 export function hasApiKey(settings) {
   return !!(settings && settings.apiKey && settings.apiKey.trim());
 }
@@ -56,7 +111,7 @@ function splitDataUrl(dataUrl) {
   return { media_type: m[1], base64: m[2] };
 }
 
-export async function extractReceipt(dataUrl, settings) {
+export async function extractReceipt(dataUrl, settings, { signal } = {}) {
   if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
   const { media_type, base64 } = splitDataUrl(dataUrl);
   const model = settings.claudeModel || 'claude-haiku-4-5';
@@ -73,32 +128,7 @@ export async function extractReceipt(dataUrl, settings) {
     }],
   };
 
-  let res;
-  try {
-    res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': settings.apiKey.trim(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    throw new Error('Network error reaching Anthropic. Check your connection and try again.');
-  }
-
-  if (!res.ok) {
-    let detail = '';
-    try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
-    if (res.status === 401) throw new Error('Invalid API key (401). Check the key in Settings.');
-    if (res.status === 429) throw new Error('Rate limited (429). Wait a moment and try again.');
-    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Anthropic account needs credit. Add a little balance in the Anthropic console.');
-    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
-  }
-
-  const data = await res.json();
+  const data = await callApi(body, settings, { signal });
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
   const parsed = parseJson(text);
   if (!parsed) throw new Error('Could not read the receipt. Try a clearer photo or enter it manually.');
@@ -198,7 +228,7 @@ function normaliseCategory(v) {
 }
 
 // Generic text call to Claude. Returns the reply text.
-export async function claudeText({ system, user, settings, maxTokens = 600 }) {
+export async function claudeText({ system, user, settings, maxTokens = 600, signal }) {
   if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
   const body = {
     model: settings.claudeModel || 'claude-haiku-4-5',
@@ -206,32 +236,12 @@ export async function claudeText({ system, user, settings, maxTokens = 600 }) {
     messages: [{ role: 'user', content: user }],
   };
   if (system) body.system = system;
-  let res;
-  try {
-    res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': settings.apiKey.trim(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify(body),
-    });
-  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
-  if (!res.ok) {
-    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
-    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
-    if (res.status === 429) throw new Error('Rate limited — try again in a moment.');
-    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
-    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
-  }
-  const data = await res.json();
+  const data = await callApi(body, settings, { signal });
   return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
 }
 
 // Parse a free-text line into a structured earning/expense.
-export async function parseEntry(text, context, settings) {
+export async function parseEntry(text, context, settings, { signal } = {}) {
   const system = `You convert a UK delivery driver's short note into ONE bookkeeping entry.
 Reply with ONLY a JSON object, no prose. Shape:
 {"kind":"earning"|"expense"|"unknown",
@@ -243,7 +253,7 @@ Rules:
 - Default date to today (${context.today}) unless the note clearly says otherwise.
 Platforms: ${JSON.stringify(context.platforms)}
 Expense categories: ${JSON.stringify(context.categories)}`;
-  const out = await claudeText({ system, user: text, settings, maxTokens: 300 });
+  const out = await claudeText({ system, user: text, settings, maxTokens: 300, signal });
   const parsed = parseJson(out);
   if (!parsed) throw new Error('Could not understand that — try e.g. "Amazon Flex £52, 4 hours, 40 miles".');
   return parsed;
@@ -286,7 +296,7 @@ Rules:
 }
 
 // source: { kind:'image', dataUrl } OR { kind:'pdf', base64, mediaType }
-export async function extractPayslip(source, settings) {
+export async function extractPayslip(source, settings, { signal } = {}) {
   if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
   let contentBlock;
   if (source.kind === 'pdf') {
@@ -300,26 +310,7 @@ export async function extractPayslip(source, settings) {
     max_tokens: 900,
     messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: payslipPrompt() }] }],
   };
-  let res;
-  try {
-    res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': settings.apiKey.trim(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify(body),
-    });
-  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
-  if (!res.ok) {
-    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
-    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
-    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
-    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
-  }
-  const data = await res.json();
+  const data = await callApi(body, settings, { signal });
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
   const parsed = parseJson(text);
   if (!parsed) throw new Error('Could not read the payslip. Try a clearer photo/PDF or enter it manually.');
@@ -366,7 +357,7 @@ Rules:
 - Numbers are plain GBP (no symbols). Never invent values you cannot see.`;
 }
 
-export async function extractEarnings(source, context, settings) {
+export async function extractEarnings(source, context, settings, { signal } = {}) {
   if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
   let contentBlock;
   if (source.kind === 'pdf') contentBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: source.base64 } };
@@ -376,21 +367,7 @@ export async function extractEarnings(source, context, settings) {
     max_tokens: 6000, // long statements have many rows — avoid truncating the JSON
     messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: earningsPrompt(context) }] }],
   };
-  let res;
-  try {
-    res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': settings.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify(body),
-    });
-  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
-  if (!res.ok) {
-    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
-    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
-    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
-    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
-  }
-  const data = await res.json();
+  const data = await callApi(body, settings, { signal });
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
   const parsed = parseJson(text);
   let rows = parsed && Array.isArray(parsed.entries) ? parsed.entries : (Array.isArray(parsed) ? parsed : null);
@@ -437,7 +414,7 @@ Rules:
 - Money as plain numbers (no symbols). Never invent transactions or values you cannot see.`;
 }
 
-export async function extractBankTransactions(source, context, settings) {
+export async function extractBankTransactions(source, context, settings, { signal } = {}) {
   if (!hasApiKey(settings)) throw new Error('No API key set. Add your Anthropic API key in Settings.');
   let contentBlock;
   if (source.kind === 'pdf') contentBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: source.base64 } };
@@ -447,22 +424,7 @@ export async function extractBankTransactions(source, context, settings) {
     max_tokens: 8000, // a full statement has many rows — a low cap truncates the JSON
     messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: bankPrompt(context) }] }],
   };
-  let res;
-  try {
-    res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': settings.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify(body),
-    });
-  } catch { throw new Error('Network error reaching Anthropic. Check your connection.'); }
-  if (!res.ok) {
-    let detail = ''; try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
-    if (res.status === 401) throw new Error('Invalid API key (401). Check it in Settings.');
-    if (res.status === 429) throw new Error('Rate limited (429). Wait a moment and try again.');
-    if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Your Anthropic account needs credit.');
-    throw new Error(`Anthropic error ${res.status}${detail ? ': ' + detail : ''}`);
-  }
-  const data = await res.json();
+  const data = await callApi(body, settings, { signal });
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
   const truncated = data.stop_reason === 'max_tokens';
   const parsed = parseJson(text);
@@ -512,23 +474,12 @@ export async function extractBankTransactions(source, context, settings) {
 
 // Validate an API key with a tiny, cheap request.
 export async function testKey(settings) {
-  if (!hasApiKey(settings)) throw new Error('Enter your API key first.');
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': settings.apiKey.trim(),
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({ model: settings.claudeModel || 'claude-haiku-4-5', max_tokens: 4, messages: [{ role: 'user', content: 'ping' }] }),
-  });
-  if (res.ok) return true;
-  let detail = '';
-  try { const j = await res.json(); detail = j.error?.message || ''; } catch {}
-  if (res.status === 401) throw new Error('Invalid API key (401).');
-  if (res.status === 400 && /credit|billing/i.test(detail)) throw new Error('Key works, but the account needs credit.');
-  throw new Error(`Error ${res.status}${detail ? ': ' + detail : ''}`);
+  await callApi(
+    { model: settings.claudeModel || 'claude-haiku-4-5', max_tokens: 4, messages: [{ role: 'user', content: 'ping' }] },
+    settings,
+    { timeoutMs: 20000 },
+  );
+  return true;
 }
 
 // Estimate the cost of one receipt scan (very rough, for user reassurance).

@@ -5,7 +5,7 @@
 import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, getConfig, allVehicles, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
-import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog } from './shared.js';
+import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog, scanCanceller } from './shared.js';
 import { extractReceipt, hasApiKey, estimateScanCost } from '../claude.js';
 import { bus } from '../bus.js';
 
@@ -162,10 +162,12 @@ export function openExpenseForm(existing = null, opts = {}) {
       return;
     }
     scanStatus.hidden = false;
-    scanStatus.innerHTML = `<span class="splash__spin"></span> Claude is reading the receipt…`;
+    const cancel = scanCanceller();
+    scanStatus.innerHTML = `<span class="splash__spin"></span> Claude is reading the receipt… `;
+    scanStatus.append(cancel.btn);
     scanBtn.disabled = true;
     try {
-      const r = await extractReceipt(dataUrl, s);
+      const r = await extractReceipt(dataUrl, s, { signal: cancel.signal });
       if (r.amount) amount.input.value = r.amount.toFixed(2);
       if (r.date) dateInput.value = r.date;
       if (r.vendor) vendor.value = r.vendor;
@@ -188,8 +190,10 @@ export function openExpenseForm(existing = null, opts = {}) {
       scanStatus.innerHTML = `${icon('check')} Read it${conf ? ` (${conf}% confident)` : ''} — please double-check the amount.`;
       scanStatus.style.color = 'var(--pos)';
     } catch (err) {
-      scanStatus.innerHTML = `${icon('warn')} ${err.message}`;
-      scanStatus.style.color = 'var(--neg)';
+      // Cancelling is a normal thing to do, not a failure — say so calmly.
+      const quiet = /cancelled/i.test(err.message);
+      scanStatus.innerHTML = quiet ? 'Scan cancelled — the photo is still attached, and you can type the details in.' : `${icon('warn')} ${err.message}`;
+      scanStatus.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
     } finally { scanBtn.disabled = false; }
   });
 
