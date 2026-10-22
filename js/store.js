@@ -9,11 +9,14 @@ import { currentTaxYear } from './util.js';
 
 const LS_KEY = 'kerb.settings.v1';
 
-// Income-tax bands are expressed as cumulative TAXABLE income
-// thresholds (i.e. after the Personal Allowance is removed).
+// Income-tax bands are expressed as cumulative TAXABLE income thresholds
+// (income after the Personal Allowance is removed). NOTE: the top limit is
+// £125,140 of TAXABLE income — it is already a taxable figure, so the
+// allowance must NOT be subtracted from it again. Doing so starts the
+// additional/top rate £12,570 early for anyone whose allowance has tapered.
 const RUK_BANDS = [
   { upTo: 37700, rate: 0.20 },      // Basic:  £12,571–£50,270
-  { upTo: 112570, rate: 0.40 },     // Higher: £50,271–£125,140
+  { upTo: 125140, rate: 0.40 },     // Higher: £50,271–£125,140
   { upTo: Infinity, rate: 0.45 },   // Additional: over £125,140
 ];
 // Scotland — six bands, set by the Scottish Parliament. Thresholds below are
@@ -24,7 +27,7 @@ const SCOT_BANDS_2025 = [
   { upTo: 14921, rate: 0.20 },      // Basic:        £15,398–£27,491
   { upTo: 31092, rate: 0.21 },      // Intermediate: £27,492–£43,662
   { upTo: 62430, rate: 0.42 },      // Higher:       £43,663–£75,000
-  { upTo: 112570, rate: 0.45 },     // Advanced:     £75,001–£125,140
+  { upTo: 125140, rate: 0.45 },     // Advanced:     £75,001–£125,140
   { upTo: Infinity, rate: 0.48 },   // Top:          over £125,140
 ];
 // 2026/27: Starter & Basic thresholds up 7.4%; Higher/Advanced/Top frozen.
@@ -33,7 +36,7 @@ const SCOT_BANDS_2026 = [
   { upTo: 16956, rate: 0.20 },      // Basic:        £16,538–£29,526
   { upTo: 31092, rate: 0.21 },      // Intermediate: £29,527–£43,662
   { upTo: 62430, rate: 0.42 },      // Higher:       £43,663–£75,000
-  { upTo: 112570, rate: 0.45 },     // Advanced:     £75,001–£125,140
+  { upTo: 125140, rate: 0.45 },     // Advanced:     £75,001–£125,140
   { upTo: Infinity, rate: 0.48 },   // Top:          over £125,140
 ];
 
