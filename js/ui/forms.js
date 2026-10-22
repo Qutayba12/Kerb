@@ -75,7 +75,7 @@ export function openExpenseForm(existing = null, opts = {}) {
   const x = {
     id: isEdit ? b.id : uid(), date: b.date || todayISO(), category: b.category || 'fuel',
     amount: b.amount ?? '', vendor: b.vendor || '', bizPct: b.bizPct ?? null, vat: b.vat ?? '', notes: b.notes || '',
-    image: b.image || '', source: b.source || 'manual',
+    image: b.image || '', hasImage: !!b.hasImage, imageChanged: false, source: b.source || 'manual',
     time: b.time || '', address: b.address || '', area: b.area || '', postcode: b.postcode || '',
     paymentMethod: b.paymentMethod || '', receiptNo: b.receiptNo || '', vatNumber: b.vatNumber || '',
     subtotal: b.subtotal ?? '', items: b.items || '', lineItems: Array.isArray(b.lineItems) ? b.lineItems : [],
@@ -89,6 +89,11 @@ export function openExpenseForm(existing = null, opts = {}) {
   const scanStatus = el('div', { class: 'scan-status', hidden: true });
   const preview = el('img', { class: 'scan-preview', hidden: true, alt: 'receipt' });
   if (x.image) { preview.src = x.image; preview.hidden = false; }
+  else if (x.hasImage) {
+    // The photo is stored apart from the record, so fetch it only now that a
+    // form is actually going to show it.
+    expenses.image(x.id).then(src => { if (src) { preview.src = src; preview.hidden = false; } }).catch(() => {});
+  }
 
   const dateInput = el('input', { class: 'input', type: 'date', value: x.date, max: todayISO() });
   const catSel = selectInput(EXPENSE_CATEGORIES.map(c => ({ value: c.id, label: c.label })), x.category);
@@ -150,7 +155,7 @@ export function openExpenseForm(existing = null, opts = {}) {
     const file = fileInput.files[0]; if (!file) return;
     let dataUrl;
     try { dataUrl = await fileToResizedDataURL(file); } catch { toast('Could not read image', 'err'); return; }
-    preview.src = dataUrl; preview.hidden = false; x.image = dataUrl;
+    preview.src = dataUrl; preview.hidden = false; x.image = dataUrl; x.imageChanged = true;
     if (!hasApiKey(s)) {
       toast('Add your API key in Settings to auto-read receipts', 'warn');
       scanStatus.hidden = true;
@@ -213,12 +218,16 @@ export function openExpenseForm(existing = null, opts = {}) {
       amount: parseMoney(amount.input.value), vendor: vendor.value.trim(),
       bizPct: Math.max(0, Math.min(100, parseInt(bizPct.value) || 0)),
       vat: parseMoney(vat.input.value), notes: notes.value.trim(),
-      image: x.image || '', source: x.source || 'manual',
+      source: x.source || 'manual',
       time: time.value || '', subtotal: parseMoney(subtotal.input.value),
       address: address.value.trim(), area: area.value.trim(), postcode: postcode.value.trim().toUpperCase(),
       paymentMethod: paymentMethod.value.trim(), receiptNo: receiptNo.value.trim(), vatNumber: vatNumber.value.trim(),
       items: items.value.trim(), lineItems: x.lineItems || [],
     };
+    // Only send the photo when it actually changed, so an ordinary edit never
+    // drops the receipt that is already stored.
+    if (x.imageChanged) rec.image = x.image || '';
+    else rec.hasImage = x.hasImage;
     if (!rec.amount) { toast('Enter the amount', 'err'); return; }
     await expenses.save(rec);
     closeSheet(); toast(isEdit ? 'Expense updated' : 'Expense added', 'ok'); bus.refresh();
