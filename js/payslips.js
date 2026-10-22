@@ -25,13 +25,14 @@ export function derivePaye(allPayslips, yearLabel) {
   const frequency = Object.entries(freqCount).sort((a, b) => b[1] - a[1])[0][0];
   const ppy = PERIODS_PER_YEAR[frequency] || 12;
 
-  const sum = (k) => round2(list.reduce((t, p) => t + (p[k] || 0), 0));
+  const toNum = (v) => { const x = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(x) ? x : 0; };
+  const sum = (k) => round2(list.reduce((t, p) => t + toNum(p[k]), 0));
   const sumGross = sum('gross'), sumTax = sum('incomeTax'), sumNI = sum('nationalInsurance'), sumPension = sum('pension'), sumHours = sum('hours');
   const count = list.length;
 
   const latest = list.slice().sort((a, b) => (a.payDate < b.payDate ? 1 : -1))[0];
-  const ytdGross = latest?.ytdGross || 0;
-  const ytdTax = latest?.ytdTax || 0;
+  const ytdGross = toNum(latest?.ytdGross);
+  const ytdTax = toNum(latest?.ytdTax);
 
   const final = !!getSettings().payeFinished;
   let annualSalary, annualTax;
@@ -41,7 +42,7 @@ export function derivePaye(allPayslips, yearLabel) {
     annualTax = ytdTax > 0 ? ytdTax : sumTax;
   } else {
     // Ongoing: prefer a stated annual salary, else annualise the average payslip.
-    const statedAnnual = latest && latest.annualSalary > 0 ? latest.annualSalary : 0;
+    const statedAnnual = latest && toNum(latest.annualSalary) > 0 ? toNum(latest.annualSalary) : 0;
     annualSalary = statedAnnual || (count ? round2((sumGross / count) * ppy) : 0);
     annualTax = count ? round2((sumTax / count) * ppy) : 0;
   }

@@ -137,13 +137,13 @@ function buildChecks({ s, sum, ty, E, X, allE, allX }) {
   }
 
   // 10) outliers worth double-checking
-  const amounts = E.map(e => (e.amount || 0) + (e.tips || 0)).filter(n => n > 0);
-  const med = median(amounts);
+  const amounts = E.map(e => numOf(e.amount) + numOf(e.tips)).filter(n => n > 0);
+  const med = typicalValue(amounts);
   const big = E.filter(e => med > 0 && ((e.amount || 0) + (e.tips || 0)) > med * 6);
   if (big.length) {
     const b = big[0];
     add('info', `${big.length} unusually large income ${big.length === 1 ? 'entry' : 'entries'}`,
-      `For example ${fmtGBP((b.amount || 0) + (b.tips || 0))} on ${fmtDate(b.date, { withYear: true })} (${platformById(b.platform).name}), against a typical ${fmtGBP(med)}. Might be a weekly total entered as one day — fine if so, worth checking if not.`,
+      `For example ${fmtGBP(numOf(b.amount) + numOf(b.tips))} on ${fmtDate(b.date, { withYear: true })} (${platformById(b.platform).name}), against a typical ${fmtGBP(med)}. Might be a weekly total entered as one day — fine if so, worth checking if not.`,
       { label: 'Review entries', run: () => { setIncomePeriod('ty'); bus.navigate('income'); } });
   }
 
@@ -192,12 +192,17 @@ function findDuplicates(list, keyOf) {
   }
   return n;
 }
-function median(arr) {
+// A "typical" entry, ignoring the top decile. A plain median is dragged up by
+// the very outliers we are hunting for — one absurd row can hide itself — so
+// the comparison baseline is taken from the lower 90% only.
+function typicalValue(arr) {
   if (!arr.length) return 0;
   const a = arr.slice().sort((x, y) => x - y);
-  const m = Math.floor(a.length / 2);
-  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  const lower = a.slice(0, Math.max(1, Math.floor(a.length * 0.9)));
+  const m = Math.floor(lower.length / 2);
+  return lower.length % 2 ? lower[m] : (lower[m - 1] + lower[m]) / 2;
 }
+function numOf(v) { const x = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(x) ? x : 0; }
 function sectionTitle(t) { return el('div', { class: 'section-title', text: t }); }
 const TONE = { bad: 'neg', warn: 'warn', info: 'info', ok: 'pos' };
 function checkCard(c) {
