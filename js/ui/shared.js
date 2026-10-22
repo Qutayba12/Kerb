@@ -109,12 +109,40 @@ export function confirmDialog({ title = 'Are you sure?', message = '', confirmTe
 }
 
 // ---------- builders ----------
+// A labelled form field. The <label> is tied to the control with for/id so
+// screen readers announce it, and tapping the label focuses the input. The
+// control may be a bare input or a wrapper (e.g. moneyInput), so we find the
+// focusable element inside it.
+let _fieldSeq = 0;
 export function field(labelText, control, hint) {
   const f = el('div', { class: 'field' });
-  if (labelText) f.append(el('label', { text: labelText }));
+  if (labelText) {
+    const lab = el('label', { text: labelText });
+    const target = focusableOf(control);
+    if (target) {
+      if (!target.id) target.id = 'kf' + (++_fieldSeq);
+      lab.htmlFor = target.id;
+    }
+    f.append(lab);
+  }
   f.append(control);
-  if (hint) f.append(el('div', { class: 'hint', html: hint }));
+  if (hint) {
+    const h = el('div', { class: 'hint', html: hint });
+    const target = focusableOf(control);
+    if (target) {
+      if (!h.id) h.id = 'kh' + (++_fieldSeq);
+      // the hint explains the field, so announce it with the control
+      target.setAttribute('aria-describedby', h.id);
+    }
+    f.append(h);
+  }
   return f;
+}
+function focusableOf(c) {
+  if (!c || !c.nodeType) return null;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(c.tagName)) return c;
+  if (c.input && c.input.nodeType) return c.input;
+  return c.querySelector ? c.querySelector('input, select, textarea') : null;
 }
 export function moneyInput(attrs = {}) {
   const wrap = el('div', { class: 'input-prefix' }, [
@@ -125,7 +153,7 @@ export function moneyInput(attrs = {}) {
   return wrap;
 }
 export function searchBox(placeholder = 'Search…') {
-  const input = el('input', { class: 'input', type: 'search', placeholder, autocomplete: 'off' });
+  const input = el('input', { class: 'input', type: 'search', placeholder, autocomplete: 'off', 'aria-label': placeholder });
   const wrap = el('div', { class: 'input-prefix', style: 'margin-bottom:12px' }, [
     el('span', { class: 'input-prefix__ic', html: icon('search') }),
     input,
