@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kerb — tax &amp; earnings for UK delivery drivers</title>
+<meta name="description" content="Kerb works out your delivery tax to the penny — Amazon Flex, Uber Eats, Deliveroo. 2026/27 HMRC rates, mileage, Self Assessment report. Everything stays on your phone." />
+<meta name="theme-color" content="#0f8a74" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+<link rel="icon" type="image/svg+xml" href="../icons/icon.svg" />
+<meta property="og:title" content="Kerb — tax &amp; earnings for UK delivery drivers" />
+<meta property="og:description" content="Know exactly what's yours to keep. Private, offline, built for drivers." />
+<meta property="og:type" content="website" />
+<style>
+  :root{
+    --brand:#0f8a74; --brand-700:#0a6355; --brand-tint:#e6f4f1;
+    --bg:#f4f6f7; --surface:#fff; --text:#101b19; --muted:#5a6b68; --faint:#8a9a97;
+    --border:#dfe5e4; --pos:#12855f; --warn:#d98a12; --radius:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --brand:#2bb89b; --brand-700:#26a48b; --brand-tint:#112e28;
+      --bg:#0b1220; --surface:#121a28; --text:#e9eef0; --muted:#9bacab; --faint:#6f8180;
+      --border:#223044; --pos:#3ecf8e; --warn:#e8a93c; }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.2;letter-spacing:-.02em;margin:0}
+  h1{font-size:clamp(30px,7vw,46px);font-weight:800}
+  h2{font-size:clamp(22px,4.6vw,30px);font-weight:800;margin-bottom:10px}
+  h3{font-size:17px;font-weight:750}
+  p{margin:10px 0}
+  .lede{font-size:clamp(16px,2.6vw,19px);color:var(--muted);max-width:62ch}
+  section{padding:54px 0;border-top:1px solid var(--border)}
+  section:first-of-type{border-top:0}
+
+  /* header */
+  .top{position:sticky;top:0;z-index:5;backdrop-filter:blur(10px);
+    background:color-mix(in srgb,var(--bg) 86%,transparent);border-bottom:1px solid var(--border)}
+  .top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;color:var(--text)}
+  .logo img{width:28px;height:28px;border-radius:7px}
+
+  /* hero */
+  .hero{padding:48px 0 54px}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;
+    color:var(--brand-700);background:var(--brand-tint);border:1px solid var(--border);
+    padding:6px 12px;border-radius:999px;margin-bottom:18px}
+  @media (prefers-color-scheme: dark){ .badge{color:var(--brand)} }
+  .cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px;align-items:center}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+    font-weight:750;font-size:16px;padding:15px 26px;border-radius:13px;border:1px solid transparent;
+    cursor:pointer;min-height:52px}
+  .btn--primary{background:var(--brand);color:#fff;box-shadow:0 6px 20px -8px var(--brand)}
+  .btn--primary:hover{background:var(--brand-700)}
+  .btn--ghost{background:transparent;color:var(--text);border-color:var(--border)}
+  .note{font-size:13.5px;color:var(--muted);margin-top:14px}
+
+  /* trust strip */
+  .strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:30px}
+  .chip{font-size:13px;font-weight:650;color:var(--muted);background:var(--surface);
+    border:1px solid var(--border);border-radius:999px;padding:7px 13px}
+
+  /* cards */
+  .grid{display:grid;gap:14px;grid-template-columns:1fr}
+  @media(min-width:640px){ .grid{grid-template-columns:1fr 1fr} }
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+  .card p{margin:7px 0 0;font-size:14.5px;color:var(--muted)}
+  .ico{width:36px;height:36px;border-radius:10px;background:var(--brand-tint);color:var(--brand);
+    display:grid;place-items:center;margin-bottom:12px}
+  .ico svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+
+  /* steps */
+  ol.steps{list-style:none;padding:0;margin:0;counter-reset:s;display:grid;gap:12px}
+  ol.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:18px 20px 18px 62px;position:relative}
+  ol.steps li::before{content:counter(s);position:absolute;left:18px;top:18px;width:28px;height:28px;
+    border-radius:9px;background:var(--brand);color:#fff;font-weight:800;font-size:14px;
+    display:grid;place-items:center}
+  ol.steps strong{display:block;font-size:16px}
+  ol.steps span{font-size:14.5px;color:var(--muted)}
+
+  /* privacy panel */
+  .panel{background:linear-gradient(160deg,var(--brand),var(--brand-700));color:#fff;
+    border-radius:20px;padding:30px}
+  .panel h2{color:#fff}
+  .panel p{color:rgba(255,255,255,.92)}
+  .panel ul{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+  .panel li{padding-left:28px;position:relative;font-size:15px;color:rgba(255,255,255,.95)}
+  .panel li::before{content:"✓";position:absolute;left:0;font-weight:800}
+
+  /* price */
+  .price{background:var(--surface);border:2px solid var(--brand);border-radius:20px;padding:26px;text-align:center}
+  .price .amt{font-size:40px;font-weight:800;letter-spacing:-.03em}
+  .price .sub{color:var(--muted);font-size:14.5px}
+
+  /* faq */
+  details{background:var(--surface);border:1px solid var(--border);border-radius:13px;
+    padding:15px 18px;margin-bottom:10px}
+  details+details{margin-top:0}
+  summary{font-weight:700;cursor:pointer;font-size:15.5px}
+  details p{font-size:14.5px}
+
+  .warnbox{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--warn);
+    border-radius:12px;padding:16px 18px;font-size:14px;color:var(--muted)}
+  footer{padding:36px 0 48px;border-top:1px solid var(--border);font-size:13.5px;color:var(--faint)}
+  footer a{color:var(--muted)}
+  .fl{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <a class="logo" href="#top"><img src="../icons/icon.svg" alt="" />Kerb</a>
+  <a class="btn btn--ghost" style="padding:9px 16px;min-height:0;font-size:14px" href="../">Open app</a>
+</div></header>
+
+<div class="wrap" id="top">
+
+  <section class="hero">
+    <span class="badge">● Built for UK delivery drivers</span>
+    <h1>Know exactly what's&nbsp;yours to keep.</h1>
+    <p class="lede">Kerb tracks your Amazon Flex, Uber Eats and Deliveroo earnings, works out your tax and National Insurance to the penny, and gives you a Self Assessment report you can file yourself — so you don't need an accountant.</p>
+    <div class="cta-row">
+      <a class="btn btn--primary" href="../">Open Kerb — it's free</a>
+      <a class="btn btn--ghost" href="#how">See how it works</a>
+    </div>
+    <p class="note">No sign-up. No account. Works offline. Your figures never leave your phone.</p>
+    <div class="strip">
+      <span class="chip">2026/27 HMRC rates</span>
+      <span class="chip">55p per mile</span>
+      <span class="chip">Class 2 &amp; 4 NIC</span>
+      <span class="chip">PAYE job handled</span>
+      <span class="chip">Works offline</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Three questions drivers always get wrong</h2>
+    <p class="lede">Most drivers either overpay, or get a January shock. Kerb answers all three, live, as you log your work.</p>
+    <div class="grid" style="margin-top:22px">
+      <div class="card">
+        <h3>“How much tax will I owe?”</h3>
+        <p>Kerb applies the real 2026/27 rates — Income Tax, Class 4 at 6%/2%, Class 2, the £1,000 trading allowance — and shows the figure as it grows.</p>
+      </div>
+      <div class="card">
+        <h3>“What can I actually claim?”</h3>
+        <p>It claims your mileage at 55p/25p, or your real running costs — whichever leaves you better off — and tells you which to use.</p>
+      </div>
+      <div class="card">
+        <h3>“How much is safe to spend?”</h3>
+        <p>Your tax pot and your spendable profit, split out separately, so the money you owe HMRC is never money you've already spent.</p>
+      </div>
+      <div class="card">
+        <h3>“What about my other job?”</h3>
+        <p>If you're also employed, Kerb keeps PAYE separate and stacks your self-employment on top correctly — so the tax figure is right, not doubled.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What's inside</h2>
+    <div class="grid" style="margin-top:22px">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M9 3h6l4 4v14H5V3h4Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></div>
+        <h3>A Self Assessment report</h3>
+        <p>Every figure mapped to the exact SA103S box you type it into on HMRC — turnover, expenses, profit. Save it as a PDF.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h3>Mileage done properly</h3>
+        <p>55p for the first 10,000 business miles, 25p after — and a separate 10,000-mile band for each vehicle, as HMRC requires.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><path d="M3 11h18"/></svg></div>
+        <h3>Scan receipts &amp; statements</h3>
+        <p>Optional: photograph a receipt, payslip or bank statement and have the figures read out for you, line by line.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2v20M5 9l7-7 7 7"/></svg></div>
+        <h3>Losses carried forward</h3>
+        <p>A tough first year isn't wasted — a trading loss is carried forward against later profits, cutting next year's bill.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></div>
+        <h3>Deadline reminders</h3>
+        <p>Kerb counts down to 31 January and nudges you in good time — plus registration and payments on account.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 3-4 6 6"/><path d="M3 21h18"/></svg></div>
+        <h3>Know your best shifts</h3>
+        <p>Real £/hour and £/mile <em>after</em> tax and costs, by platform and by day — so you work the hours that actually pay.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <h2>Your tax data never leaves your phone</h2>
+      <p>Most money apps upload everything to a server. Kerb doesn't have one.</p>
+      <ul>
+        <li>No account, no email, no sign-up</li>
+        <li>No analytics and no tracking</li>
+        <li>Your records are stored on your device and pinned so the browser can't clear them</li>
+        <li>Lock it behind a PIN, and export a backup whenever you like</li>
+      </ul>
+      <p style="margin-top:16px;font-size:13.5px">The one exception: if you choose to scan a receipt using your own API key, that single image is sent to be read and is not stored by us.</p>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <ol class="steps" style="margin-top:20px">
+      <li><strong>Log your work</strong><span>Add a shift in seconds, start a live one, or import a statement. Tips, hours, drops and miles.</span></li>
+      <li><strong>Watch the real numbers</strong><span>Profit, tax to set aside and safe-to-spend update instantly — with your PAYE job kept separate.</span></li>
+      <li><strong>File it yourself in January</strong><span>Open your Self Assessment report, copy each figure into the box it names on HMRC, and keep the PDF for your records.</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Price</h2>
+    <div class="price" style="margin-top:18px">
+      <div class="amt">Free</div>
+      <div class="sub">while Kerb is in early access — no card, no trial countdown</div>
+      <a class="btn btn--primary" style="margin-top:18px" href="../">Open Kerb</a>
+    </div>
+    <p class="note" style="text-align:center">Paid extras may come later. Anything you've already recorded stays yours, and stays on your device.</p>
+  </section>
+
+  <section>
+    <h2>Honest answers</h2>
+    <div style="margin-top:18px">
+      <details>
+        <summary>Does Kerb file my tax return for me?</summary>
+        <p>No. Kerb is not HMRC-recognised filing software and cannot submit anything to HMRC. It prepares your figures and tells you which box each one goes in; you file through HMRC's own online service.</p>
+      </details>
+      <details>
+        <summary>Is this tax advice?</summary>
+        <p>No. Kerb gives estimates to help you budget and keep records. For anything unusual or significant, speak to a qualified accountant.</p>
+      </details>
+      <details>
+        <summary>Do I need an account?</summary>
+        <p>No. Open it and start — there's nothing to sign up for, because there's no server to sign up to.</p>
+      </details>
+      <details>
+        <summary>Does it work without signal?</summary>
+        <p>Yes. Add Kerb to your Home Screen and it works fully offline — useful in car parks and dead spots.</p>
+      </details>
+      <details>
+        <summary>What if I get a new phone?</summary>
+        <p>Export a backup file from Settings and import it on the new device. Because nothing is stored on a server, that backup is your copy.</p>
+      </details>
+      <details>
+        <summary>I'm employed as well as delivering. Does that work?</summary>
+        <p>Yes — that's built in. Add your payslips or your salary and Kerb stacks your self-employment on top, so you're only setting aside what you genuinely owe.</p>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <div class="warnbox">
+      <strong style="color:var(--text)">Please read:</strong> Kerb provides estimates and record-keeping to help you prepare your own Self Assessment. It is not tax, accounting or legal advice, and it is not HMRC-recognised filing software. You are responsible for the figures you submit. Always confirm the final numbers with HMRC or a qualified accountant.
+    </div>
+  </section>
+
+</div>
+
+<footer><div class="wrap">
+  <div class="fl">
+    <a href="../">Open the app</a>
+    <a href="../#/terms">Terms &amp; privacy</a>
+    <a href="#top">Back to top</a>
+  </div>
+  <div>Kerb — built for UK self-employed delivery drivers. Rates shown for the 2026/27 tax year.</div>
+</div></footer>
+
+</body>
+</html>
