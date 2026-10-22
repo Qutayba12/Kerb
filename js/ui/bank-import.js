@@ -8,7 +8,7 @@ import { el, uid, todayISO, fmtGBP, fmtDate, fileToResizedDataURL, fileToBase64 
 import { earnings, expenses } from '../db.js';
 import { getSettings, allPlatforms, EXPENSE_CATEGORIES, categoryById } from '../store.js';
 import { extractBankTransactions, hasApiKey } from '../claude.js';
-import { icon, toast, selectInput } from './shared.js';
+import { icon, toast, selectInput, scanCanceller } from './shared.js';
 import { makeDupChecker } from '../dedupe.js';
 import { bus } from '../bus.js';
 
@@ -46,7 +46,9 @@ export async function render() {
     if (!file) return;
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     status.hidden = false; status.style.color = 'var(--muted)';
-    status.innerHTML = `<span class="splash__spin"></span> Claude is reading the statement…`;
+    const cancel = scanCanceller();
+    status.innerHTML = `<span class="splash__spin"></span> Claude is reading the statement… `;
+    status.append(cancel.btn);
     photoBtn.disabled = pdfBtn.disabled = true; preview.replaceChildren();
     try {
       let source;
@@ -57,13 +59,17 @@ export async function render() {
         platforms: allPlatforms().map(p => ({ id: p.id, name: p.name })),
         categories: EXPENSE_CATEGORIES.map(c => c.id),
       };
-      const { transactions, truncated } = await extractBankTransactions(source, context, getSettings());
+      const { transactions, truncated } = await extractBankTransactions(source, context, getSettings(), { signal: cancel.signal });
       status.hidden = true;
       if (!transactions.length) { toast('No transactions found in that statement', 'warn'); return; }
       extracted = transactions.map(t => ({ ...t, id: uid() }));
       renderPreview();
       if (truncated) toast(`Long statement — showing the first ${transactions.length}. Import the rest a page at a time.`, 'warn');
-    } catch (e) { status.innerHTML = `${icon('warn')} ${e.message}`; status.style.color = 'var(--neg)'; }
+    } catch (e) {
+      const quiet = /cancelled/i.test(e.message);
+      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${e.message}`;
+      status.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
+    }
     finally { photoBtn.disabled = pdfBtn.disabled = false; photoInput.value = ''; fileInput.value = ''; }
   }
   photoInput.addEventListener('change', () => handle(photoInput.files[0]));

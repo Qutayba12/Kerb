@@ -8,7 +8,7 @@ import { payslips } from '../db.js';
 import { getSettings, saveSettings } from '../store.js';
 import { extractPayslip, hasApiKey } from '../claude.js';
 import { derivePaye, applyDerivedPaye } from '../payslips.js';
-import { icon, field, moneyInput, selectInput, toast, openSheet, closeSheet, confirmDialog, emptyState } from './shared.js';
+import { icon, field, moneyInput, selectInput, toast, openSheet, closeSheet, confirmDialog, emptyState, scanCanceller } from './shared.js';
 import { bus } from '../bus.js';
 
 export async function render() {
@@ -79,18 +79,22 @@ export async function render() {
     if (!file) return;
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     status.hidden = false; status.style.color = 'var(--muted)';
-    status.innerHTML = `<span class="splash__spin"></span> Claude is reading the payslip…`;
+    const cancel = scanCanceller();
+    status.innerHTML = `<span class="splash__spin"></span> Claude is reading the payslip… `;
+    status.append(cancel.btn);
     photoBtn.disabled = pdfBtn.disabled = true;
     try {
       let source, image = '';
       if (isPdf) { const { base64 } = await fileToBase64(file); source = { kind: 'pdf', base64 }; }
       else { image = await fileToResizedDataURL(file, 1600, 0.85); source = { kind: 'image', dataUrl: image }; }
       if (!hasApiKey(getSettings())) { toast('Add your API key in Settings to auto-read', 'warn'); status.hidden = true; openPayslipForm({ image }, { asNew: true }); return; }
-      const r = await extractPayslip(source, getSettings());
+      const r = await extractPayslip(source, getSettings(), { signal: cancel.signal });
       status.hidden = true;
       openPayslipForm({ ...r, image, source: 'claude' }, { asNew: true });
     } catch (e) {
-      status.innerHTML = `${icon('warn')} ${e.message}`; status.style.color = 'var(--neg)';
+      const quiet = /cancelled/i.test(e.message);
+      status.innerHTML = quiet ? 'Scan cancelled.' : `${icon('warn')} ${e.message}`;
+      status.style.color = quiet ? 'var(--muted)' : 'var(--neg-text)';
     } finally { photoBtn.disabled = pdfBtn.disabled = false; photoInput.value = ''; fileInput.value = ''; }
   }
 
