@@ -134,7 +134,7 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
       sheet.append(el('div', { class: 'report__note', text: `How the mileage was worked out: ${s.mileageBasis.trim()}` }));
     }
     if (sum.baseLeg && sum.baseLeg.miles > 0) {
-      sheet.append(el('div', { class: 'report__note', text: `Of ${fmtNum(sum.businessMiles)} business miles, ${fmtNum(sum.baseLeg.miles)} are travel between home and a pickup station, across stations at differing distances.` }));
+      sheet.append(el('div', { class: 'report__note', text: `Of ${fmtNum(sum.businessMiles)} business miles, ${fmtNum(sum.baseLeg.miles)} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.` }));
     }
     sheet.append(el('div', { class: 'report__note', text: `Mileage is claimed at HMRC's simplified rate. For a car that is 55p/mile for the first 10,000 business miles and 25p after.${perVeh} When you claim mileage you cannot also claim fuel, insurance or repairs for the same vehicle.` }));
   }

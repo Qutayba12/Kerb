@@ -135,7 +135,7 @@ const DEFAULTS = {
   // Pickup points, each with its own distance. A delivery driver's stations
   // sit at very different distances, so a single "typical miles per block"
   // would overstate the near ones and understate the far ones.
-  stations: [],                  // [{id,label,baseMiles,roundMiles}]
+  stations: [],                  // [{id,label,baseMiles,typicalMiles}]
   mileageBasis: '',              // how the distances were worked out — shown on the report
   expenseMethod: 'mileage',      // 'mileage' | 'actual'
   lossRelief: true,              // carry a trading loss forward against later profits
@@ -247,7 +247,7 @@ export function sanitiseSettings(raw) {
       id: sText(v.id, 40) || 's' + Math.random().toString(36).slice(2, 8),
       label: sText(v.label, 60) || 'Station',
       baseMiles: sNum(v.baseMiles, 0, 2000),
-      roundMiles: sNum(v.roundMiles, 0, 2000),
+      typicalMiles: sNum(v.typicalMiles, 0, 2000),
     }));
   }
   put('mileageBasis', sText(raw.mileageBasis, 400));
@@ -326,12 +326,17 @@ export function allPlatforms() {
 // The driver's vehicles. Older installs have just the single `vehicle` type,
 // which is returned here as one default vehicle so everything keeps working.
 // HMRC applies the simplified-mileage bands PER VEHICLE, so each needs an id.
-// The stations this driver collects from. Each carries its own round-trip
-// distance from home and the typical distance covered on the round itself.
-// They are kept apart because the first leg is the one whose deductibility
-// depends on where HMRC considers the base of operations to be — keeping the
-// split means that position can be changed later by editing one number,
-// instead of re-entering every shift.
+// The stations this driver collects from.
+//
+// A block is not a there-and-back trip. It runs home -> station -> drops ->
+// home from wherever the last drop happened to be, and that last leg varies
+// from ten minutes to an hour. So a station holds two separate things:
+//
+//   baseMiles     one way, home to the station. The only leg whose
+//                 deductibility is in question, and the only one that is
+//                 the same every time.
+//   typicalMiles  what a whole block from here usually comes to, measured.
+//                 Used to fill a figure in; never a substitute for a reading.
 export function allStations() {
   const s = loadSettings();
   const list = Array.isArray(s.stations) ? s.stations.filter(v => v && v.id) : [];
@@ -339,30 +344,31 @@ export function allStations() {
     id: v.id,
     label: v.label || 'Station',
     baseMiles: Number(v.baseMiles) || 0,
-    roundMiles: Number(v.roundMiles) || 0,
-    get totalMiles() { return round2((Number(v.baseMiles) || 0) + (Number(v.roundMiles) || 0)); },
+    typicalMiles: Number(v.typicalMiles) || 0,
   }));
 }
 export function stationById(id) { return allStations().find(v => v.id === id) || null; }
 
-// Work out a station's round distance from shifts that were actually
-// measured there. The home leg is already known, so whatever the odometer
-// recorded beyond it is the round. Only readings — odometer or GPS — count:
-// a number typed in afterwards would just be the guess coming back.
-export function suggestRoundMiles(stationId, allEarnings = []) {
+// What a block from this station usually comes to, taken from shifts that
+// were actually measured there. The whole block is used, not a derived part
+// of it: the way home starts at the last drop, not at the station, so there
+// is no fixed distance to subtract and nothing to reconstruct.
+//
+// Only readings count — odometer or GPS. Deriving a figure from a mileage
+// typed in afterwards would hand the driver their own guess back as evidence.
+export function suggestBlockMiles(stationId, allEarnings = []) {
   const st = stationById(stationId);
   if (!st) return null;
-  const measured = allEarnings.filter(e => e
-    && e.stationId === stationId
-    && (e.milesSource === 'odometer' || e.milesSource === 'gps')
-    && Number(e.miles) > 0);
-  if (!measured.length) return null;
-  const rounds = measured
-    .map(e => round2(Number(e.miles) - st.baseMiles))
-    .filter(v => v > 0);                     // a shorter trip than the home leg is not a round
-  if (!rounds.length) return null;
-  const avg = round2(rounds.reduce((t, v) => t + v, 0) / rounds.length);
-  return { n: rounds.length, average: avg, lowest: Math.min(...rounds), highest: Math.max(...rounds) };
+  const totals = allEarnings
+    .filter(e => e && e.stationId === stationId
+      && (e.milesSource === 'odometer' || e.milesSource === 'gps')
+      && Number(e.miles) > 0)
+    .map(e => round2(Number(e.miles)))
+    // A block cannot be shorter than getting to the station in the first place.
+    .filter(v => v >= st.baseMiles);
+  if (!totals.length) return null;
+  const avg = round2(totals.reduce((t, v) => t + v, 0) / totals.length);
+  return { n: totals.length, average: avg, lowest: Math.min(...totals), highest: Math.max(...totals) };
 }
 
 export function allVehicles() {

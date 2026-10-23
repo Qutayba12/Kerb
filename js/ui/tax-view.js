@@ -270,7 +270,7 @@ export async function render() {
   // exists.
   if (sum.baseLeg && sum.baseLeg.amount > 0) {
     const b = sum.baseLeg;
-    root.append(el('div', { class: 'callout callout--info', style: 'margin-top:14px', html: `${icon('info')}<div><b>${fmtGBP(b.amount)} of your mileage claim is travel to and from a station</b> (${fmtNum(b.miles)} of ${fmtNum(sum.businessMiles)} miles).${b.unsplitMiles > 0 ? ` Another ${fmtNum(b.unsplitMiles)} miles are logged without a station, so are not counted here.` : ''} Whether that leg counts as business travel depends on whether HMRC treats your pickup points as a fixed base — if you work from several stations at different distances, it usually does count. Worth confirming once with an accountant.</div>` }));
+    root.append(el('div', { class: 'callout callout--info', style: 'margin-top:14px', html: `${icon('info')}<div><b>${fmtGBP(b.amount)} of your mileage claim is the drive out to a station</b> (${fmtNum(b.miles)} of ${fmtNum(sum.businessMiles)} miles).${b.unsplitMiles > 0 ? ` Another ${fmtNum(b.unsplitMiles)} miles are logged without a station, so are not counted here.` : ''} The way home is not included: it starts at your last drop, which is a work location. Whether the outbound leg counts as business travel depends on whether HMRC treats your pickup points as a fixed base — working from several stations at different distances points away from that. Worth confirming once with an accountant.</div>` }));
   }
 
   // HMRC publishes each year's rates in advance; until they exist for this
