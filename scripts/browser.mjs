@@ -84,6 +84,7 @@ export async function launch({ port, cdp, headless = true } = {}) {
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 
   let id = 0;
+  let closed = false;
   const pending = new Map();
   const events = [];
   ws.onmessage = (ev) => {
@@ -92,6 +93,9 @@ export async function launch({ port, cdp, headless = true } = {}) {
     else if (msg.method) events.push(msg);
   };
   const send = (method, params = {}) => new Promise((res, rej) => {
+    // Sending on a closed socket never settles, so the caller's await hangs and
+    // node exits silently with no output — which reads as "the test vanished".
+    if (closed || ws.readyState !== 1) { rej(new Error('browser is closed (' + method + ')')); return; }
     const myId = ++id;
     pending.set(myId, (m) => (m.error ? rej(new Error(method + ': ' + m.error.message)) : res(m.result)));
     ws.send(JSON.stringify({ id: myId, method, params }));
@@ -197,6 +201,9 @@ export async function launch({ port, cdp, headless = true } = {}) {
     },
 
     async close() {
+      closed = true;
+      for (const [, settle] of pending) { try { settle({ error: { message: 'browser closed' } }); } catch {} }
+      pending.clear();
       try { ws.close(); } catch {}
       chrome.kill('SIGKILL'); server.kill('SIGKILL');
       await wait(100);
