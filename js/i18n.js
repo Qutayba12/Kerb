@@ -522,6 +522,46 @@ const AR = {
     'صوّر أرباحك',
   'An entry adds up to other entries you already have':
     'مُدخل يساوي مجموع مُدخلات أخرى لديك',
+  'Pickup stations':
+    'محطات الاستلام',
+  'Add a station':
+    'إضافة محطة',
+  'Add station':
+    'إضافة محطة',
+  'Station':
+    'المحطة',
+  'Station name':
+    'اسم المحطة',
+  'Miles there and back':
+    'الأميال ذهاباً وإياباً',
+  'Miles on the round':
+    'أميال جولة التوصيل',
+  'Home to this station and home again.':
+    'من البيت إلى هذه المحطة ثم العودة.',
+  'Roughly how far you drive delivering once you leave it.':
+    'كم تقود تقريباً في التوصيل بعد مغادرتها.',
+  'Whatever you call it.':
+    'أي اسم تعرفها به.',
+  'Pick one to fill the miles in automatically.':
+    'اختر واحدة لتُملأ الأميال تلقائياً.',
+  'How you worked these out':
+    'كيف توصّلت إلى هذه الأرقام',
+  'Shown on your Self Assessment report. If HMRC asks how you arrived at your mileage, this is the answer.':
+    'يظهر في تقرير إقرارك الذاتي. وإن سألتك HMRC كيف توصّلت إلى أميالك، فهذا هو الجواب.',
+  'Station removed':
+    'أُزيلت المحطة',
+  'Station added':
+    'أُضيفت المحطة',
+  'Remove station?':
+    'إزالة المحطة؟',
+  'Shifts already logged keep the miles they have.':
+    'الورديات المسجّلة تحتفظ بأميالها كما هي.',
+  'Name the station':
+    'سمِّ المحطة',
+  '— not set —':
+    '— غير محدّدة —',
+  'Pickup points sit at very different distances, so one "typical miles" figure would overstate the near ones and understate the far ones. Set each station once and Kerb fills the miles in when you log a block there.':
+    'نقاط الاستلام تقع على مسافات شديدة التباين، فرقم «أميال نمطية» واحد يُضخّم القريبة ويُنقص البعيدة. اضبط كل محطة مرّة واحدة، فيملأ Kerb الأميال عند تسجيل بلوك فيها.',
 };
 
 // placeholders (separate so we can target the attribute)
@@ -700,6 +740,10 @@ const AR_PAT = {
     '{0} مُدخلات تساوي مجموع مُدخلات أخرى لديك',
   '{0} on {1} {2} is exactly the total of {3} entries from {4} {5} to {6} {7}, and has no hours or miles of its own. That is the shape of a weekly payout recorded next to the blocks it pays for — which would declare the same money twice and tax you on income you never earned. Check it, and delete whichever one is the summary.':
     '{0} في {1} {2} يساوي تماماً مجموع {3} مُدخلات من {4} {5} إلى {6} {7}، وليست له ساعات ولا أميال خاصة به. هذا شكل الدفعة الأسبوعية مسجّلة بجانب البلوكات التي تدفع عنها — وهو ما يُعلن المال نفسه مرّتين ويفرض عليك ضريبة على دخل لم تكسبه. راجعه، واحذف أيّهما الملخّص.',
+  '{0} mi there and back · {1} mi on the round · {2} mi a block':
+    '{0} ميل ذهاباً وإياباً · {1} ميل في الجولة · {2} ميل للبلوك',
+  '{0} mi there and back + {1} mi on the round.':
+    '{0} ميل ذهاباً وإياباً + {1} ميل في الجولة.',
 };
 
 // Slotted patterns for whole prose units, keyed on inner markup. The Arabic
@@ -830,6 +874,8 @@ const AR_HTML = {
     '<b>{0} في {1} {2} يساوي مجموع {3} مُدخلات أخرى</b> من {4} {5} إلى {6} {7}. هذا شكل الدفعة الأسبوعية — نفس مال البلوكات التي تدفع عنها. وهو مستبعَد أدناه؛ لا تؤشّره إلا إن كان عملاً منفصلاً فعلاً.',
   '<b>You already have {0} saved on {1} {2}</b>, and these {3} rows add up to exactly that. If that saved entry was the weekly payout, adding these blocks as well would count the week twice — delete it in Income after adding.':
     '<b>لديك {0} محفوظ في {1} {2}</b>، وهذه الصفوف الـ{3} تساوي مجموعه تماماً. لو كان ذلك المُدخل هو الدفعة الأسبوعية، فإضافة هذه البلوكات ستحسب الأسبوع مرّتين — احذفه من شاشة الدخل بعد الإضافة.',
+  'Pickup points sit at very different distances, so one "typical miles" figure would overstate the near ones and understate the far ones. Set each station once and Kerb fills the miles in when you log a block there.':
+    'نقاط الاستلام تقع على مسافات شديدة التباين، فرقم «أميال نمطية» واحد يُضخّم القريبة ويُنقص البعيدة. اضبط كل محطة مرّة واحدة، فيملأ Kerb الأميال عند تسجيل بلوك فيها.',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).

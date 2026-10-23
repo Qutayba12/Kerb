@@ -5,7 +5,7 @@
 // Figures verified for 2026/27: England/Wales/NI, Scotland (six
 // bands) and student-loan thresholds, all editable in Settings.
 // ============================================================
-import { currentTaxYear } from './util.js';
+import { currentTaxYear, round2 } from './util.js';
 
 const LS_KEY = 'kerb.settings.v1';
 
@@ -132,6 +132,11 @@ const DEFAULTS = {
   region: 'ruk',
   vehicle: 'car',                // the default/only vehicle's type
   vehicles: [],                  // [{id,label,type}] — empty = one vehicle of type `vehicle`
+  // Pickup points, each with its own distance. A delivery driver's stations
+  // sit at very different distances, so a single "typical miles per block"
+  // would overstate the near ones and understate the far ones.
+  stations: [],                  // [{id,label,baseMiles,roundMiles}]
+  mileageBasis: '',              // how the distances were worked out — shown on the report
   expenseMethod: 'mileage',      // 'mileage' | 'actual'
   lossRelief: true,              // carry a trading loss forward against later profits
   hmrcPayments: [],              // [{id,taxYear,date,amount,note}] money actually sent to HMRC
@@ -237,6 +242,15 @@ export function sanitiseSettings(raw) {
       type: ENUMS.vehicle.includes(v.type) ? v.type : 'car',
     }));
   }
+  if (Array.isArray(raw.stations)) {
+    out.stations = raw.stations.slice(0, 50).filter(v => v && typeof v === 'object').map(v => ({
+      id: sText(v.id, 40) || 's' + Math.random().toString(36).slice(2, 8),
+      label: sText(v.label, 60) || 'Station',
+      baseMiles: sNum(v.baseMiles, 0, 2000),
+      roundMiles: sNum(v.roundMiles, 0, 2000),
+    }));
+  }
+  put('mileageBasis', sText(raw.mileageBasis, 400));
   if (Array.isArray(raw.hmrcPayments)) {
     out.hmrcPayments = raw.hmrcPayments.slice(0, 500).filter(p => p && typeof p === 'object').map(p => ({
       id: sText(p.id, 40) || 'h' + Math.random().toString(36).slice(2, 8),
@@ -312,6 +326,25 @@ export function allPlatforms() {
 // The driver's vehicles. Older installs have just the single `vehicle` type,
 // which is returned here as one default vehicle so everything keeps working.
 // HMRC applies the simplified-mileage bands PER VEHICLE, so each needs an id.
+// The stations this driver collects from. Each carries its own round-trip
+// distance from home and the typical distance covered on the round itself.
+// They are kept apart because the first leg is the one whose deductibility
+// depends on where HMRC considers the base of operations to be — keeping the
+// split means that position can be changed later by editing one number,
+// instead of re-entering every shift.
+export function allStations() {
+  const s = loadSettings();
+  const list = Array.isArray(s.stations) ? s.stations.filter(v => v && v.id) : [];
+  return list.map(v => ({
+    id: v.id,
+    label: v.label || 'Station',
+    baseMiles: Number(v.baseMiles) || 0,
+    roundMiles: Number(v.roundMiles) || 0,
+    get totalMiles() { return round2((Number(v.baseMiles) || 0) + (Number(v.roundMiles) || 0)); },
+  }));
+}
+export function stationById(id) { return allStations().find(v => v.id === id) || null; }
+
 export function allVehicles() {
   const s = loadSettings();
   const list = Array.isArray(s.vehicles) ? s.vehicles.filter(v => v && v.id) : [];

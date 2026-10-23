@@ -4,7 +4,7 @@
 // ============================================================
 import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate, escapeHtml } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
-import { getSettings, allPlatforms, getConfig, allVehicles, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
+import { getSettings, allPlatforms, getConfig, allVehicles, allStations, stationById, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog, scanCanceller } from './shared.js';
 import { extractReceipt, hasApiKey } from '../claude.js';
 import { bus } from '../bus.js';
@@ -17,7 +17,8 @@ export function openEarningsForm(existing = null, opts = {}) {
   const e = {
     id: isEdit ? b.id : uid(), date: b.date || todayISO(), platform: b.platform || allPlatforms()[0].id,
     amount: b.amount ?? '', tips: b.tips ?? '', hours: b.hours ?? '', deliveries: b.deliveries ?? '', miles: b.miles ?? '', notes: b.notes || '',
-    vehicleId: b.vehicleId || '',
+    vehicleId: b.vehicleId || '', stationId: b.stationId || '',
+    milesBase: b.milesBase ?? null, milesRound: b.milesRound ?? null,
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
@@ -30,6 +31,16 @@ export function openEarningsForm(existing = null, opts = {}) {
   const miles = el('input', { class: 'input', type: 'number', step: '0.1', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
   const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
 
+  // Picking the station fills the miles in, because stations sit at very
+  // different distances. The two legs are stored separately: whether the
+  // home-to-station leg is deductible turns on where the base of operations
+  // is, and keeping them apart means that can be revisited by changing one
+  // number rather than re-entering every shift.
+  const stations = allStations();
+  const stationSel = stations.length
+    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: `${v.label} · ${fmtNum(v.totalMiles)} mi` }))], e.stationId)
+    : null;
+
   // Only ask which vehicle when the driver actually has more than one.
   const vehicles = allVehicles();
   const vehicleSel = vehicles.length > 1
@@ -37,6 +48,22 @@ export function openEarningsForm(existing = null, opts = {}) {
     : null;
 
   form.append(dateFieldWithYearCheck('Date', dateInput), field('Platform', platformSel));
+  if (stationSel) {
+    const stationHint = el('div', { class: 'hint' });
+    const describe = () => {
+      const st = stationById(stationSel.value);
+      stationHint.textContent = st
+        ? `${fmtNum(st.baseMiles)} mi there and back + ${fmtNum(st.roundMiles)} mi on the round.`
+        : 'Pick one to fill the miles in automatically.';
+    };
+    stationSel.addEventListener('change', () => {
+      const st = stationById(stationSel.value);
+      if (st) { miles.value = String(st.totalMiles); }
+      describe();
+    });
+    describe();
+    form.append(field('Station', stationSel), stationHint);
+  }
   if (vehicleSel) form.append(field('Vehicle', vehicleSel, 'Each vehicle has its own first 10,000 business miles at the higher rate.'));
   form.append(
     field('Earnings (before tips)', amount, 'What the app/platform paid you for the work.'),
@@ -55,7 +82,14 @@ export function openEarningsForm(existing = null, opts = {}) {
       hours: parseFloat(hours.value) || 0, deliveries: parseInt(deliveries.value) || 0,
       miles: parseFloat(miles.value) || 0, notes: notes.value.trim(),
       vehicleId: vehicleSel ? vehicleSel.value : (e.vehicleId || ''),
+      stationId: stationSel ? stationSel.value : (e.stationId || ''),
     };
+    // Record how the miles split, so the home-to-station leg can be separated
+    // out later without going back through every shift.
+    const st = rec.stationId ? stationById(rec.stationId) : null;
+    if (st && Math.abs(rec.miles - st.totalMiles) < 0.05) {
+      rec.milesBase = st.baseMiles; rec.milesRound = st.roundMiles;
+    } else { rec.milesBase = null; rec.milesRound = null; }
     if (!rec.amount && !rec.tips && !rec.miles) { toast('Enter earnings, tips or miles', 'err'); return; }
     await earnings.save(rec);
     closeSheet(); toast(isEdit ? 'Shift updated' : 'Shift added', 'ok'); bus.refresh();

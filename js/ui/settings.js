@@ -2,10 +2,10 @@
 // ui/settings.js — everything configurable + Claude key + data.
 // Most controls auto-save; calculations refresh where relevant.
 // ============================================================
-import { el, uid, todayISO, fmtGBP } from '../util.js';
+import { el, uid, todayISO, fmtGBP, fmtNum } from '../util.js';
 import {
   getSettings, saveSettings, resetSettings, getConfig, availableYears,
-  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles,
+  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations,
 } from '../store.js';
 import { importAll, wipeAll } from '../db.js';
 import { ensurePersistentStorage, storageStatus, fmtBytes } from '../storage.js';
@@ -52,6 +52,10 @@ export async function render() {
   // ---------- Vehicles ----------
   root.append(sec('Vehicles'));
   root.append(vehiclesCard());
+
+  // ---------- Stations ----------
+  root.append(sec('Pickup stations'));
+  root.append(stationsCard());
 
   // ---------- Income context ----------
   root.append(sec('Your income context'));
@@ -423,6 +427,74 @@ function vehiclesCard() {
   add.onclick = () => openVehicleForm();
   wrap.append(add);
   return wrap;
+}
+
+function stationsCard() {
+  const s = getSettings();
+  const wrap = el('div', { class: 'card' });
+  const list = allStations();
+
+  wrap.append(el('div', { class: 'callout callout--info', style: 'margin:0 0 10px', html: `${icon('info')}<div>Pickup points sit at very different distances, so one "typical miles" figure would overstate the near ones and understate the far ones. Set each station once and Kerb fills the miles in when you log a block there.</div>` }));
+
+  if (list.length) {
+    const rows = el('div', { class: 'card card--flush', style: 'margin:0 0 10px' });
+    list.forEach(v => {
+      const item = el('div', { class: 'item' }, [
+        el('div', { class: 'item__icon', style: 'background:var(--brand-tint);color:var(--brand)', html: icon('route') }),
+        el('div', { class: 'item__main' }, [
+          el('div', { class: 'item__title', text: v.label }),
+          el('div', { class: 'item__sub', text: `${fmtNum(v.baseMiles)} mi there and back · ${fmtNum(v.roundMiles)} mi on the round · ${fmtNum(v.totalMiles)} mi a block` }),
+        ]),
+      ]);
+      const del = el('button', { class: 'link tiny', type: 'button', text: 'Remove' });
+      del.onclick = async () => {
+        const ok = await confirmDialog({ title: 'Remove station?', message: 'Shifts already logged keep the miles they have.', confirmText: 'Remove', danger: true });
+        if (!ok) return;
+        saveSettings({ stations: (getSettings().stations || []).filter(x => x.id !== v.id) });
+        toast('Station removed', 'ok'); bus.refresh();
+      };
+      item.append(del);
+      rows.append(item);
+    });
+    wrap.append(rows);
+  }
+
+  const add = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
+  add.innerHTML = icon('plus') + '<span>Add a station</span>';
+  add.onclick = () => openStationForm();
+  wrap.append(add);
+
+  // How the distances were arrived at. An estimate with a stated method is a
+  // record; the same number with nothing behind it is a guess.
+  const basis = el('textarea', { class: 'input', rows: 3, value: s.mileageBasis || '' });
+  basis.placeholder = 'e.g. measured each station on the map; round is about 12 miles';
+  basis.addEventListener('change', () => { saveSettings({ mileageBasis: basis.value.trim().slice(0, 400) }); toast('Saved', 'ok'); });
+  wrap.append(el('hr', { class: 'soft' }), field('How you worked these out', basis, 'Shown on your Self Assessment report. If HMRC asks how you arrived at your mileage, this is the answer.'));
+  return wrap;
+}
+
+function openStationForm() {
+  const form = el('form', { class: 'kform', autocomplete: 'off' });
+  const label = el('input', { class: 'input', type: 'text', placeholder: 'e.g. Sheffield S9' });
+  const num = (ph) => el('input', { class: 'input', type: 'number', step: '0.1', min: '0', inputMode: 'decimal', placeholder: ph });
+  const base = num('e.g. 28');
+  const round = num('e.g. 12');
+  form.append(
+    field('Station name', label, 'Whatever you call it.'),
+    field('Miles there and back', base, 'Home to this station and home again.'),
+    field('Miles on the round', round, 'Roughly how far you drive delivering once you leave it.'),
+  );
+  const save = () => {
+    const name = label.value.trim();
+    if (!name) { toast('Name the station', 'err'); return; }
+    const list = (getSettings().stations || []).slice();
+    list.push({ id: 's' + Date.now().toString(36), label: name, baseMiles: parseFloat(base.value) || 0, roundMiles: parseFloat(round.value) || 0 });
+    saveSettings({ stations: list });
+    closeSheet(); toast('Station added', 'ok'); bus.refresh();
+  };
+  form.append(el('div', { style: 'margin-top:16px' }, [el('button', { class: 'btn btn--primary btn--block', type: 'submit', text: 'Add station' })]));
+  form.addEventListener('submit', (ev) => { ev.preventDefault(); save(); });
+  openSheet({ title: 'Add a station', node: form });
 }
 
 function openVehicleForm() {
