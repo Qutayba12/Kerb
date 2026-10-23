@@ -30,6 +30,8 @@ function findChrome() {
 }
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// Not a global: the only way to get at the AsyncFunction constructor.
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 async function poll(fn, { tries = 100, every = 100, what = 'condition' } = {}) {
   for (let i = 0; i < tries; i++) {
@@ -123,9 +125,16 @@ export async function launch({ port, cdp, headless = true } = {}) {
     // not by looking for the word 'return' — a string containing 'return'
     // would otherwise be misread, and a body wrapped as an expression is a
     // SyntaxError thrown inside the page rather than a useful failure.
+    //
+    // The parse has to be an ASYNC one. The expression runs inside an async
+    // arrow in the page, so `await x()` is a perfectly good expression there,
+    // but a plain Function rejects it — which used to send it down the
+    // statement-body path, where nothing returns it. The caller got undefined
+    // for a value that existed, with no error anywhere: a poll on such an
+    // expression simply never came true.
     async eval(expr, { awaitPromise = true } = {}) {
       let isExpression = true;
-      try { new Function('return (' + expr + '\n)'); } catch { isExpression = false; }
+      try { new AsyncFunction('return (' + expr + '\n)'); } catch { isExpression = false; }
       const body = isExpression ? 'return (' + expr + '\n)' : expr;
       const r = await send('Runtime.evaluate', {
         expression: `(async () => { ${body} })()`,
@@ -187,11 +196,52 @@ export async function launch({ port, cdp, headless = true } = {}) {
       return api;
     },
 
-    // Wait until the app has booted past the splash and the first screen is done.
+    // Wait until the app has booted past the splash, the first screen is done,
+    // AND the service worker is in control of the page.
+    //
+    // That last part is not caution. The app reloads itself when the worker
+    // claims the page (app.js, on 'controllerchange'), and the worker only
+    // claims once it has cached every asset — which takes as long as the
+    // machine is slow. Return before that and the reload lands in the middle
+    // of whatever test is running, wiping everything the test put on `window`:
+    // a stubbed fetch becomes the real one again and the request leaves the
+    // browser. The symptom is a real 401 in a test that stubbed the network,
+    // on a different test each run, and only when the machine is busy.
+    //
+    // Two things this cannot do. It cannot await the claim in the page, because
+    // the reload destroys the context a listener would be waiting in. And it
+    // cannot read the worker's state once and believe it: at first render the
+    // registration may not exist yet, so "no registration" does not mean "no
+    // worker is coming". So it proves the page instead — leave a mark, and if
+    // the mark is still there on a controlled page, nothing reloaded it.
     async ready() {
-      await poll(() => api.eval('!document.getElementById("app").hidden'), { what: 'app boot' });
-      await poll(() => api.eval('document.getElementById("view").children.length > 0'), { what: 'first render' });
-      await api.settled();
+      const boot = async () => {
+        await poll(() => api.eval('!document.getElementById("app").hidden'), { what: 'app boot' });
+        await poll(() => api.eval('document.getElementById("view").children.length > 0'), { what: 'first render' });
+        await api.settled();
+      };
+      // Bounded and non-throwing: a page with no worker must fall straight
+      // through rather than fail the run.
+      const until = async (expr, tries) => {
+        for (let i = 0; i < tries; i++) {
+          try { if (await api.eval(expr)) return true; } catch {}
+          await wait(100);
+        }
+        return false;
+      };
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await boot();
+        // Already controlled: this worker has claimed the page and will not
+        // fire controllerchange again, so no reload is coming.
+        if (await api.eval('!!(navigator.serviceWorker && navigator.serviceWorker.controller)').catch(() => false)) return api;
+        const registered = await until('!!(navigator.serviceWorker && await navigator.serviceWorker.getRegistration())', 40);
+        if (!registered) return api;
+        await api.eval('window.__swMark = 1; return true;').catch(() => {});
+        await until('!!navigator.serviceWorker.controller', 300);
+        // Mark intact means the claim did not reload the page; mark gone means
+        // the document we were inspecting is gone, so settle the new one.
+        if (!(await until('window.__swMark === undefined', 15))) return api;
+      }
       return api;
     },
 
