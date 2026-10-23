@@ -1,7 +1,7 @@
 // ============================================================
 // ui/tax-view.js — full Self Assessment breakdown for the year.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline, round2, uid, parseMoney } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline, round2, uid, parseMoney, fmtMiles } from '../util.js';
 import { earnings, expenses, payslips } from '../db.js';
 import { getSettings, saveSettings, availableYears, VEHICLE_LABELS, REGION_LABELS } from '../store.js';
 import { computeTaxYear, quarterlySummary } from '../tax.js';
@@ -56,7 +56,7 @@ export async function render() {
   } else {
     // With more than one vehicle, show each one — each has its own 10k band.
     if (sum.mileageDed && (sum.mileageRows || []).length > 1) {
-      sum.mileageRows.forEach(r => trow(`Less: mileage — ${r.label} (${fmtNum(r.miles)} mi)`, '−' + fmtGBP(r.amount)));
+      sum.mileageRows.forEach(r => trow(`Less: mileage — ${r.label} (${fmtMiles(r.miles)} mi)`, '−' + fmtGBP(r.amount)));
     } else if (sum.mileageDed) {
       trow(`Less: mileage (${fmtNum(sum.businessMiles)} mi)`, '−' + fmtGBP(sum.mileageDed));
     }
@@ -270,7 +270,7 @@ export async function render() {
   // exists.
   if (sum.baseLeg && sum.baseLeg.amount > 0) {
     const b = sum.baseLeg;
-    root.append(el('div', { class: 'callout callout--info', style: 'margin-top:14px', html: `${icon('info')}<div><b>${fmtGBP(b.amount)} of your mileage claim is the drive out to a station</b> (${fmtNum(b.miles)} of ${fmtNum(sum.businessMiles)} miles).${b.unsplitMiles > 0 ? ` Another ${fmtNum(b.unsplitMiles)} miles are logged without a station, so are not counted here.` : ''} The way home is not included: it starts at your last drop, which is a work location. Whether the outbound leg counts as business travel depends on whether HMRC treats your pickup points as a fixed base — working from several stations at different distances points away from that. Worth confirming once with an accountant.</div>` }));
+    root.append(el('div', { class: 'callout callout--info', style: 'margin-top:14px', html: `${icon('info')}<div><b>${fmtGBP(b.amount)} of your mileage claim is the drive out to a station</b> (${fmtMiles(b.miles)} of ${fmtNum(sum.businessMiles)} miles).${b.unsplitMiles > 0 ? ` Another ${fmtMiles(b.unsplitMiles)} miles are logged without a station, so are not counted here.` : ''} The way home is not included: it starts at your last drop, which is a work location. Whether the outbound leg counts as business travel depends on whether HMRC treats your pickup points as a fixed base — working from several stations at different distances points away from that. Worth confirming once with an accountant.</div>` }));
   }
 
   // HMRC publishes each year's rates in advance; until they exist for this

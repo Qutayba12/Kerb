@@ -2,7 +2,7 @@
 // ui/items.js — row renderers for earnings & expenses, reused by
 // the dashboard, income and expenses screens. Tapping opens edit.
 // ============================================================
-import { el, fmtGBP, fmtDate, fmtNum } from '../util.js';
+import { el, fmtGBP, fmtDate, fmtNum, fmtMiles } from '../util.js';
 import { platformById, categoryById, getSettings } from '../store.js';
 import { icon } from './shared.js';
 import { deductibleAmount } from '../tax.js';
@@ -13,7 +13,7 @@ export function earningItem(e) {
   const total = (e.amount || 0) + (e.tips || 0);
   const bits = [];
   if (e.hours) bits.push(`${fmtNum(e.hours, e.hours % 1 ? 1 : 0)}h`);
-  if (e.miles) bits.push(`${fmtNum(e.miles)} mi`);
+  if (e.miles) bits.push(`${fmtMiles(e.miles)} mi`);
   if (e.deliveries) bits.push(`${e.deliveries} drops`);
   if (e.tips) bits.push(`${fmtGBP(e.tips)} tips`);
   const sub = subLine([fmtDate(e.date, { weekday: true }), ...bits]);

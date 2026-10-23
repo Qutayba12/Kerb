@@ -16,6 +16,15 @@ export function fmtGBP(n, { round = false } = {}) {
   const v = Number(n) || 0;
   return round ? GBP0.format(Math.round(v)) : GBP.format(round2(v));
 }
+// Mileage, shown without lying about it. fmtNum defaults to no decimals, so
+// a station 21.5 miles away displayed as "22" — half a mile per block that
+// the driver never drove, and a figure that no longer matched what they
+// typed. Whole numbers stay clean; a fraction is shown because it is real.
+export function fmtMiles(n) {
+  const v = Number(n) || 0;
+  return fmtNum(v, Number.isInteger(round2(v)) ? 0 : 1);
+}
+
 export function fmtNum(n, dp = 0) {
   return new Intl.NumberFormat('en-GB', { minimumFractionDigits: dp, maximumFractionDigits: dp }).format(Number(n) || 0);
 }

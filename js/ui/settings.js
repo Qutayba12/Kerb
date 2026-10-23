@@ -2,7 +2,7 @@
 // ui/settings.js — everything configurable + Claude key + data.
 // Most controls auto-save; calculations refresh where relevant.
 // ============================================================
-import { el, uid, todayISO, fmtGBP, fmtNum } from '../util.js';
+import { el, uid, todayISO, fmtGBP, fmtNum, fmtMiles } from '../util.js';
 import {
   getSettings, saveSettings, resetSettings, getConfig, availableYears,
   VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations, suggestBlockMiles,
@@ -445,7 +445,7 @@ function stationsCard() {
       if (!slot || !sug) return;
       const same = Math.abs(sug.average - v.typicalMiles) < 0.1;
       slot.replaceChildren(el('div', { class: 'tiny', style: 'margin-top:4px' }, [
-        el('span', { class: 'muted', text: `Measured over ${sug.n} shift${sug.n === 1 ? '' : 's'}: ${fmtNum(sug.average)} mi a block${sug.n > 1 ? ` (${fmtNum(sug.lowest)}–${fmtNum(sug.highest)})` : ''}. ` }),
+        el('span', { class: 'muted', text: `Measured over ${sug.n} shift${sug.n === 1 ? '' : 's'}: ${fmtMiles(sug.average)} mi a block${sug.n > 1 ? ` (${fmtMiles(sug.lowest)}–${fmtMiles(sug.highest)})` : ''}. ` }),
       ]));
       if (!same) {
         const use = el('button', { class: 'link tiny', type: 'button', text: 'Use this' });
@@ -468,7 +468,7 @@ function stationsCard() {
         el('div', { class: 'item__icon', style: 'background:var(--brand-tint);color:var(--brand)', html: icon('route') }),
         el('div', { class: 'item__main' }, [
           el('div', { class: 'item__title', text: v.label }),
-          el('div', { class: 'item__sub', text: v.typicalMiles ? `${fmtNum(v.typicalMiles)} mi a block · ${fmtNum(v.baseMiles)} mi of that is getting there` : `${fmtNum(v.baseMiles)} mi to get there · block distance not measured yet` }),
+          el('div', { class: 'item__sub', text: v.typicalMiles ? `${fmtMiles(v.typicalMiles)} mi a block · ${fmtMiles(v.baseMiles)} mi of that is getting there` : `${fmtMiles(v.baseMiles)} mi to get there · block distance not measured yet` }),
           el('div', { 'data-sug': v.id }),
         ]),
       ]);
