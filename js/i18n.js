@@ -568,6 +568,32 @@ const AR = {
     'اتركه فارغاً — سجّل وردية واحدة بالعدّاد فيملؤه Kerb.',
   'Recording it lets Kerb learn what a block from here comes to.':
     'تسجيلها يتيح لـ Kerb معرفة كم يبلغ البلوك من هنا.',
+  'Assign stations':
+    'تعيين المحطات',
+  'Assign stations to past shifts':
+    'تعيين المحطات للورديات السابقة',
+  'Set in bulk':
+    'تعيين جماعي',
+  'Choose a station…':
+    'اختر محطة…',
+  'Also set the miles from that station':
+    'اضبط الأميال أيضاً من تلك المحطة',
+  'Pick a station to enable this.':
+    'اختر محطة لتفعيل هذا.',
+  'Select some shifts below':
+    'اختر ورديات من الأسفل',
+  'Every shift has a station':
+    'كل وردية لها محطة',
+  'Station cleared':
+    'أُزيلت المحطة',
+  'Set the station on shifts logged before you had them. If a statement never said which station a shift was from, leave it unset — the miles you already entered stay, and the report counts them as not attributed to a station rather than pretending otherwise.':
+    'عيّن المحطة للورديات المسجّلة قبل أن تضيفها. وإن لم يذكر الكشف من أي محطة كانت الوردية، فاتركها فارغة — تبقى الأميال التي أدخلتها، ويعدّها التقرير غير منسوبة لمحطة بدل التظاهر بغير ذلك.',
+  'Their miles still count in full. Setting the station records which pickup point each shift ran from, which is what shows the travel was between varying places rather than to one fixed base. Leave any you genuinely cannot work out — a guess here would change the mileage.':
+    'أميالها تُحسب كاملة كما هي. وتعيين المحطة يسجّل نقطة الاستلام لكل وردية، وهو ما يُظهر أن تنقّلك كان بين أماكن متغيّرة لا إلى قاعدة ثابتة واحدة. واترك ما لا تستطيع معرفته فعلاً — فالتخمين هنا يغيّر الأميال.',
+  'Add your stations first, in Settings. Each one needs the distance from home before a shift can use it.':
+    'أضف محطاتك أولاً من الإعدادات. كل محطة تحتاج مسافتها من البيت قبل أن تستخدمها وردية.',
+  'No shifts in this tax year':
+    'لا ورديات في هذه السنة الضريبية',
 };
 
 // placeholders (separate so we can target the attribute)
@@ -758,6 +784,34 @@ const AR_PAT = {
     'عادةً {0} ميل للبلوك، منها {1} ميل للوصول.',
   '{0} mi to get there. Log a shift by odometer and Kerb learns what a block comes to.':
     '{0} ميل للوصول. سجّل وردية بالعدّاد ليعرف Kerb كم يبلغ البلوك.',
+  '{0} shifts have no station set':
+    '{0} ورديات بلا محطة محدّدة',
+  '{0} shift has no station set':
+    'وردية {0} بلا محطة محدّدة',
+  'Without a station ({0})':
+    'بلا محطة ({0})',
+  'All {0}':
+    'الكل {0}',
+  'Apply to {0} shifts':
+    'طبّق على {0} ورديات',
+  'Apply to {0} shift':
+    'طبّق على وردية {0}',
+  '{0} shifts updated':
+    'حُدّثت {0} ورديات',
+  '{0} shift updated':
+    'حُدّثت وردية {0}',
+  'Set {0} shifts to {1}?':
+    'تعيين {0} ورديات إلى {1}؟',
+  'Set {0} shift to {1}?':
+    'تعيين وردية {0} إلى {1}؟',
+  'Replaces the miles on the selected shifts with {0} miles each — what a block from {1} measured. Leave it off to keep the miles you entered.':
+    'يستبدل أميال الورديات المختارة بـ {0} ميلاً لكل منها — وهو ما قيس لبلوك من {1}. اتركه مُطفأ للإبقاء على الأميال التي أدخلتها.',
+  '{0} has no measured block distance yet, so the miles you already entered are kept. Log one shift there by odometer to get a real figure.':
+    '{0} ليس لها مسافة بلوك مقيسة بعد، فتبقى الأميال التي أدخلتها. سجّل وردية واحدة هناك بالعدّاد للحصول على رقم حقيقي.',
+  'Their miles will be replaced with {0} miles each. Only do this where you are sure that is the station you worked from.':
+    'ستُستبدل أميالها بـ {0} ميلاً لكل منها. لا تفعل هذا إلا حيث تكون واثقاً أنها المحطة التي عملت منها.',
+  'Set to {0}':
+    'عُيّنت إلى {0}',
 };
 
 // Slotted patterns for whole prose units, keyed on inner markup. The Arabic

@@ -489,6 +489,14 @@ function stationsCard() {
     wrap.append(el('div', { class: 'callout callout--info', style: 'margin:0 0 10px', html: `${icon('info')}<div>Don't guess what a block comes to. The way home starts at your last drop, not at the station, so it is different every time and cannot be worked out on a map. Start a live shift with <b>Odometer</b> selected and pick the station — after a shift or two Kerb has the real figure.</div>` }));
   }
 
+  // A way in for the shifts logged before stations existed.
+  if (list.length) {
+    const assign = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-bottom:8px' });
+    assign.innerHTML = icon('route') + '<span>Assign stations to past shifts</span>';
+    assign.onclick = () => bus.navigate('assignstations');
+    wrap.append(assign);
+  }
+
   const add = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
   add.innerHTML = icon('plus') + '<span>Add a station</span>';
   add.onclick = () => openStationForm();

@@ -571,6 +571,121 @@ const run = async () => {
     return 'silent';
   });
 
+  // ---------------- assigning stations to shifts already logged ----------------
+  const seedShifts = (n, withStation) => `
+    const db = await import('/js/db.js');
+    const st = await import('/js/store.js');
+    await db.wipeAll();
+    st.saveSettings({ taxYear: '2026/27', expenseMethod: 'mileage', lang: 'en', stations: [
+      { id: 'sheff', label: 'Amazon Logistics (S4 8AL)', baseMiles: 2.3, typicalMiles: 19 },
+      { id: 'donny', label: 'Amazon Logistics (DN11 0BF)', baseMiles: 21.5, typicalMiles: 0 },
+    ] });
+    for (let i = 0; i < ${n}; i++) {
+      await db.earnings.save({ id: 'b' + i, date: '2026-09-' + String(10 + i).padStart(2, '0'),
+        platform: 'amazonflex', amount: 70, tips: 0, hours: 4, deliveries: 0, miles: 40,
+        stationId: ${JSON.stringify(withStation || '')}, notes: '' });
+    }
+    return true;`
+
+  await check('assign — the screen lists every shift that has no station', async () => {
+    await b.eval(seedShifts(12, ''));
+    await b.goto('#/assignstations');
+    const out = await b.eval(`
+      const v = document.getElementById('view');
+      // Plain includes, not a regex: a backslash escape inside a template
+      // literal is consumed before the regex ever sees it.
+      return { rows: v.querySelectorAll('.item').length, chipShows12: v.textContent.includes('Without a station (12)') };`);
+    eq(out.rows, 12, 'rows listed');
+    if (!out.chipShows12) throw new Error('the filter does not show how many are missing');
+    return '12 shifts waiting for a station';
+  });
+
+  await check('assign — setting one shift saves the station and the outbound leg', async () => {
+    const out = await b.eval(`
+      const sel = document.querySelector('#view .item select');
+      sel.value = 'donny';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 300));
+      const db = await import('/js/db.js');
+      const hit = (await db.earnings.all()).find(e => e.stationId === 'donny');
+      return hit ? { stationId: hit.stationId, milesBase: hit.milesBase, miles: hit.miles } : null;`);
+    eq(out, { stationId: 'donny', milesBase: 21.5, miles: 40 }, 'one shift updated');
+    return 'station set, miles untouched, outbound leg recorded';
+  });
+
+  await check('assign — a bulk apply needs both a station and a selection', async () => {
+    await b.eval(seedShifts(6, ''));
+    await b.goto('#/assignstations');
+    const states = await b.eval(`
+      const btn = [...document.querySelectorAll('#view button')].find(x => /Select some shifts|Apply to/.test(x.textContent));
+      const before = { text: btn.textContent, disabled: btn.disabled };
+      document.querySelectorAll('#view .item input[type=checkbox]')[0].click();
+      document.querySelectorAll('#view .item input[type=checkbox]')[1].click();
+      const picked = { text: btn.textContent, disabled: btn.disabled };
+      const sel = document.querySelector('#view .card select');
+      sel.value = 'sheff'; sel.dispatchEvent(new Event('change', { bubbles: true }));
+      const ready = { text: btn.textContent, disabled: btn.disabled };
+      return { before, picked, ready };`);
+    if (!states.before.disabled) throw new Error('apply was enabled with nothing selected');
+    if (!states.picked.disabled) throw new Error('apply was enabled before a station was chosen');
+    if (states.ready.disabled) throw new Error('apply stayed disabled when both were set');
+    if (!/Apply to 2 shifts/.test(states.ready.text)) throw new Error('button does not say how many: ' + states.ready.text);
+    return 'enabled only once both are set';
+  });
+
+  await check('assign — a bulk apply sets only the selected shifts', async () => {
+    await b.eval(`
+      const btn = [...document.querySelectorAll('#view button')].find(x => /Apply to/.test(x.textContent));
+      btn.click();
+      await new Promise(r => setTimeout(r, 200));
+      const ok = [...document.querySelectorAll('.sheet button, .sheet .btn')].find(x => /Set station/i.test(x.textContent));
+      if (ok) ok.click();
+      await new Promise(r => setTimeout(r, 500));
+      return true;`);
+    const out = await b.eval(`
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      return { set: all.filter(e => e.stationId === 'sheff').length, untouched: all.filter(e => !e.stationId).length,
+               miles: [...new Set(all.map(e => e.miles))].sort((a, b) => a - b) };`);
+    eq(out.set, 2, 'shifts updated');
+    eq(out.untouched, 4, 'the rest left alone');
+    eq(out.miles, [40], 'miles kept, because the option was off');
+    return '2 of 6 set, miles untouched';
+  });
+
+  await check('assign — the miles option is off unless that station has been measured', async () => {
+    await b.goto('#/assignstations');
+    const out = await b.eval(`
+      const sel = document.querySelector('#view .card select');
+      const cb = document.querySelector('#view .switch input[type=checkbox]');
+      sel.value = 'donny';                      // no measured block distance
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      const unmeasured = { disabled: cb.disabled, hint: document.querySelector('#view .card .hint').textContent };
+      sel.value = 'sheff';                      // measured at 19 mi
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      const measured = { disabled: cb.disabled, hint: document.querySelector('#view .card .hint').textContent };
+      return { unmeasured, measured };`);
+    if (!out.unmeasured.disabled) throw new Error('offered to overwrite miles from a station with no measurement');
+    if (!/no measured block distance/i.test(out.unmeasured.hint)) throw new Error('does not explain why: ' + out.unmeasured.hint);
+    if (out.measured.disabled) throw new Error('refused to offer it for a measured station');
+    if (!/19 miles/.test(out.measured.hint)) throw new Error('does not say what it would set: ' + out.measured.hint);
+    return 'only offered where there is a real figure behind it';
+  });
+
+  await check('assign — the review screen points at it, and stops once they are all set', async () => {
+    await b.eval(seedShifts(3, ''));
+    await b.goto('#/review');
+    const before = await b.eval(`document.getElementById('view').textContent`);
+    if (!/3 shifts have no station set/.test(before)) throw new Error('review did not flag the missing stations');
+    if (!/a guess here would change the mileage/i.test(before)) throw new Error('review does not warn against guessing');
+    await b.eval(seedShifts(3, 'sheff'));
+    await b.goto('#/review');
+    const after = await b.eval(`document.getElementById('view').textContent`);
+    if (/have no station set/.test(after)) throw new Error('still flagged once every shift had one');
+    if (!/Every shift has a station/.test(after)) throw new Error('no confirmation once done');
+    return 'flags 3, then confirms when none are left';
+  });
+
   await b.close();
 
   const passed = results.filter((r) => r.pass).length;

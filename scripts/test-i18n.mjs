@@ -13,7 +13,7 @@ import { launch } from './browser.mjs';
 
 const ROUTES = ['home', 'income', 'expenses', 'tax', 'pots', 'insights', 'goals',
   'report', 'review', 'guide', 'terms', 'settings', 'payslips', 'import',
-  'bankimport', 'scanearn', 'assistant', 'shift'];
+  'bankimport', 'scanearn', 'assistant', 'shift', 'assignstations'];
 
 // Latin text that is legitimately untranslated: brands, currency/format codes,
 // tax-regime terms HMRC itself uses in English, and anything numeric.
@@ -29,6 +29,7 @@ const ALLOW = [
   /^(Amazon Flex|Uber Eats|Deliveroo|Just Eat|Stuart|Evri|Yodel)(\s*·.*)?$/,
   // Text the user typed themselves (a bill name, a vendor) is never translated.
   /^(Phone contract|Car insurance \(courier\))$/,
+  /^Amazon Logistics \(/,                                     // a station the user named
 ];
 
 const run = async () => {
@@ -42,6 +43,9 @@ const run = async () => {
   await b.eval(`
     const s = JSON.parse(localStorage.getItem('kerb.settings.v1') || '{}');
     s.lang = 'ar'; s.onboarded = true;
+    // Some screens only show their real content once configured; without
+    // this the sweep walks an empty-state page and reports it clean.
+    s.stations = [{ id: 'sheff', label: 'Amazon Logistics (S4 8AL)', baseMiles: 2.3, typicalMiles: 19 }];
     localStorage.setItem('kerb.settings.v1', JSON.stringify(s)); 1`);
 
   await b.open('/');

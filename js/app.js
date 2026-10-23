@@ -31,8 +31,9 @@ import * as bankimport from './ui/bank-import.js';
 import * as guide from './ui/guide.js';
 import * as terms from './ui/terms.js';
 import * as review from './ui/review.js';
+import * as assignStations from './ui/assign-stations.js';
 
-const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn, bankimport, guide, terms, review };
+const VIEWS = { home, income, expenses, tax, pots, insights, settings, shift, report, goals, assistant, import: importCsv, payslips, scanearn, bankimport, guide, terms, review, assignstations: assignStations };
 const TABBAR_ROUTES = ['home', 'income', 'expenses', 'tax'];
 let currentRoute = 'home';
 
