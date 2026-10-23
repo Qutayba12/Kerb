@@ -594,7 +594,20 @@ const AR = {
     'أضف محطاتك أولاً من الإعدادات. كل محطة تحتاج مسافتها من البيت قبل أن تستخدمها وردية.',
   'No shifts in this tax year':
     'لا ورديات في هذه السنة الضريبية',
+  'Your whole mileage claim is an estimate':
+    'مطالبة الأميال كلها تقديرية',
+  'A distance with no reading behind it is an estimate, however carefully it was worked out. Settings marks which stations have never been measured — one tracked shift from each is all it takes.':
+    'المسافة التي لا تستند إلى قراءة هي تقدير، مهما حُسبت بعناية. والإعدادات تبيّن أي المحطات لم تُقَس قط — ووردية واحدة متتبَّعة من كل منها تكفي.',
+  'Every station has a measured block behind its mileage':
+    'كل محطة خلف أميالها بلوك مقيس',
+  'Start a tracked shift':
+    'ابدأ وردية متتبَّعة',
 };
+
+// Both "all estimated" details open the same way and differ only in their
+// closing advice, so the shared halves are declared once here.
+const EST_EN = "{0} of this year's deduction rests on {1} miles that were all typed in — not one was read off an odometer or tracked. HMRC does accept a reasonable estimate, so this is not an error, but it is the thinnest record you can hold for your largest claim. ";
+const EST_AR = '{0} من خصم هذه السنة يستند إلى {1} ميل أُدخلت كلها يدوياً — ولم يُقرأ أي منها من عدّاد السيارة ولم تُتبَّع. وHMRC يقبل التقدير المعقول، فهذا ليس خطأً، لكنه أضعف سجل يمكن أن تحتفظ به لأكبر مطالبة لديك. ';
 
 // placeholders (separate so we can target the attribute)
 const AR_PH = {
@@ -786,6 +799,14 @@ const AR_PAT = {
     '{0} ميل للوصول. سجّل وردية بالعدّاد ليعرف Kerb كم يبلغ البلوك.',
   '{0} shifts have no station set':
     '{0} ورديات بلا محطة محدّدة',
+  '{0} of your {1} stations has no measured block behind it':
+    '{0} من أصل {1} من محطاتك ليس خلفها بلوك مقيس',
+  '{0} of your {1} stations have no measured block behind them':
+    '{0} من أصل {1} من محطاتك ليس خلفها بلوك مقيس',
+  [EST_EN + 'Run one shift per station from the live tracker, reading the odometer at the start and at the end. Kerb then offers that measured figure for every later block from the same station, and this notice clears one station at a time.']:
+    EST_AR + 'شغّل وردية واحدة من كل محطة عبر المتتبّع المباشر، واقرأ العدّاد في البداية وفي النهاية. بعدها يعرض Kerb الرقم المقيس لكل بلوك لاحق من المحطة نفسها، ويختفي هذا التنبيه محطةً محطة.',
+  [EST_EN + 'Run a shift from the live tracker, reading the odometer at the start and at the end, and Kerb works the miles out for you.']:
+    EST_AR + 'شغّل وردية من المتتبّع المباشر، واقرأ العدّاد في البداية وفي النهاية، ويحسب Kerb الأميال لك.',
   '{0} shift has no station set':
     'وردية {0} بلا محطة محدّدة',
   'Without a station ({0})':

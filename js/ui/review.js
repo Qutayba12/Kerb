@@ -4,9 +4,9 @@
 // flags what looks wrong, missing or worth a second look BEFORE
 // the figures reach HMRC. Nothing here changes your data.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtDate, todayISO, daysBetween, taxYearFromLabel } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtMiles, fmtDate, todayISO, daysBetween, taxYearFromLabel } from '../util.js';
 import { earnings, expenses } from '../db.js';
-import { getSettings, categoryById, platformById } from '../store.js';
+import { getSettings, categoryById, platformById, allStations } from '../store.js';
 import { computeTaxYear } from '../tax.js';
 import { icon, downloadBackup } from './shared.js';
 import { setPeriod as setIncomePeriod } from './income.js';
@@ -83,7 +83,7 @@ function buildChecks({ s, sum, ty, E, X, allE, allX }) {
       'Your biggest deduction is missing. Add the miles to each shift, or switch to the actual-costs method.',
       { label: 'Open Income', run: () => bus.navigate('income') });
   } else if (s.expenseMethod === 'mileage') {
-    add('ok', `${fmtNum(sum.businessMiles)} business miles claimed`, '');
+    add('ok', `${fmtMiles(sum.businessMiles)} business miles claimed`, '');
   }
 
   // 5) likely duplicates
@@ -107,7 +107,40 @@ function buildChecks({ s, sum, ty, E, X, allE, allX }) {
     } else add('ok', 'Every shift has a station', '');
   }
 
-  // 5b) a weekly payout recorded alongside the blocks it pays for.
+  // 5b) the mileage claim rests entirely on figures that were typed in.
+  //
+  // Mileage is the largest number on most drivers' returns and the first one
+  // HMRC asks the basis for. An estimate is allowed, but it is the weakest
+  // kind of record — and the fix is cheap: one block driven with the odometer
+  // read at both ends settles that station's distance for good, after which
+  // Kerb offers the measured figure for every later block from the same
+  // station. So this clears one station at a time, not all at once.
+  //
+  // Whether a station has ever been measured is asked of ALL earnings, not
+  // just this year's: a distance established last year is still established.
+  if (s.expenseMethod === 'mileage' && sum.businessMiles > 0) {
+    const stations = allStations();
+    const anyMeasured = allE.some(e => isMeasured(e) && numOf(e.miles) > 0);
+    const unmeasured = stations.filter(st => !allE.some(e => isMeasured(e) && numOf(e.miles) > 0 && e.stationId === st.id));
+    if (!anyMeasured) {
+      // The station labels are the driver's own words, so they stay out of the
+      // sentence: a translation key carrying user data never matches. Which
+      // stations are unmeasured is already shown, per station, in Settings.
+      add('warn', 'Your whole mileage claim is an estimate',
+        `${fmtGBP(sum.mileageDed)} of this year's deduction rests on ${fmtMiles(sum.businessMiles)} miles that were all typed in — not one was read off an odometer or tracked. HMRC does accept a reasonable estimate, so this is not an error, but it is the thinnest record you can hold for your largest claim. ${stations.length
+          ? 'Run one shift per station from the live tracker, reading the odometer at the start and at the end. Kerb then offers that measured figure for every later block from the same station, and this notice clears one station at a time.'
+          : 'Run a shift from the live tracker, reading the odometer at the start and at the end, and Kerb works the miles out for you.'}`,
+        { label: 'Start a tracked shift', run: () => bus.navigate('shift') });
+    } else if (unmeasured.length) {
+      add('info', `${unmeasured.length} of your ${stations.length} stations ${unmeasured.length === 1 ? 'has no measured block behind it' : 'have no measured block behind them'}`,
+        'A distance with no reading behind it is an estimate, however carefully it was worked out. Settings marks which stations have never been measured — one tracked shift from each is all it takes.',
+        { label: 'Start a tracked shift', run: () => bus.navigate('shift') });
+    } else if (stations.length) {
+      add('ok', 'Every station has a measured block behind its mileage', '');
+    }
+  }
+
+  // 5c) a weekly payout recorded alongside the blocks it pays for.
   // The check above cannot see this one: the payout has its own date and a
   // different amount, so nothing matches. It only shows up as one entry that
   // equals the sum of several others.
@@ -226,6 +259,9 @@ function typicalValue(arr) {
   const m = Math.floor(lower.length / 2);
   return lower.length % 2 ? lower[m] : (lower[m - 1] + lower[m]) / 2;
 }
+// Miles we can stand behind: read off the dashboard, or tracked while driving.
+// Anything typed in afterwards is an estimate, however carefully worked out.
+function isMeasured(e) { return !!e && (e.milesSource === 'odometer' || e.milesSource === 'gps'); }
 function numOf(v) { const x = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(x) ? x : 0; }
 function sectionTitle(t) { return el('div', { class: 'section-title', text: t }); }
 const TONE = { bad: 'neg', warn: 'warn', info: 'info', ok: 'pos' };

@@ -686,6 +686,75 @@ const run = async () => {
     return 'flags 3, then confirms when none are left';
   });
 
+  // ---------------- an entirely estimated mileage claim ----------------
+  // This is the one gap only the driver can close, so the review has to keep
+  // saying so, and has to stop the moment a station gets its first reading.
+  await check('review — a mileage claim with nothing measured behind it is flagged', async () => {
+    await b.eval(seedShifts(4, 'sheff'));
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/Your whole mileage claim is an estimate/.test(txt)) throw new Error('not flagged: every mile was typed in');
+    if (!/not one was read off an odometer or tracked/.test(txt)) throw new Error('does not say why');
+    if (!/not an error/.test(txt)) throw new Error('reads as a mistake rather than a weak record');
+    const btn = await b.eval(`[...document.querySelectorAll('#view button')].some(x => /Start a tracked shift/.test(x.textContent))`);
+    if (!btn) throw new Error('no way to act on it');
+    return 'flagged, with the fix one tap away';
+  });
+
+  await check('review — one measured block clears that station and leaves the other', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      const hit = all.find(e => e.stationId === 'sheff');
+      await db.earnings.save({ ...hit, miles: 19, milesSource: 'odometer' });
+      return true;`);
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (/Your whole mileage claim is an estimate/.test(txt)) throw new Error('still claims nothing is measured');
+    if (!/1 of your 2 stations has no measured block behind it/.test(txt)) throw new Error('does not name what is left: ' + txt.slice(0, 400));
+    if (!/Settings marks which stations have never been measured/.test(txt)) throw new Error('does not say where to look');
+    return 'one down, one to go';
+  });
+
+  await check('review — a typed-in mileage is never accepted as a measurement', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js');
+      // 'manual' is what the entry form records: a figure worked out afterwards.
+      await db.earnings.save({ id: 'donny-manual', date: '2026-09-20', platform: 'amazonflex',
+        amount: 70, tips: 0, hours: 4, deliveries: 0, miles: 44, stationId: 'donny',
+        milesSource: 'manual', notes: '' });
+      return true;`);
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/1 of your 2 stations has no measured block behind it/.test(txt)) throw new Error('a typed-in figure was counted as measured');
+    return 'manual still counts as an estimate';
+  });
+
+  await check('review — confirms once every station has a reading behind it', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js');
+      const hit = (await db.earnings.all()).find(e => e.stationId === 'donny');
+      await db.earnings.save({ ...hit, miles: 48, milesSource: 'odometer' });
+      return true;`);
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (/no measured block behind/.test(txt)) throw new Error('still flagged once both were measured');
+    if (!/Every station has a measured block behind its mileage/.test(txt)) throw new Error('no confirmation once done');
+    return 'silent, and says so';
+  });
+
+  await check('review — says nothing about measurement when not claiming mileage', async () => {
+    await b.eval(`
+      const st = await import('/js/store.js');
+      st.saveSettings({ expenseMethod: 'actual' });
+      return true;`);
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (/measured block behind|whole mileage claim is an estimate/.test(txt)) throw new Error('nagged about mileage on the actual-costs method');
+    await b.eval(`(await import('/js/store.js')).saveSettings({ expenseMethod: 'mileage' }); return true;`);
+    return 'irrelevant on actual costs, so silent';
+  });
+
   await b.close();
 
   const passed = results.filter((r) => r.pass).length;
