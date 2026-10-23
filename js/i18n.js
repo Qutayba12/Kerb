@@ -562,6 +562,12 @@ const AR = {
     '— غير محدّدة —',
   'Pickup points sit at very different distances, so one "typical miles" figure would overstate the near ones and understate the far ones. Set each station once and Kerb fills the miles in when you log a block there.':
     'نقاط الاستلام تقع على مسافات شديدة التباين، فرقم «أميال نمطية» واحد يُضخّم القريبة ويُنقص البعيدة. اضبط كل محطة مرّة واحدة، فيملأ Kerb الأميال عند تسجيل بلوك فيها.',
+  'Use this':
+    'استخدم هذا',
+  'Updated from your measured shifts':
+    'حُدّث من ورديّاتك المقيسة',
+  'Recording it lets Kerb work out this station\'s round distance from a measured shift.':
+    'تسجيلها يتيح لـ Kerb استنتاج مسافة جولة هذه المحطة من وردية مقيسة.',
 };
 
 // placeholders (separate so we can target the attribute)
@@ -744,6 +750,10 @@ const AR_PAT = {
     '{0} ميل ذهاباً وإياباً · {1} ميل في الجولة · {2} ميل للبلوك',
   '{0} mi there and back + {1} mi on the round.':
     '{0} ميل ذهاباً وإياباً + {1} ميل في الجولة.',
+  'Measured over {0} shifts: {1} mi on the round ({2}–{3}).':
+    'مقيسة عبر {0} ورديات: {1} ميل في الجولة ({2}–{3}).',
+  'Measured over {0} shift: {1} mi on the round.':
+    'مقيسة عبر وردية {0}: {1} ميل في الجولة.',
 };
 
 // Slotted patterns for whole prose units, keyed on inner markup. The Arabic
@@ -876,6 +886,8 @@ const AR_HTML = {
     '<b>لديك {0} محفوظ في {1} {2}</b>، وهذه الصفوف الـ{3} تساوي مجموعه تماماً. لو كان ذلك المُدخل هو الدفعة الأسبوعية، فإضافة هذه البلوكات ستحسب الأسبوع مرّتين — احذفه من شاشة الدخل بعد الإضافة.',
   'Pickup points sit at very different distances, so one "typical miles" figure would overstate the near ones and understate the far ones. Set each station once and Kerb fills the miles in when you log a block there.':
     'نقاط الاستلام تقع على مسافات شديدة التباين، فرقم «أميال نمطية» واحد يُضخّم القريبة ويُنقص البعيدة. اضبط كل محطة مرّة واحدة، فيملأ Kerb الأميال عند تسجيل بلوك فيها.',
+  'Not sure how far the round is? Don\'t guess it. Start a live shift with <b>Odometer</b> selected and pick the station — after a shift or two Kerb works the round out from the reading and offers you the figure.':
+    'لا تعرف طول جولة التوصيل؟ لا تخمّنها. ابدأ وردية مباشرة واختر <b>عدّاد المسافة</b> ثم المحطة — وبعد وردية أو اثنتين يستنتج Kerb الجولة من القراءة ويعرض عليك الرقم.',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).

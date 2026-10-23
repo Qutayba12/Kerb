@@ -5,9 +5,9 @@
 import { el, uid, todayISO, fmtGBP, fmtNum } from '../util.js';
 import {
   getSettings, saveSettings, resetSettings, getConfig, availableYears,
-  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations,
+  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations, suggestRoundMiles,
 } from '../store.js';
-import { importAll, wipeAll } from '../db.js';
+import { importAll, wipeAll, earnings } from '../db.js';
 import { ensurePersistentStorage, storageStatus, fmtBytes } from '../storage.js';
 import { icon, field, selectInput, moneyInput, toast, confirmDialog, openSheet, closeSheet, downloadBackup } from './shared.js';
 import { testKey } from '../claude.js';
@@ -434,6 +434,31 @@ function stationsCard() {
   const wrap = el('div', { class: 'card' });
   const list = allStations();
 
+  // A station's round distance is hard to know up front and easy to measure.
+  // Once a few shifts there have been logged by odometer or GPS, the figure
+  // is simply what the reading showed beyond the home leg — so offer it
+  // rather than asking for another estimate.
+  earnings.all().then((all) => {
+    list.forEach((v) => {
+      const sug = suggestRoundMiles(v.id, all);
+      const slot = wrap.querySelector(`[data-sug="${v.id}"]`);
+      if (!slot || !sug) return;
+      const same = Math.abs(sug.average - v.roundMiles) < 0.1;
+      slot.replaceChildren(el('div', { class: 'tiny', style: 'margin-top:4px' }, [
+        el('span', { class: 'muted', text: `Measured over ${sug.n} shift${sug.n === 1 ? '' : 's'}: ${fmtNum(sug.average)} mi on the round${sug.n > 1 ? ` (${fmtNum(sug.lowest)}–${fmtNum(sug.highest)})` : ''}. ` }),
+      ]));
+      if (!same) {
+        const use = el('button', { class: 'link tiny', type: 'button', text: 'Use this' });
+        use.onclick = () => {
+          const next = (getSettings().stations || []).map(x => (x.id === v.id ? { ...x, roundMiles: sug.average } : x));
+          saveSettings({ stations: next });
+          toast('Updated from your measured shifts', 'ok'); bus.refresh();
+        };
+        slot.firstChild.append(use);
+      }
+    });
+  }).catch(() => {});
+
   wrap.append(el('div', { class: 'callout callout--info', style: 'margin:0 0 10px', html: `${icon('info')}<div>Pickup points sit at very different distances, so one "typical miles" figure would overstate the near ones and understate the far ones. Set each station once and Kerb fills the miles in when you log a block there.</div>` }));
 
   if (list.length) {
@@ -444,6 +469,7 @@ function stationsCard() {
         el('div', { class: 'item__main' }, [
           el('div', { class: 'item__title', text: v.label }),
           el('div', { class: 'item__sub', text: `${fmtNum(v.baseMiles)} mi there and back · ${fmtNum(v.roundMiles)} mi on the round · ${fmtNum(v.totalMiles)} mi a block` }),
+          el('div', { 'data-sug': v.id }),
         ]),
       ]);
       const del = el('button', { class: 'link tiny', type: 'button', text: 'Remove' });
@@ -457,6 +483,10 @@ function stationsCard() {
       rows.append(item);
     });
     wrap.append(rows);
+  }
+
+  if (list.some(v => !v.roundMiles)) {
+    wrap.append(el('div', { class: 'callout callout--info', style: 'margin:0 0 10px', html: `${icon('info')}<div>Not sure how far the round is? Don't guess it. Start a live shift with <b>Odometer</b> selected and pick the station — after a shift or two Kerb works the round out from the reading and offers you the figure.</div>` }));
   }
 
   const add = el('button', { class: 'btn btn--sub btn--block', type: 'button' });

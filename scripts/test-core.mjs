@@ -600,6 +600,61 @@ const run = async () => {
     return 'says nothing it cannot support';
   });
 
+  await check('stations — the round distance is worked out from measured shifts', async () => {
+    // "I don't know how far the round is" has a real answer: measure a couple
+    // with the odometer and subtract the home leg, which is already known.
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      st.saveSettings({ stations: [{ id: 'donny', label: 'Doncaster', baseMiles: 43, roundMiles: 0 }] });
+      const E = [
+        { id: '1', date: '2026-09-15', stationId: 'donny', milesSource: 'odometer', miles: 61 },
+        { id: '2', date: '2026-09-16', stationId: 'donny', milesSource: 'odometer', miles: 67 },
+        { id: '3', date: '2026-09-17', stationId: 'donny', milesSource: 'gps', miles: 64 },
+      ];
+      return st.suggestRoundMiles('donny', E);`);
+    eq(out.n, 3, 'shifts used');
+    eq(out.average, 21, 'average round: (18 + 24 + 21) / 3');
+    eq([out.lowest, out.highest], [18, 24], 'range shown so one odd shift is visible');
+    return '3 measured shifts -> 21 mi on the round (18–24)';
+  });
+
+  await check('stations — a typed-in mileage is not treated as a measurement', async () => {
+    // Deriving the round from a number the driver typed would just hand their
+    // own guess back as if it were evidence.
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      return st.suggestRoundMiles('donny', [
+        { id: '1', date: '2026-09-15', stationId: 'donny', milesSource: 'manual', miles: 61 },
+        { id: '2', date: '2026-09-16', stationId: 'donny', miles: 61 },
+      ]);`);
+    eq(out, null, 'unmeasured shifts must not produce a figure');
+    return 'only odometer or GPS readings count';
+  });
+
+  await check('stations — a shift shorter than the home leg is ignored, not counted as negative', async () => {
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      return st.suggestRoundMiles('donny', [
+        { id: '1', date: '2026-09-15', stationId: 'donny', milesSource: 'odometer', miles: 30 },
+        { id: '2', date: '2026-09-16', stationId: 'donny', milesSource: 'odometer', miles: 65 },
+      ]);`);
+    eq(out, { n: 1, average: 22, lowest: 22, highest: 22 }, 'impossible reading dropped');
+    return 'a 30-mile reading against a 43-mile home leg is discarded';
+  });
+
+  await check('stations — a live shift records the station and how the miles were measured', async () => {
+    const rec = await b.eval(`
+      const sh = await import('/js/shift.js');
+      sh.stopShift();
+      sh.startShift({ platform: 'amazonflex', gps: false, odoStart: 84000, milesMode: 'odometer', stationId: 'donny' });
+      sh.updateShift({ odoEnd: 84064, earnings: 80 });
+      const s = sh.getActive();
+      return { stationId: s.stationId, miles: sh.effectiveMiles() };`);
+    eq(rec, { stationId: 'donny', miles: 64 }, 'shift carries the station and the measured miles');
+    await b.eval(`const sh = await import('/js/shift.js'); sh.stopShift(); return true;`);
+    return 'station attached, 64 measured miles';
+  });
+
   await b.close();
 
   const passed = results.filter(Boolean).length;
