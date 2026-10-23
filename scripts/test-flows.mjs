@@ -286,8 +286,188 @@ const run = async () => {
     });
   }
 
-  await b.close();
+  // ---------------- add earnings / add expense ----------------
+  // The most-used screens in the app, and the ones that put money into the
+  // tax figures by hand.
+  const openAdd = async (which) => {
+    await b.goto('#/home');
+    await b.eval(`const m = await import('/js/ui/forms.js'); m.${which}(); return true;`);
+    await b.settled();
+  };
 
+  await check('add earnings — a shift entered by hand is stored exactly', async () => {
+    await openAdd('openEarningsForm');
+    b.clearErrors();
+    await b.eval(fillByLabel('Date', '2026-09-20'));
+    await b.eval(fillByLabel('Earnings (before tips)', '73.40'));
+    await b.eval(fillByLabel('Tips', '6.10'));
+    await b.eval(fillByLabel('Hours worked', '5'));
+    await b.eval(fillByLabel('Deliveries', '14'));
+    await b.eval(fillByLabel('Business miles driven', '52'));
+    await b.eval(clickText('^\s*Save\s*$', '.sheet'));
+    await b.settled();
+    const rec = await b.eval(`
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      const hit = all.find(r => r.date === '2026-09-20');
+      return hit ? { amount: hit.amount, tips: hit.tips, hours: hit.hours, deliveries: hit.deliveries, miles: hit.miles } : null;`);
+    eq(rec, { amount: 73.4, tips: 6.1, hours: 5, deliveries: 14, miles: 52 }, 'saved shift');
+    const errs = b.errors();
+    if (errs.length) throw new Error('page errors: ' + errs.join(' | '));
+    return 'amount, tips, hours, drops and miles all round-trip';
+  });
+
+  await check('add earnings — an empty shift is refused', async () => {
+    const before = await b.eval(countStore('earnings'));
+    await openAdd('openEarningsForm');
+    await b.eval(clickText('^\s*Save\s*$', '.sheet'));
+    await b.settled();
+    const after = await b.eval(countStore('earnings'));
+    eq(after, before, 'nothing saved with no amount, tips or miles');
+    const stillOpen = await b.eval(`!!document.querySelector('.sheet')`);
+    if (!stillOpen) throw new Error('the form closed even though nothing was saved');
+    await b.eval(`const m = await import('/js/ui/shared.js'); m.closeSheet(); return true;`);
+    return 'refused and the form stayed open';
+  });
+
+  await check('add earnings — a miles-only entry is allowed', async () => {
+    await openAdd('openEarningsForm');
+    await b.eval(fillByLabel('Date', '2026-09-21'));
+    await b.eval(fillByLabel('Business miles driven', '31'));
+    await b.eval(clickText('^\s*Save\s*$', '.sheet'));
+    await b.settled();
+    const rec = await b.eval(`
+      const db = await import('/js/db.js');
+      const hit = (await db.earnings.all()).find(r => r.date === '2026-09-21');
+      return hit ? { amount: hit.amount, miles: hit.miles } : null;`);
+    eq(rec, { amount: 0, miles: 31 }, 'miles-only shift');
+    return 'a mileage-only day is a valid record';
+  });
+
+  await check('add expense — stored with the category default for business use', async () => {
+    await openAdd('openExpenseForm');
+    b.clearErrors();
+    await b.eval(fillByLabel('Date', '2026-09-20'));
+    await b.eval(fillByLabel('Amount paid', '48.20'));
+    await b.eval(fillByLabel('Vendor', 'BP'));
+    await b.eval(clickText('^\s*Save\s*$', '.sheet'));
+    await b.settled();
+    const rec = await b.eval(`
+      const db = await import('/js/db.js');
+      const hit = (await db.expenses.all()).find(x => x.date === '2026-09-20' && x.vendor === 'BP');
+      return hit ? { amount: hit.amount, category: hit.category, bizPct: hit.bizPct } : null;`);
+    if (!rec) throw new Error('expense not saved');
+    eq([rec.amount, rec.category], [48.2, 'fuel'], 'amount and default category');
+    if (rec.bizPct !== 100) throw new Error('expected 100% business use for fuel, got ' + rec.bizPct);
+    const errs = b.errors();
+    if (errs.length) throw new Error('page errors: ' + errs.join(' | '));
+    return 'fuel expense at 100% business use';
+  });
+
+  await check('add expense — no amount is refused', async () => {
+    const before = await b.eval(countStore('expenses'));
+    await openAdd('openExpenseForm');
+    await b.eval(fillByLabel('Vendor', 'Nothing'));
+    await b.eval(clickText('^\s*Save\s*$', '.sheet'));
+    await b.settled();
+    eq(await b.eval(countStore('expenses')), before, 'nothing saved without an amount');
+    await b.eval(`const m = await import('/js/ui/shared.js'); m.closeSheet(); return true;`);
+    return 'refused';
+  });
+
+  await check('add expense — an impossible business use cannot be saved', async () => {
+    // The field is a number input capped at 100 inside a submitting form, so
+    // the browser refuses the save outright; the clamp in save() is the second
+    // line of defence behind it.
+    await openAdd('openExpenseForm');
+    await b.eval(fillByLabel('Date', '2026-09-22'));
+    await b.eval(fillByLabel('Amount paid', '20'));
+    await b.eval(fillByLabel('Vendor', 'ClampTest'));
+    await b.eval(fillByLabel('Business use %', '150'));
+    await b.eval(clickText('^\s*Save\s*$', '.sheet'));
+    await b.settled();
+    const saved = await b.eval(`
+      const db = await import('/js/db.js');
+      return !!(await db.expenses.all()).find(x => x.vendor === 'ClampTest');`);
+    if (saved) throw new Error('an expense with 150% business use was saved');
+    // The same form saves happily once the figure is possible.
+    await b.eval(fillByLabel('Business use %', '50'));
+    await b.eval(clickText('^\s*Save\s*$', '.sheet'));
+    await b.settled();
+    const pct = await b.eval(`
+      const db = await import('/js/db.js');
+      const hit = (await db.expenses.all()).find(x => x.vendor === 'ClampTest');
+      return hit ? hit.bizPct : null;`);
+    eq(pct, 50, 'business use saved once in range');
+    return '150% blocked by the form, 50% saved';
+  });
+
+  // ---------------- backup: the only copy off this device ----------------
+  await check('backup — export carries the records but no secret values', async () => {
+    const info = await b.eval(`
+      const st = await import('/js/store.js');
+      st.saveSettings({ apiKey: 'sk-ant-SHOULD-NOT-APPEAR', utr: '1234567890', pinHash: 'HASH-SHOULD-NOT-APPEAR', pinSalt: 'SALT-SHOULD-NOT-APPEAR', lockEnabled: true });
+      const db = await import('/js/db.js');
+      const data = await db.exportAll();
+      const text = JSON.stringify(data);
+      return {
+        earnings: (data.earnings || []).length,
+        expenses: (data.expenses || []).length,
+        payslips: (data.payslips || []).length,
+        leaks: ['sk-ant-SHOULD-NOT-APPEAR', 'HASH-SHOULD-NOT-APPEAR', 'SALT-SHOULD-NOT-APPEAR'].filter(v => text.includes(v)),
+        blanked: { apiKey: data.settings.apiKey, pinHash: data.settings.pinHash, pinSalt: data.settings.pinSalt, lockEnabled: data.settings.lockEnabled },
+        keepsUtr: text.includes('1234567890'),
+      };`);
+    if (info.leaks.length) throw new Error('secret values present in the backup: ' + info.leaks.join(', '));
+    // The keys are written as empty rather than omitted, so importing a backup
+    // clears any PIN on the receiving device instead of leaving a stale one.
+    eq(info.blanked, { apiKey: '', pinHash: '', pinSalt: '', lockEnabled: false }, 'secret fields blanked');
+    if (!info.earnings || !info.expenses) throw new Error('backup is missing records: ' + JSON.stringify(info));
+    if (!info.keepsUtr) throw new Error('UTR missing — a backup should restore your own details');
+    await b.eval(`const st = await import('/js/store.js'); st.saveSettings({ apiKey: '', pinHash: '', pinSalt: '', lockEnabled: false }); return true;`);
+    return `${info.earnings} earnings, ${info.expenses} expenses, ${info.payslips} payslips; no key, no PIN, UTR kept`;
+  });
+
+  await check('backup — export, wipe, import restores every figure', async () => {
+    const outcome = await b.eval(`
+      const db = await import('/js/db.js');
+      const before = {
+        earnings: (await db.earnings.all()).length,
+        expenses: (await db.expenses.all()).length,
+        payslips: (await db.payslips.all()).length,
+        income: (await db.earnings.all()).reduce((t, r) => t + (r.amount || 0) + (r.tips || 0), 0),
+        spend: (await db.expenses.all()).reduce((t, r) => t + (r.amount || 0), 0),
+      };
+      const backup = JSON.parse(JSON.stringify(await db.exportAll()));
+      await db.wipeAll();
+      const emptied = (await db.earnings.all()).length;
+      const res = await db.importAll(backup, { replace: true });
+      const after = {
+        earnings: (await db.earnings.all()).length,
+        expenses: (await db.expenses.all()).length,
+        payslips: (await db.payslips.all()).length,
+        income: (await db.earnings.all()).reduce((t, r) => t + (r.amount || 0) + (r.tips || 0), 0),
+        spend: (await db.expenses.all()).reduce((t, r) => t + (r.amount || 0), 0),
+      };
+      return { before, emptied, after, res };`);
+    eq(outcome.emptied, 0, 'wipe actually emptied the store');
+    eq(outcome.after, outcome.before, 'restored data must match what was exported');
+    return `${outcome.after.earnings} earnings and ${outcome.after.expenses} expenses restored, totals identical`;
+  });
+
+  await check('backup — a corrupt file is rejected without destroying what is there', async () => {
+    const outcome = await b.eval(`
+      const db = await import('/js/db.js');
+      const before = (await db.earnings.all()).length;
+      let threw = false;
+      try { await db.importAll({ earnings: 'not-an-array', expenses: 42 }, { replace: true }); }
+      catch (e) { threw = true; }
+      return { before, after: (await db.earnings.all()).length, threw };`);
+    if (outcome.after !== outcome.before) {
+      throw new Error(`records lost to a bad import: ${outcome.before} -> ${outcome.after}`);
+    }
+    return `kept all ${outcome.before} records (${outcome.threw ? 'rejected with an error' : 'ignored the bad fields'})`;
+  });
   await b.close();
 
   const passed = results.filter((r) => r.pass).length;
