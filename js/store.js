@@ -128,6 +128,13 @@ export function categoryById(id) {
   return EXPENSE_CATEGORIES.find(c => c.id === id) || EXPENSE_CATEGORIES.at(-1);
 }
 
+// How long the mileage-basis note may be. It has to hold a real explanation
+// — where the distances came from, whether they were measured or estimated,
+// and anything inferred rather than recorded — because it is the evidence
+// behind the largest deduction on the return. Shared with the Settings
+// field so the two cannot drift apart and cut a sentence in half.
+export const MILEAGE_BASIS_MAX = 1200;
+
 const DEFAULTS = {
   region: 'ruk',
   vehicle: 'car',                // the default/only vehicle's type
@@ -250,7 +257,7 @@ export function sanitiseSettings(raw) {
       typicalMiles: sNum(v.typicalMiles, 0, 2000),
     }));
   }
-  put('mileageBasis', sText(raw.mileageBasis, 400));
+  put('mileageBasis', sText(raw.mileageBasis, MILEAGE_BASIS_MAX));
   if (Array.isArray(raw.hmrcPayments)) {
     out.hmrcPayments = raw.hmrcPayments.slice(0, 500).filter(p => p && typeof p === 'object').map(p => ({
       id: sText(p.id, 40) || 'h' + Math.random().toString(36).slice(2, 8),

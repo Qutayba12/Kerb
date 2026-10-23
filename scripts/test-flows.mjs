@@ -686,6 +686,62 @@ const run = async () => {
     return 'flags 3, then confirms when none are left';
   });
 
+  // ---------------- the mileage-basis note ----------------
+  // The note is the stated basis for the biggest deduction on the return, so
+  // what the field accepts is a correctness question, not a cosmetic one: a
+  // disclosure cut off mid-sentence is worse than none at all.
+  await check('settings — the mileage note survives the Settings field intact', async () => {
+    await b.goto('#/settings');
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      const note = "Distances from home to each collection station were measured postcode to postcode "
+        + "on Google Maps and recorded once per station. Each block's mileage is the whole shift, home "
+        + "to home; I travel nowhere other than work for its duration. These are reasonable estimates, "
+        + "not odometer readings. The Amazon Flex payment statement does not name the station, so for "
+        + "earlier blocks I identified it from the block's scheduled hours, and where I could not "
+        + "identify it with confidence I assumed the nearest of my three stations. That under-states "
+        + "rather than over-states the mileage claimed.";
+      const ta = [...document.querySelectorAll('#view textarea')]
+        .find(t => /measured each station on the map/.test(t.placeholder));
+      if (!ta) return { error: 'the mileage note field is not on the Settings screen' };
+      ta.value = note;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      const counter = ta.parentElement.parentElement.textContent.match(/\\d+\\s*\\/\\s*\\d+/);
+      ta.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 150));
+      const saved = st.getSettings().mileageBasis;
+      return { len: note.length, savedLen: saved.length, intact: saved === note,
+               maxLength: ta.maxLength, counter: counter && counter[0] };`);
+    if (out.error) throw new Error(out.error);
+    if (!out.intact) throw new Error(`the field cut the note to ${out.savedLen} of ${out.len} characters`);
+    if (out.maxLength < out.len) throw new Error('maxLength would block typing it: ' + out.maxLength);
+    if (!out.counter) throw new Error('no character count shown, so a cut would be silent');
+    return `${out.len} characters saved whole, counter reads ${out.counter}`;
+  });
+
+  await check('settings — the note is bounded, and says so before it bites', async () => {
+    await b.goto('#/settings');
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      const ta = [...document.querySelectorAll('#view textarea')]
+        .find(t => /measured each station on the map/.test(t.placeholder));
+      ta.value = 'y'.repeat(st.MILEAGE_BASIS_MAX + 500);
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      // maxLength only governs typing, so a programmatic value gets past it.
+      // The counter has to say so, and the save has to bound it either way.
+      const el = [...ta.parentElement.parentElement.querySelectorAll('div')]
+        .find(d => /^\\d+\\s*\\/\\s*\\d+$/.test(d.textContent.trim()));
+      const over = { text: el && el.textContent.trim(), flagged: !!el && /warn/.test(el.style.color) };
+      ta.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 150));
+      return { saved: st.getSettings().mileageBasis.length, max: st.MILEAGE_BASIS_MAX, over };`);
+    eq(out.saved, out.max, 'an over-long note is bounded');
+    if (!out.over.text) throw new Error('no character count shown, so the cut would be silent');
+    if (!out.over.text.endsWith('/ ' + out.max)) throw new Error('the counter does not name the limit: ' + out.over.text);
+    if (!out.over.flagged) throw new Error('over the limit, but the counter is not flagged: ' + out.over.text);
+    return `bounded at ${out.max}, counter reads ${out.over.text} and is flagged`;
+  });
+
   // ---------------- an entirely estimated mileage claim ----------------
   // This is the one gap only the driver can close, so the review has to keep
   // saying so, and has to stop the moment a station gets its first reading.
