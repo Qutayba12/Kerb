@@ -100,7 +100,7 @@ export async function render() {
   themeSel.addEventListener('change', () => { saveSettings({ theme: themeSel.value }); bus.applyTheme(); });
   const langSel = selectInput([{ value: 'en', label: 'English' }, { value: 'ar', label: 'العربية' }], s.lang || 'en');
   langSel.addEventListener('change', () => { if (langSel.value !== (getSettings().lang || 'en')) setLang(langSel.value); });
-  root.append(card([field('Theme', themeSel), field('Language', langSel, 'العربية تبدّل الواجهة إلى اليمين-لليسار.')]));
+  root.append(card([field('Theme', themeSel), field('Language', langSel, 'Arabic switches the interface to right-to-left.')]));
 
   // ---------- Privacy & security ----------
   root.append(sec('Privacy & security'));

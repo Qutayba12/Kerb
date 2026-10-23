@@ -46,19 +46,25 @@
     {id:'b2', name:'Car insurance (courier)', amount:1180, freq:'annual', category:'insurance', nextDue:'2026-11-12', business:true, bizPct:100},
   ];
 
+  // Open at the app's CURRENT schema version. Pinning an old version here
+  // makes the request fail with VersionError against an upgraded database,
+  // which silently seeds nothing and looks like a bug in the app.
+  const DB_VERSION = 3;
+  const STORES = ['earnings','expenses','bills','payslips'];
   await new Promise((resolve, reject) => {
-    const req = indexedDB.open('kerb', 1);
+    const req = indexedDB.open('kerb', DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      for (const name of ['earnings','expenses','bills']) {
+      for (const name of STORES) {
         if (!db.objectStoreNames.contains(name)) { const os = db.createObjectStore(name,{keyPath:'id'}); os.createIndex('date','date'); }
       }
+      if (!db.objectStoreNames.contains('images')) db.createObjectStore('images',{keyPath:'id'});
     };
     req.onsuccess = () => {
       const db = req.result;
-      // clear then repopulate
-      const tx = db.transaction(['earnings','expenses','bills'],'readwrite');
-      tx.objectStore('earnings').clear(); tx.objectStore('expenses').clear(); tx.objectStore('bills').clear();
+      const names = STORES.filter(n=>db.objectStoreNames.contains(n));
+      const tx = db.transaction(names,'readwrite');
+      names.forEach(n=>tx.objectStore(n).clear());
       earnings.forEach(o=>tx.objectStore('earnings').put(o));
       expenses.forEach(o=>tx.objectStore('expenses').put(o));
       bills.forEach(o=>tx.objectStore('bills').put(o));

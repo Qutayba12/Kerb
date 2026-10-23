@@ -96,7 +96,7 @@ function potCard({ title, tone, icon: ic, target, saved, hint, onEdit }) {
       el('button', { class: 'btn btn--sm btn--sub', type: 'button', text: 'Update', onclick: onEdit }),
     ]),
     el('div', { class: 'row row--between', style: 'margin:12px 0 6px' }, [
-      el('span', { class: 'tiny muted', html: `Saved <b style="color:var(--text)">${fmtGBP(saved)}</b>` }),
+      el('span', { class: 'tiny muted', html: `Saved so far <b style="color:var(--text)">${fmtGBP(saved)}</b>` }),
       el('span', { class: 'tiny muted', html: `Target <b style="color:var(--text)">${fmtGBP(target)}</b>` }),
     ]),
     (() => { const b = el('div', { class: 'bar' }); b.append(el('div', { class: `bar__fill bar__fill--${tone === 'warn' ? 'warn' : tone === 'gold' ? 'gold' : ''}`, style: `width:${pct}%` })); return b; })(),
