@@ -22,10 +22,7 @@ export async function render() {
   root.append(el('div', { class: 'callout callout--brand', html: `${icon('spark')}<div>Scan a photo or upload the <b>PDF</b> of your bank / card statement — Claude reads every transaction and suggests which are delivery <b>income</b> and which are business <b>expenses</b>. You confirm each one before it's added.</div>` }));
 
   if (!hasApiKey(s)) {
-    root.append(el('div', { class: 'callout callout--warn', html: `${icon('info')}<div>Add your Anthropic API key in Settings to read statements. Your statement is sent only to Anthropic to read it — never stored anywhere else.</div>` }));
-    const b = el('button', { class: 'btn btn--primary btn--block', type: 'button', text: 'Open Settings' }); b.onclick = () => bus.navigate('settings');
-    root.append(b);
-    return root;
+    root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div>Scanning is free for a limited number each month, and your statement passes through Kerb's server on its way to Anthropic to be read. Add your own Anthropic API key in Settings to send it straight from this device instead.</div>` }));
   }
 
   // Records already saved — used to flag likely duplicates so the same money

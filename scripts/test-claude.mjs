@@ -10,6 +10,7 @@
 //   node scripts/test-claude.mjs
 // ============================================================
 import { launch } from './browser.mjs';
+import { validateScanRequest } from '../api/_validate.js';
 
 const results = [];
 async function check(name, fn) {
@@ -37,6 +38,16 @@ const failWith = (status, body = {}) => `
   return true;`;
 
 const PNG = 'data:image/png;base64,iVBORw0KGgo=';
+
+// Record the outgoing request so the app's real body can be checked against
+// the endpoint's real validator.
+const captureNext = (text) => `
+  window.__sent = null;
+  window.fetch = async (url, init) => {
+    window.__sent = { url: String(url), headers: (init && init.headers) || {}, body: JSON.parse((init && init.body) || '{}') };
+    return new Response(JSON.stringify({ content: [{ type: 'text', text: ${JSON.stringify('{}')} }], usage: {}, stop_reason: 'end_turn' }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  return true;`;
 
 const run = async () => {
   const b = await launch();
@@ -261,32 +272,152 @@ const run = async () => {
   await check('error handling — being offline says so without calling out', async () => {
     const msg = await b.eval(`
       const c = await import('/js/claude.js');
-      const orig = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
+      // Shadow the prototype getter on the instance, and delete the shadow
+      // afterwards — restoring onto the prototype would leave the instance
+      // property in place and every later test would still look offline.
       Object.defineProperty(navigator, 'onLine', { get: () => false, configurable: true });
       let called = false;
       window.fetch = async () => { called = true; throw new Error('should not be reached'); };
       let message;
       try { await c.extractReceipt(${JSON.stringify(PNG)}, ${settings}); message = 'NO ERROR THROWN'; }
       catch (e) { message = e.message; }
-      if (orig) Object.defineProperty(Navigator.prototype, 'onLine', orig);
+      delete navigator.onLine;
+      if (navigator.onLine !== true) throw new Error('failed to restore navigator.onLine');
       return { message, called };`);
     if (msg.called) throw new Error('it tried the network while offline');
     if (!/offline/i.test(msg.message)) throw new Error('unclear offline message: ' + msg.message);
     return 'fails fast with an offline message';
   });
 
-  await check('error handling — a missing key is refused before any request', async () => {
-    const out = await b.eval(`
+  await check('no key at all — scanning still works, through the shared endpoint', async () => {
+    // The point of the whole change: someone who has never heard of Anthropic
+    // can scan a receipt. Previously this threw before any request was made.
+    await b.eval(reply(JSON.stringify({ amount: 31.5, vendor: 'Esso', category: 'fuel', date: '2026-09-18' })));
+    const r = await b.eval(`
       const c = await import('/js/claude.js');
-      let called = false;
-      window.fetch = async () => { called = true; throw new Error('should not be reached'); };
-      let message;
-      try { await c.extractReceipt(${JSON.stringify(PNG)}, { apiKey: '' }); message = 'NO ERROR THROWN'; }
-      catch (e) { message = e.message; }
-      return { message, called };`);
-    if (out.called) throw new Error('it called Anthropic with no key');
-    if (!/api key/i.test(out.message)) throw new Error('unclear message: ' + out.message);
-    return 'no request made';
+      const r = await c.extractReceipt(${JSON.stringify(PNG)}, { claudeModel: 'claude-haiku-5-5', apiKey: '' });
+      return { amount: r.amount, vendor: r.vendor };`);
+    eq(r, { amount: 31.5, vendor: 'Esso' }, 'scan result with no key configured');
+    return 'a receipt was read on an account with no API key';
+  });
+
+  // ---------------- routing: own key vs the shared endpoint ----------------
+  await check('routing — with your own key the request goes straight to Anthropic', async () => {
+    await b.eval(captureNext());
+    await b.eval(`
+      const c = await import('/js/claude.js');
+      try { await c.extractReceipt(${JSON.stringify(PNG)}, ${settings}); } catch (e) {}
+      return true;`);
+    const sent = await b.eval(`window.__sent`);
+    if (!/api\.anthropic\.com/.test(sent.url)) throw new Error('did not go to Anthropic: ' + sent.url);
+    if (!sent.headers['x-api-key']) throw new Error('own key not sent');
+    if (sent.headers['x-kerb-device']) throw new Error('device header leaked to Anthropic');
+    return 'direct to Anthropic, no device id attached';
+  });
+
+  await check('routing — with no key it goes to the shared endpoint, and the key is never in the browser', async () => {
+    await b.eval(captureNext());
+    await b.eval(`
+      const c = await import('/js/claude.js');
+      try { await c.extractReceipt(${JSON.stringify(PNG)}, { claudeModel: 'claude-haiku-5-5', apiKey: '' }); } catch (e) {}
+      return true;`);
+    const sent = await b.eval(`window.__sent`);
+    if (!/\/api\/scan$/.test(sent.url)) throw new Error('did not go to the shared endpoint: ' + sent.url);
+    if (sent.headers['x-api-key']) throw new Error('an API key was sent from the browser');
+    if (!/^[0-9a-f]{32}$/.test(sent.headers['x-kerb-device'] || '')) throw new Error('bad device id: ' + sent.headers['x-kerb-device']);
+    return 'proxied, no key client-side';
+  });
+
+  await check('routing — the device id is stable across scans', async () => {
+    const first = await b.eval(`const c = await import('/js/claude.js'); return c.deviceId();`);
+    const second = await b.eval(`const c = await import('/js/claude.js'); return c.deviceId();`);
+    eq(first, second, 'device id must not change between scans');
+    return 'one id per device';
+  });
+
+  // The app and the endpoint must agree on the shape, or scanning breaks for
+  // everyone without their own key. Check the real body against the real validator.
+  for (const [name, call] of [
+    ['receipt', `c.extractReceipt(${JSON.stringify(PNG)}, s)`],
+    ['payslip', `c.extractPayslip({ kind: 'image', dataUrl: ${JSON.stringify(PNG)} }, s)`],
+    ['earnings statement', `c.extractEarnings({ kind: 'image', dataUrl: ${JSON.stringify(PNG)} }, { today: '2026-09-20', platforms: st.allPlatforms() }, s)`],
+    ['bank statement', `c.extractBankTransactions({ kind: 'image', dataUrl: ${JSON.stringify(PNG)} }, { today: '2026-09-20', platforms: st.allPlatforms(), categories: [] }, s)`],
+  ]) {
+    await check(`shape — a real ${name} request is accepted by the endpoint`, async () => {
+      await b.eval(captureNext());
+      await b.eval(`
+        const c = await import('/js/claude.js');
+        const st = await import('/js/store.js');
+        const s = { claudeModel: 'claude-haiku-5-5', apiKey: '' };
+        try { await ${call}; } catch (e) {}
+        return true;`);
+      const sent = await b.eval(`window.__sent`);
+      const verdict = validateScanRequest(sent.body);
+      if (!verdict.ok) throw new Error(`the endpoint would reject the app's own request: ${verdict.reason}`);
+      return `model ${sent.body.model}, max_tokens ${sent.body.max_tokens}`;
+    });
+  }
+
+  await check('shape — a PDF statement is also accepted', async () => {
+    await b.eval(captureNext());
+    await b.eval(`
+      const c = await import('/js/claude.js');
+      const st = await import('/js/store.js');
+      try { await c.extractEarnings({ kind: 'pdf', base64: 'JVBERi0xLjQK' },
+        { today: '2026-09-20', platforms: st.allPlatforms() }, { claudeModel: 'claude-haiku-5-5', apiKey: '' }); } catch (e) {}
+      return true;`);
+    const verdict = validateScanRequest(await b.eval(`window.__sent.body`));
+    if (!verdict.ok) throw new Error('PDF path rejected: ' + verdict.reason);
+    return 'document block accepted';
+  });
+
+  // ---------------- the endpoint's own refusals reach the user ----------------
+  for (const [status, code, msg, label] of [
+    [402, 'quota_exhausted', 'You have used your 50 free scans this month. Add your own Anthropic API key in Settings to keep scanning.', 'the free allowance running out'],
+    [429, 'daily_cap', 'Shared scanning has reached its daily limit. Try again tomorrow, or add your own Anthropic API key in Settings.', 'the daily cap'],
+    [503, 'not_configured', 'Shared scanning is not set up on this deployment. Add your own Anthropic API key in Settings.', 'scanning not being configured'],
+  ]) {
+    await check(`shared endpoint — ${label} is explained in its own words`, async () => {
+      await b.eval(`
+        window.fetch = async () => new Response(JSON.stringify({ error: { code: ${JSON.stringify(code)}, message: ${JSON.stringify(msg)} } }), { status: ${status}, headers: { 'content-type': 'application/json' } });
+        return true;`);
+      const shown = await b.eval(`
+        const c = await import('/js/claude.js');
+        try { await c.extractReceipt(${JSON.stringify(PNG)}, { claudeModel: 'claude-haiku-5-5', apiKey: '' }); return 'NO ERROR THROWN'; }
+        catch (e) { return e.message; }`);
+      eq(shown, msg, 'the endpoint message must reach the user unchanged');
+      return 'passed through verbatim';
+    });
+  }
+
+  await check('text features still ask for your own key', async () => {
+    // The shared endpoint reads documents only; free-form text would make it a
+    // general-purpose model on a key we pay for.
+    let called = false;
+    const shown = await b.eval(`
+      const c = await import('/js/claude.js');
+      window.fetch = async () => { window.__called = true; throw new Error('should not be reached'); };
+      window.__called = false;
+      try { await c.claudeText({ user: 'hello', settings: { apiKey: '' } }); return { msg: 'NO ERROR THROWN', called: window.__called }; }
+      catch (e) { return { msg: e.message, called: window.__called }; }`);
+    if (shown.called) throw new Error('a text request was sent to the shared endpoint');
+    if (!/own Anthropic API key/i.test(shown.msg)) throw new Error('unclear message: ' + shown.msg);
+    if (!/scanning .*works without/i.test(shown.msg)) throw new Error('does not say scanning still works: ' + shown.msg);
+    return 'refused locally, and says scanning still works';
+  });
+  await check('shared endpoint — a non-JSON reply is explained, not thrown raw', async () => {
+    // What a misrouted endpoint looks like: a 200 serving the function's own
+    // source, or a captive portal's login page.
+    await b.eval(`
+      window.fetch = async () => new Response('export default function handler() {}', { status: 200, headers: { 'content-type': 'application/javascript' } });
+      return true;`);
+    const msg = await b.eval(`
+      const c = await import('/js/claude.js');
+      try { await c.extractReceipt(${JSON.stringify(PNG)}, { claudeModel: 'claude-haiku-5-5', apiKey: '' }); return 'NO ERROR THROWN'; }
+      catch (e) { return e.message; }`);
+    if (/JSON|SyntaxError|Unexpected token/i.test(msg)) throw new Error('raw parser error surfaced: ' + msg);
+    if (!/not available on this deployment/i.test(msg)) throw new Error('unhelpful message: ' + msg);
+    return 'points at adding your own key';
   });
 
   await b.close();

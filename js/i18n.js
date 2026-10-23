@@ -498,6 +498,26 @@ const AR = {
   'today': 'اليوم',
   'tomorrow': 'غداً',
   'no hours logged': 'لا ساعات مسجّلة',
+  'Your records are stored only on this device. There is no account, and your income, expenses and tax figures are never uploaded to us. We cannot see them.':
+    'تُحفظ سجلاتك على هذا الجهاز فقط. لا يوجد حساب، ولا تُرفع إلينا أرقام دخلك ومصاريفك وضريبتك أبداً. ولا نستطيع رؤيتها.',
+  'Scanning is the exception, and it works one of two ways. If you add your own Anthropic API key, the image or file goes straight from this device to Anthropic under your key and their terms, and touches no server of ours.':
+    'المسح هو الاستثناء، ويعمل بإحدى طريقتين. إن أضفت مفتاح Anthropic الخاص بك، فتذهب الصورة أو الملف مباشرةً من هذا الجهاز إلى Anthropic بمفتاحك ووفق شروطهم، ولا تمرّ بأي خادم لنا.',
+  'If you have not added a key, scanning uses a free monthly allowance. The image or file is then sent to a Kerb endpoint, which forwards it to Anthropic using our key and returns the result. It passes through our server to get there. We do not store it, and it is not used for anything else — but it does leave your device by way of us, which is the difference between the two. Add your own key if you would rather it never did.':
+    'وإن لم تُضف مفتاحاً، فيستخدم المسح حصّة شهرية مجانية. عندها تُرسل الصورة أو الملف إلى خادم Kerb، فيمرّرها إلى Anthropic بمفتاحنا ويعيد النتيجة. أي أنها تمرّ بخادمنا في طريقها. نحن لا نحفظها ولا تُستخدم لأي غرض آخر — لكنها تغادر جهازك عبرنا، وهذا هو الفرق بين الطريقتين. أضف مفتاحك الخاص إن كنت تفضّل ألّا تفعل.',
+  'Either way, only the file you choose to scan is sent. Your records, totals and tax figures are not.':
+    'وفي الحالتين، لا يُرسل سوى الملف الذي تختار مسحه. أما سجلاتك ومجاميعك وأرقامك الضريبية فلا تُرسل.',
+  'Free for a limited number of scans each month. Add your own Anthropic API key in Settings for unlimited scanning.':
+    'مجاني لعدد محدود من المسحات شهرياً. أضف مفتاح Anthropic الخاص بك في الإعدادات لمسح بلا حدود.',
+  'Scanning is free for a limited number each month. Add your own Anthropic API key in Settings for unlimited scanning.':
+    'المسح مجاني لعدد محدود شهرياً. أضف مفتاح Anthropic الخاص بك في الإعدادات لمسح بلا حدود.',
+  'Scanning is free for a limited number each month, and your statement passes through Kerb\'s server on its way to Anthropic to be read. Add your own Anthropic API key in Settings to send it straight from this device instead.':
+    'المسح مجاني لعدد محدود شهرياً، ويمرّ كشفك بخادم Kerb في طريقه إلى Anthropic لقراءته. أضف مفتاح Anthropic الخاص بك في الإعدادات لإرساله مباشرةً من هذا الجهاز بدلاً من ذلك.',
+  'This needs your own Anthropic API key. Add one in Settings — scanning receipts and statements works without it.':
+    'هذا يتطلّب مفتاح Anthropic الخاص بك. أضفه في الإعدادات — أما مسح الفواتير والكشوف فيعمل بدونه.',
+  'Scanning is not available on this deployment. Add your own Anthropic API key in Settings.':
+    'المسح غير متاح في هذه النسخة. أضف مفتاح Anthropic الخاص بك في الإعدادات.',
+  'Enter a key first.':
+    'أدخل مفتاحاً أولاً.',
 };
 
 // placeholders (separate so we can target the attribute)
@@ -790,6 +810,8 @@ const AR_HTML = {
     '<b>خذ نسخة احتياطية من سجلاتك.</b> كل شيء محفوظ على هذا الجهاز فقط — ولم تُصدّر نسخة احتياطية بعد. وينبغي حفظ سجلات HMRC {0}+ سنوات. اضغط لحفظ ملف النسخة الاحتياطية.',
   'For every <b>{0}</b> profit from now, keep about <b>{1}</b> for tax &amp; NIC — the rest is yours.':
     'من كل <b>{0}</b> ربح من الآن، احتفظ بنحو <b>{1}</b> للضريبة والتأمين — والباقي لك.',
+  '<b>Kerb</b> keeps everything on this device — your entries never leave it. Only a file you choose to scan is sent: straight to Anthropic when you have added your own key, otherwise via Kerb\'s endpoint using the free allowance. Figures are estimates to help you budget; confirm on your HMRC Self Assessment.':
+    'يحفظ <b>Kerb</b> كل شيء على هذا الجهاز — فمُدخلاتك لا تغادره. ولا يُرسل سوى ملف تختار مسحه: مباشرةً إلى Anthropic إن أضفت مفتاحك الخاص، وإلا فعبر خادم Kerb باستخدام الحصّة المجانية. والأرقام تقديرات تساعدك في وضع ميزانيتك؛ تحقّق منها في إقرارك لدى HMRC.',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).

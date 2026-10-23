@@ -161,7 +161,7 @@ const DEFAULTS = {
   traderName: '',                // optional, shown on the Self Assessment report
   utr: '',                       // optional Unique Taxpayer Reference
   apiKey: '',
-  claudeModel: 'claude-haiku-4-5',
+  claudeModel: 'claude-haiku-5-5',   // see DEFAULT_MODEL below
   lockEnabled: false,            // require a PIN to open the app
   pinHash: '',                   // SHA-256(salt + PIN) — never the PIN itself
   pinSalt: '',
@@ -267,12 +267,28 @@ function numbersOnly(obj, depth) {
 
 let _settings = null;
 
+// Models that have a current-generation replacement at the same or lower
+// price. A saved claude-haiku-4-5 costs ten times as much per scan as
+// claude-haiku-5-5 for the same job, so an old install is quietly paying
+// more for a worse model until it is moved across.
+export const DEFAULT_MODEL = 'claude-haiku-5-5';
+
+const MODEL_UPGRADES = {
+  'claude-haiku-4-5': 'claude-haiku-5-5',
+  'claude-sonnet-5': 'claude-sonnet-5-5',
+};
+
 export function loadSettings() {
   if (_settings) return _settings;
   try {
     const raw = localStorage.getItem(LS_KEY);
     _settings = raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
   } catch { _settings = { ...DEFAULTS }; }
+  const better = MODEL_UPGRADES[_settings.claudeModel];
+  if (better) {
+    _settings.claudeModel = better;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(_settings)); } catch {}
+  }
   return _settings;
 }
 export function getSettings() { return loadSettings(); }
