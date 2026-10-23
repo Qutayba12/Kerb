@@ -3,7 +3,7 @@
 // platform earnings statement (Amazon Flex, Uber Eats, …);
 // Claude extracts the shifts and you bulk-add them.
 // ============================================================
-import { el, uid, todayISO, fmtGBP, fmtNum, fmtDate, fileToResizedDataURL, fileToBase64, escapeHtml } from '../util.js';
+import { el, uid, todayISO, fmtGBP, fmtNum, fmtDate, fileToResizedDataURL, fileToBase64, escapeHtml, fmtMiles } from '../util.js';
 import { earnings } from '../db.js';
 import { getSettings, allPlatforms, platformById } from '../store.js';
 import { extractEarnings, hasApiKey } from '../claude.js';
@@ -117,7 +117,7 @@ export async function render() {
       const p = platformById(e.platform);
       const bits = [fmtDate(e.date, { weekday: true })];
       if (e.hours) bits.push(`${fmtNum(e.hours, e.hours % 1 ? 1 : 0)}h`);
-      if (e.miles) bits.push(`${fmtNum(e.miles)} mi`);
+      if (e.miles) bits.push(`${fmtMiles(e.miles)} mi`);
       if (e.deliveries) bits.push(`${e.deliveries} drops`);
       if (e.tips) bits.push(`${fmtGBP(e.tips)} tips`);
       const sub = el('div', { class: 'item__sub', text: bits.join(' · ') });

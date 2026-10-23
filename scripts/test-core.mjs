@@ -655,6 +655,41 @@ const run = async () => {
     return 'station attached, 64 measured miles';
   });
 
+  await check('mileage display — a fractional distance is not rounded away', async () => {
+    // A station 21.5 miles out was displayed as "22": half a mile per block
+    // the driver never drove, and a number that no longer matched what they
+    // had typed, which reads as the app disagreeing with its own data.
+    const out = await b.eval(`
+      const u = await import('/js/util.js');
+      return [2.3, 21.5, 25.3, 64, 5948, 0, 143.2].map(v => u.fmtMiles(v));`);
+    eq(out, ['2.3', '21.5', '25.3', '64', '5,948', '0', '143.2'], 'formatted miles');
+    return 'fractions kept, whole numbers left clean';
+  });
+
+  await check('mileage display — stations show the distance that was entered', async () => {
+    await b.eval(`
+      const st = await import('/js/store.js');
+      // saveSettings, not a raw localStorage write: the store keeps the
+      // settings in memory, so writing underneath it leaves the page running
+      // on whatever it loaded with — which is how this test first failed.
+      st.saveSettings({ lang: 'en', stations: [
+        { id: 'sheff', label: 'Amazon Logistics (S4 8AL)', baseMiles: 2.3, typicalMiles: 0 },
+        { id: 'donny', label: 'Amazon Logistics (DN11 0BF)', baseMiles: 21.5, typicalMiles: 0 },
+        { id: 'leeds', label: 'Amazon Logistics (WF5 9EE)', baseMiles: 25.3, typicalMiles: 0 },
+      ] });
+      return true;`);
+    await b.open('/');
+    await b.ready();
+    await b.goto('#/settings');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    for (const shown of ['2.3', '21.5', '25.3']) {
+      if (!txt.includes(shown + ' mi')) throw new Error(`station distance ${shown} is not shown as entered`);
+    }
+    if (/\b22 mi\b/.test(txt)) throw new Error('21.5 was rounded up to 22 on screen');
+    if (/\b2 mi\b/.test(txt)) throw new Error('2.3 was rounded down to 2 on screen');
+    return 'all three read back exactly as typed';
+  });
+
   await b.close();
 
   const passed = results.filter(Boolean).length;

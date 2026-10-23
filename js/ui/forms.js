@@ -2,7 +2,7 @@
 // ui/forms.js — add/edit sheets for earnings, expenses, bills.
 // Shared by the Add screen and the list edit actions.
 // ============================================================
-import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate, escapeHtml } from '../util.js';
+import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate, escapeHtml, fmtMiles } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, getConfig, allVehicles, allStations, stationById, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog, scanCanceller } from './shared.js';
@@ -38,7 +38,7 @@ export function openEarningsForm(existing = null, opts = {}) {
   // number rather than re-entering every shift.
   const stations = allStations();
   const stationSel = stations.length
-    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: v.typicalMiles ? `${v.label} · ${fmtNum(v.typicalMiles)} mi` : v.label }))], e.stationId)
+    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: v.typicalMiles ? `${v.label} · ${fmtMiles(v.typicalMiles)} mi` : v.label }))], e.stationId)
     : null;
 
   // Only ask which vehicle when the driver actually has more than one.
@@ -54,8 +54,8 @@ export function openEarningsForm(existing = null, opts = {}) {
       const st = stationById(stationSel.value);
       stationHint.textContent = st
         ? (st.typicalMiles
-          ? `Usually ${fmtNum(st.typicalMiles)} mi a block, ${fmtNum(st.baseMiles)} mi of it getting there.`
-          : `${fmtNum(st.baseMiles)} mi to get there. Log a shift by odometer and Kerb learns what a block comes to.`)
+          ? `Usually ${fmtMiles(st.typicalMiles)} mi a block, ${fmtMiles(st.baseMiles)} mi of it getting there.`
+          : `${fmtMiles(st.baseMiles)} mi to get there. Log a shift by odometer and Kerb learns what a block comes to.`)
         : 'Pick one to fill the miles in automatically.';
     };
     stationSel.addEventListener('change', () => {

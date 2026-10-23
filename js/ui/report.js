@@ -6,7 +6,7 @@
 // pack — every income and expense line — for HMRC's 5-year
 // record-keeping rule. Save as PDF from the Print dialog.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, fmtDate, todayISO } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, fmtDate, todayISO, fmtMiles } from '../util.js';
 import { earnings, expenses } from '../db.js';
 import { getSettings, availableYears, VEHICLE_LABELS, REGION_LABELS, EXPENSE_CATEGORIES } from '../store.js';
 import { computeTaxYear } from '../tax.js';
@@ -104,7 +104,7 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
     addRow(t1, 'Trading income allowance', '−' + fmtGBP(sum.effectiveDeduction), 'Box 10.1');
   } else {
     if (sum.mileageDed && (sum.mileageRows || []).length > 1) {
-      sum.mileageRows.forEach(r => addRow(t1, `Business mileage — ${r.label} (${fmtNum(r.miles)} miles)`, '−' + fmtGBP(r.amount), 'in Box 20'));
+      sum.mileageRows.forEach(r => addRow(t1, `Business mileage — ${r.label} (${fmtMiles(r.miles)} miles)`, '−' + fmtGBP(r.amount), 'in Box 20'));
     } else if (sum.mileageDed) {
       addRow(t1, `Business mileage (${fmtNum(sum.businessMiles)} miles)`, '−' + fmtGBP(sum.mileageDed), 'in Box 20');
     }
@@ -134,7 +134,7 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
       sheet.append(el('div', { class: 'report__note', text: `How the mileage was worked out: ${s.mileageBasis.trim()}` }));
     }
     if (sum.baseLeg && sum.baseLeg.miles > 0) {
-      sheet.append(el('div', { class: 'report__note', text: `Of ${fmtNum(sum.businessMiles)} business miles, ${fmtNum(sum.baseLeg.miles)} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.` }));
+      sheet.append(el('div', { class: 'report__note', text: `Of ${fmtNum(sum.businessMiles)} business miles, ${fmtMiles(sum.baseLeg.miles)} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.` }));
     }
     sheet.append(el('div', { class: 'report__note', text: `Mileage is claimed at HMRC's simplified rate. For a car that is 55p/mile for the first 10,000 business miles and 25p after.${perVeh} When you claim mileage you cannot also claim fuel, insurance or repairs for the same vehicle.` }));
   }
@@ -208,9 +208,9 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
       let iAmt = 0, iTips = 0, iMiles = 0;
       incRows.forEach(e => {
         iAmt += (e.amount || 0); iTips += (e.tips || 0); iMiles += (e.miles || 0);
-        recRow(ti, [fmtDate(e.date, { withYear: true }), platformName(e.platform), fmtGBP(e.amount || 0), fmtGBP(e.tips || 0), fmtNum(e.miles || 0)]);
+        recRow(ti, [fmtDate(e.date, { withYear: true }), platformName(e.platform), fmtGBP(e.amount || 0), fmtGBP(e.tips || 0), fmtMiles(e.miles || 0)]);
       });
-      recRow(ti, ['Total', '', fmtGBP(iAmt), fmtGBP(iTips), fmtNum(iMiles)], true);
+      recRow(ti, ['Total', '', fmtGBP(iAmt), fmtGBP(iTips), fmtMiles(iMiles)], true);
       sheet.append(ti);
     } else sheet.append(el('div', { class: 'report__note', text: 'No income recorded in this tax year.' }));
 
