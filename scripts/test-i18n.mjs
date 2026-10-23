@@ -86,6 +86,55 @@ const run = async () => {
     results.push({ route, status: real.length || errs.length ? 'LEAK' : 'ok', leaks: real, errs });
   }
 
+  // --- the review screen's branching states ---
+  // A single pass over the routes only ever renders one branch of a check.
+  // The mileage-evidence check has three, and the one the default seed shows
+  // is the "nothing measured" warning — so the other two would ship in
+  // English without anyone noticing. Re-render review under each state.
+  const sweepView = `
+    const out = [];
+    const w = document.createTreeWalker(document.getElementById('view'), NodeFilter.SHOW_TEXT, null);
+    while (w.nextNode()) {
+      const t = w.currentNode.nodeValue.trim();
+      if (!t || /[\\u0600-\\u06FF]/.test(t) || !/[A-Za-z]{2}/.test(t)) continue;
+      const st = w.currentNode.parentElement && getComputedStyle(w.currentNode.parentElement);
+      if (st && (st.display === 'none' || st.visibility === 'hidden')) continue;
+      out.push(t);
+    }
+    return [...new Set(out)];`;
+  const TWO = `[{ id: 'sheff', label: 'Amazon Logistics (S4 8AL)', baseMiles: 2.3, typicalMiles: 19 },
+               { id: 'donny', label: 'Amazon Logistics (DN11 0BF)', baseMiles: 21.5, typicalMiles: 0 }]`;
+  const VARIANTS = [
+    ['review · no stations set up', `
+      const st = await import('/js/store.js');
+      st.saveSettings({ stations: [] }); return true;`],
+    ['review · one of two measured', `
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      st.saveSettings({ stations: ${TWO} });
+      const all = await db.earnings.all();
+      await db.earnings.save({ ...all[0], stationId: 'sheff', miles: 19, milesSource: 'odometer' });
+      await db.earnings.save({ ...all[1], stationId: 'donny' });
+      return true;`],
+    ['review · every station measured', `
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      await db.earnings.save({ ...all[1], stationId: 'donny', miles: 48, milesSource: 'odometer' });
+      return true;`],
+  ];
+  for (const [name, setup] of VARIANTS) {
+    b.clearErrors();
+    await b.eval(setup);
+    await b.goto('#/income');          // force a real re-render of review
+    await b.goto('#/review');
+    const leaks = (await b.eval(sweepView)).filter((t) => !ALLOW.some((re) => re.test(t)));
+    const errs = b.errors();
+    totalLeaks += leaks.length;
+    totalErrors += errs.length;
+    results.push({ route: name, status: leaks.length || errs.length ? 'LEAK' : 'ok', leaks, errs });
+  }
+  // Put the seed back the way the rest of the run expects it.
+  await b.eval(`(await import('/js/store.js')).saveSettings({ stations: ${TWO} }); return true;`);
+
   // --- English must be untouched by all of this ---
   // The Arabic layer rewrites text nodes and innerHTML, so a bug there could
   // leak Arabic (or a literal {0}) into the English UI. Check both.
@@ -142,7 +191,7 @@ const run = async () => {
     (r.leaks || []).forEach((t) => console.log('      EN: ' + JSON.stringify(t.slice(0, 90))));
     (r.errs || []).forEach((t) => console.log('      ERR: ' + String(t).slice(0, 140)));
   }
-  console.log(`\n${results.filter((r) => r.status === 'ok').length}/${ROUTES.length} screens clean`
+  console.log(`\n${results.filter((r) => r.status === 'ok').length}/${results.length} screens clean`
     + `   ${totalLeaks} untranslated strings   ${totalErrors} errors`);
   console.log(`english unaffected: ${enBleed.length === 0 ? 'yes' : 'NO'}`
     + `   unfilled slots in arabic: ${arSlots.length}`);
