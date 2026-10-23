@@ -9,7 +9,8 @@
     "icons": "node scripts/gen-icons.mjs",
     "test": "node scripts/test-tax.mjs",
     "test:i18n": "node scripts/test-i18n.mjs",
-    "test:all": "node scripts/test-tax.mjs && node scripts/test-i18n.mjs --strict"
+    "test:all": "node scripts/test-tax.mjs && node scripts/test-i18n.mjs --strict && node scripts/test-flows.mjs",
+    "test:flows": "node scripts/test-flows.mjs"
   },
   "license": "MIT"
 }
