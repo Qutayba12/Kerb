@@ -40,13 +40,37 @@ Kerb is a Progressive Web App — no app store needed.
 
 > The camera, install and offline features need HTTPS (or `localhost`). Opening `index.html` directly from disk won't work — serve it.
 
-## 🤖 Turn on scanning (Claude)
+## 🤖 Scanning (Claude)
+
+Scanning reads receipts, earnings statements, **bank statements** and payslips — from a photo or a PDF — and fills everything in. It works two ways.
+
+**Free allowance (no account needed).** Out of the box, each device gets a number of free scans per month through Kerb's own endpoint. Nothing to set up. The file passes through that endpoint on its way to Anthropic — see *Privacy* below.
+
+**Your own key (unlimited, nothing passes through us).**
 
 1. Create an API key at **console.anthropic.com → API keys** and add a small amount of credit.
 2. In Kerb: **Settings → Receipt scanning** → paste the key → *Save key* → *Test*.
-3. Now the **+** menu's *Scan or upload* group can read receipts, earnings statements, **bank statements** and payslips — from a photo or a PDF — and fill everything in.
 
-Your key is stored **only on your device**, is sent **only to Anthropic** (never to any Kerb server — there isn't one), and is **never** included in a backup file. Each scan costs a fraction of a penny.
+Your key is stored **only on your device**, is sent **only to Anthropic**, and is **never** included in a backup file. Each scan costs a fraction of a penny.
+
+Quick-add by text and the assistant always need your own key: the shared endpoint accepts documents only, so it can't be used as a general-purpose model.
+
+### Hosting the free allowance yourself
+
+The endpoint is `api/scan.js`, a single serverless function. On Vercel it needs one environment variable:
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | yes | the key the endpoint spends |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | strongly recommended | shared counters, so quotas hold across instances |
+| `FREE_SCANS_PER_MONTH` | no (default 50) | the free monthly allowance per device |
+| `DAILY_REQUEST_CAP` | no (default 5000) | hard ceiling on what the endpoint can cost in a day |
+
+Without `ANTHROPIC_API_KEY` the endpoint returns a clear "not set up" message and the app falls back to asking for your own key — nothing breaks.
+
+**Without the KV variables the quotas are per-instance only** and reset on every cold start, so the per-device allowance is not really enforced. The daily cap is the protection that still bounds the cost; attach a KV store before relying on the allowance.
+
+What stops the endpoint being used as a free model is `api/_validate.js`: a request is accepted only if it is exactly one image or PDF plus one instruction, on an allowed model, with a capped reply — no system prompt, no tools, no free-form text. `npm run test:api` covers what it refuses.
 
 ## 🚀 Deploy (free options)
 
@@ -98,7 +122,8 @@ Kerb gives **estimates to help you budget and stay organised**. It is not tax ad
 - All entries stay in your browser's local database on your device.
 - Backups you export are plain files you control; they never include your API key or your PIN.
 - An optional **PIN lock** gates access to the app (stored as a salted SHA-256 hash). It keeps casual snoopers out; it is not full encryption of the data at rest, so keep your phone's own screen lock on too.
-- The only network call the app makes is your optional scan, straight to Anthropic with your key.
+- The only network call the app makes is a scan you ask for. With your own key it goes straight to Anthropic. Without one it goes through Kerb's endpoint, which forwards it to Anthropic and returns the result — the file passes through that server, is not stored, and is not used for anything else. Add your own key if you'd rather it never left your device by way of us.
+- Only the file you choose to scan is ever sent. Your records, totals and tax figures are not.
 
 ## License
 

@@ -20,11 +20,10 @@ export async function render() {
   root.append(el('h2', { style: 'font-size:22px;margin:4px 2px 12px', text: 'Scan earnings' }));
   root.append(el('div', { class: 'callout callout--brand', html: `${icon('spark')}<div>Scan a photo or upload the <b>PDF</b> of your Amazon Flex / Uber Eats (or any) earnings statement — Claude reads each shift (date, pay, tips, hours, miles) so you can add them all at once.</div>` }));
 
+  // Scanning works without an Anthropic account: the request goes through
+  // Kerb's own endpoint, which gives every device a free monthly allowance.
   if (!hasApiKey(s)) {
-    root.append(el('div', { class: 'callout callout--warn', html: `${icon('info')}<div>Add your Anthropic API key in Settings to scan statements. You can still add earnings manually or import a CSV.</div>` }));
-    const b = el('button', { class: 'btn btn--primary btn--block', type: 'button', text: 'Open Settings' }); b.onclick = () => bus.navigate('settings');
-    root.append(b);
-    return root;
+    root.append(el('div', { class: 'callout callout--info', html: `${icon('info')}<div>Scanning is free for a limited number each month. Add your own Anthropic API key in Settings for unlimited scanning.</div>` }));
   }
 
   // Flag shifts that match ones already saved, so an overlapping statement

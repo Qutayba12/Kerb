@@ -9,9 +9,10 @@
     "icons": "node scripts/gen-icons.mjs",
     "test": "node scripts/test-tax.mjs",
     "test:i18n": "node scripts/test-i18n.mjs",
-    "test:all": "node scripts/test-tax.mjs && node scripts/test-i18n.mjs --strict && node scripts/test-flows.mjs && node scripts/test-claude.mjs",
+    "test:all": "node scripts/test-tax.mjs && node scripts/test-api.mjs && node scripts/test-i18n.mjs --strict && node scripts/test-flows.mjs && node scripts/test-claude.mjs",
     "test:flows": "node scripts/test-flows.mjs",
-    "test:claude": "node scripts/test-claude.mjs"
+    "test:claude": "node scripts/test-claude.mjs",
+    "test:api": "node scripts/test-api.mjs"
   },
   "license": "MIT"
 }

@@ -41,8 +41,10 @@ export async function render() {
   ]);
 
   section(root, 'Privacy — your data stays on your device', [
-    'Your records are stored only on this device. There is no Kerb server and no account, so your income, expenses and tax figures are never uploaded to us, and we cannot see them.',
-    'The one exception is scanning: if you add your own Anthropic API key and choose to scan a receipt, statement or payslip, that single image or file is sent directly from your device to Anthropic to be read, under your own key and their terms. It is not stored by Kerb.',
+    'Your records are stored only on this device. There is no account, and your income, expenses and tax figures are never uploaded to us. We cannot see them.',
+    'Scanning is the exception, and it works one of two ways. If you add your own Anthropic API key, the image or file goes straight from this device to Anthropic under your key and their terms, and touches no server of ours.',
+    'If you have not added a key, scanning uses a free monthly allowance. The image or file is then sent to a Kerb endpoint, which forwards it to Anthropic using our key and returns the result. It passes through our server to get there. We do not store it, and it is not used for anything else — but it does leave your device by way of us, which is the difference between the two. Add your own key if you would rather it never did.',
+    'Either way, only the file you choose to scan is sent. Your records, totals and tax figures are not.',
     'Because the data is only on this device, losing or wiping the device loses the records. Export a backup regularly, and keep your device\'s own screen lock on.',
     'Deleting the app, or clearing its data, permanently deletes your records.',
   ]);

@@ -468,6 +468,38 @@ const run = async () => {
     }
     return `kept all ${outcome.before} records (${outcome.threw ? 'rejected with an error' : 'ignored the bad fields'})`;
   });
+  // ---------------- model generation ----------------
+  await check('model — an old install is moved onto the current generation', async () => {
+    // claude-haiku-4-5 costs ten times as much per scan as claude-haiku-5-5
+    // for the same job, so an install left on it is quietly overcharged.
+    const out = await b.eval(`
+      const raw = JSON.parse(localStorage.getItem('kerb.settings.v1'));
+      raw.claudeModel = 'claude-haiku-4-5';
+      localStorage.setItem('kerb.settings.v1', JSON.stringify(raw));
+      return true;`);
+    await b.open('/');
+    await b.ready();
+    const after = await b.eval(`JSON.parse(localStorage.getItem('kerb.settings.v1')).claudeModel`);
+    eq(after, 'claude-haiku-5-5', 'migrated model');
+    const persisted = await b.eval(`
+      const st = await import('/js/store.js');
+      return { setting: st.getSettings().claudeModel, dflt: st.DEFAULT_MODEL };`);
+    eq(persisted, { setting: 'claude-haiku-5-5', dflt: 'claude-haiku-5-5' }, 'migration persisted and default agrees');
+    return 'claude-haiku-4-5 -> claude-haiku-5-5, written back to storage';
+  });
+
+  await check('model — a model the user deliberately chose is left alone', async () => {
+    await b.eval(`
+      const raw = JSON.parse(localStorage.getItem('kerb.settings.v1'));
+      raw.claudeModel = 'claude-sonnet-5-5';
+      localStorage.setItem('kerb.settings.v1', JSON.stringify(raw));
+      return true;`);
+    await b.open('/');
+    await b.ready();
+    const after = await b.eval(`JSON.parse(localStorage.getItem('kerb.settings.v1')).claudeModel`);
+    eq(after, 'claude-sonnet-5-5', 'current-generation choice untouched');
+    return 'a current model is not rewritten';
+  });
   await b.close();
 
   const passed = results.filter((r) => r.pass).length;

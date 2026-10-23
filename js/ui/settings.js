@@ -20,8 +20,8 @@ const SL_PLANS = [
   { value: 'plan4', label: 'Plan 4 (Scotland)' }, { value: 'plan5', label: 'Plan 5' }, { value: 'postgrad', label: 'Postgraduate' },
 ];
 const MODELS = [
-  { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (fast, cheapest)' },
-  { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (most capable)' },
+  { value: 'claude-haiku-5-5', label: 'Claude Haiku 5.5 (fast, cheapest)' },
+  { value: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (most capable)' },
 ];
 
 export async function render() {
@@ -111,7 +111,7 @@ export async function render() {
   root.append(dataCard());
 
   // ---------- About ----------
-  root.append(el('div', { class: 'callout callout--brand', style: 'margin-top:16px', html: `${icon('info')}<div><b>Kerb</b> keeps everything on this device — your entries never leave it, except a receipt image you choose to scan, which goes only to Anthropic via your own key. Figures are estimates to help you budget; confirm on your HMRC Self Assessment.</div>` }));
+  root.append(el('div', { class: 'callout callout--brand', style: 'margin-top:16px', html: `${icon('info')}<div><b>Kerb</b> keeps everything on this device — your entries never leave it. Only a file you choose to scan is sent: straight to Anthropic when you have added your own key, otherwise via Kerb's endpoint using the free allowance. Figures are estimates to help you budget; confirm on your HMRC Self Assessment.</div>` }));
   const termsBtn = el('button', { class: 'btn btn--sub btn--block', type: 'button', style: 'margin-top:10px' });
   termsBtn.innerHTML = icon('note') + '<span>Terms of use & privacy</span>';
   termsBtn.onclick = () => bus.navigate('terms');

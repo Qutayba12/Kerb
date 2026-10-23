@@ -87,7 +87,6 @@ export async function render() {
       let source, image = '';
       if (isPdf) { const { base64 } = await fileToBase64(file); source = { kind: 'pdf', base64 }; }
       else { image = await fileToResizedDataURL(file, 1600, 0.85); source = { kind: 'image', dataUrl: image }; }
-      if (!hasApiKey(getSettings())) { toast('Add your API key in Settings to auto-read', 'warn'); status.hidden = true; openPayslipForm({ image }, { asNew: true }); return; }
       const r = await extractPayslip(source, getSettings(), { signal: cancel.signal });
       status.hidden = true;
       openPayslipForm({ ...r, image, source: 'claude' }, { asNew: true });
@@ -103,7 +102,7 @@ export async function render() {
     el('div', { class: 'btn-grid' }, [photoBtn, pdfBtn]),
     photoInput, fileInput, status,
     el('button', { class: 'link tiny', type: 'button', text: 'Enter manually', style: 'display:block;margin:10px auto 0', onclick: () => openPayslipForm(null) }),
-    !hasApiKey(s) ? el('div', { class: 'hint', style: 'margin-top:6px', text: 'Tip: add your Anthropic API key in Settings to auto-read payslips.' }) : null,
+    !hasApiKey(s) ? el('div', { class: 'hint', style: 'margin-top:6px', text: 'Free for a limited number of scans each month. Add your own Anthropic API key in Settings for unlimited scanning.' }) : null,
   ]));
 
   // list

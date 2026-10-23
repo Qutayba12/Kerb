@@ -6,7 +6,7 @@ import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, ta
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, getConfig, allVehicles, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog, scanCanceller } from './shared.js';
-import { extractReceipt, hasApiKey, estimateScanCost } from '../claude.js';
+import { extractReceipt, hasApiKey } from '../claude.js';
 import { bus } from '../bus.js';
 
 // ---------------- Earnings ----------------
@@ -156,11 +156,6 @@ export function openExpenseForm(existing = null, opts = {}) {
     let dataUrl;
     try { dataUrl = await fileToResizedDataURL(file); } catch { toast('Could not read image', 'err'); return; }
     preview.src = dataUrl; preview.hidden = false; x.image = dataUrl; x.imageChanged = true;
-    if (!hasApiKey(s)) {
-      toast('Add your API key in Settings to auto-read receipts', 'warn');
-      scanStatus.hidden = true;
-      return;
-    }
     scanStatus.hidden = false;
     const cancel = scanCanceller();
     scanStatus.innerHTML = `<span class="splash__spin"></span> Claude is reading the receipt… `;
@@ -198,7 +193,7 @@ export function openExpenseForm(existing = null, opts = {}) {
   });
 
   const scanWrap = el('div', {}, [scanBtn, fileInput, scanStatus, preview]);
-  if (!hasApiKey(s)) scanWrap.append(el('div', { class: 'hint', html: `Tip: add your Anthropic API key in Settings — scanning costs ${estimateScanCost()}.` }));
+  if (!hasApiKey(s)) scanWrap.append(el('div', { class: 'hint', text: 'Free for a limited number of scans each month. Add your own Anthropic API key in Settings for unlimited scanning.' }));
 
   form.append(
     scanWrap,
