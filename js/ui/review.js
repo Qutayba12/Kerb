@@ -96,6 +96,17 @@ function buildChecks({ s, sum, ty, E, X, allE, allX }) {
       { label: 'Review entries', run: () => { setIncomePeriod('ty'); bus.navigate('income'); } });
   } else add('ok', 'No duplicate-looking entries', '');
 
+  // 5a) shifts with no station, now that stations exist.
+  const stationCount = (getSettings().stations || []).length;
+  if (stationCount && s.expenseMethod === 'mileage') {
+    const noStation = E.filter(e => !e.stationId).length;
+    if (noStation) {
+      add('info', `${noStation} shift${noStation === 1 ? '' : 's'} ${noStation === 1 ? 'has' : 'have'} no station set`,
+        'Their miles still count in full. Setting the station records which pickup point each shift ran from, which is what shows the travel was between varying places rather than to one fixed base. Leave any you genuinely cannot work out — a guess here would change the mileage.',
+        { label: 'Assign stations', run: () => bus.navigate('assignstations') });
+    } else add('ok', 'Every shift has a station', '');
+  }
+
   // 5b) a weekly payout recorded alongside the blocks it pays for.
   // The check above cannot see this one: the payout has its own date and a
   // different amount, so nothing matches. It only shows up as one entry that
