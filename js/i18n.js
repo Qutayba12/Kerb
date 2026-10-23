@@ -518,6 +518,10 @@ const AR = {
     'المسح غير متاح في هذه النسخة. أضف مفتاح Anthropic الخاص بك في الإعدادات.',
   'Enter a key first.':
     'أدخل مفتاحاً أولاً.',
+  'Capture your earnings':
+    'صوّر أرباحك',
+  'An entry adds up to other entries you already have':
+    'مُدخل يساوي مجموع مُدخلات أخرى لديك',
 };
 
 // placeholders (separate so we can target the attribute)
@@ -688,6 +692,14 @@ const AR_PAT = {
   'in {0}': 'خلال {0}',
   'in ~{0}': 'خلال ~{0}',
   '{0} · {1}/hr': '{0} · {1}/ساعة',
+  'No earnings logged yet. Your platform only keeps recent history and you cannot download it, so capture it before it goes.':
+    'لا دخل مسجّل بعد. منصّتك تحتفظ بسجل حديث فقط ولا يمكنك تحميله، فصوّره قبل أن يختفي.',
+  'Nothing logged since {0} {1} {2} — {3} days. Your platform only keeps recent history and you cannot download it, so capture it before it goes.':
+    'لا شيء مسجّل منذ {0} {1} {2} — {3} يوماً. منصّتك تحتفظ بسجل حديث فقط ولا يمكنك تحميله، فصوّره قبل أن يختفي.',
+  '{0} entries add up to other entries you already have':
+    '{0} مُدخلات تساوي مجموع مُدخلات أخرى لديك',
+  '{0} on {1} {2} is exactly the total of {3} entries from {4} {5} to {6} {7}, and has no hours or miles of its own. That is the shape of a weekly payout recorded next to the blocks it pays for — which would declare the same money twice and tax you on income you never earned. Check it, and delete whichever one is the summary.':
+    '{0} في {1} {2} يساوي تماماً مجموع {3} مُدخلات من {4} {5} إلى {6} {7}، وليست له ساعات ولا أميال خاصة به. هذا شكل الدفعة الأسبوعية مسجّلة بجانب البلوكات التي تدفع عنها — وهو ما يُعلن المال نفسه مرّتين ويفرض عليك ضريبة على دخل لم تكسبه. راجعه، واحذف أيّهما الملخّص.',
 };
 
 // Slotted patterns for whole prose units, keyed on inner markup. The Arabic
@@ -814,6 +826,10 @@ const AR_HTML = {
     'يحفظ <b>Kerb</b> كل شيء على هذا الجهاز — فمُدخلاتك لا تغادره. ولا يُرسل سوى ملف تختار مسحه: مباشرةً إلى Anthropic إن أضفت مفتاحك الخاص، وإلا فعبر خادم Kerb باستخدام الحصّة المجانية. والأرقام تقديرات تساعدك في وضع ميزانيتك؛ تحقّق منها في إقرارك لدى HMRC.',
   '<b>These use {0} rates.</b> HMRC has not published the {1} figures in Kerb yet, so the previous year\'s allowances and thresholds are being used as a placeholder. Treat the result as a rough guide and check back once the new rates are in.':
     '<b>هذه بمعدّلات {0}.</b> لم تُضَف أرقام سنة {1} إلى Kerb بعد، لذا تُستخدم بدلات وحدود السنة السابقة مؤقتاً. اعتبر النتيجة دليلاً تقريبياً وراجعها عند إضافة المعدّلات الجديدة.',
+  '<b>{0} on {1} {2} adds up to {3} other entries</b> from {4} {5} to {6} {7}. That is what a weekly payout looks like — the same money as the blocks it pays for. It is left out below; tick it only if it really is separate work.':
+    '<b>{0} في {1} {2} يساوي مجموع {3} مُدخلات أخرى</b> من {4} {5} إلى {6} {7}. هذا شكل الدفعة الأسبوعية — نفس مال البلوكات التي تدفع عنها. وهو مستبعَد أدناه؛ لا تؤشّره إلا إن كان عملاً منفصلاً فعلاً.',
+  '<b>You already have {0} saved on {1} {2}</b>, and these {3} rows add up to exactly that. If that saved entry was the weekly payout, adding these blocks as well would count the week twice — delete it in Income after adding.':
+    '<b>لديك {0} محفوظ في {1} {2}</b>، وهذه الصفوف الـ{3} تساوي مجموعه تماماً. لو كان ذلك المُدخل هو الدفعة الأسبوعية، فإضافة هذه البلوكات ستحسب الأسبوع مرّتين — احذفه من شاشة الدخل بعد الإضافة.',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).
@@ -918,6 +934,14 @@ function isProseUnit(elm) {
   if (!kids.length) return false;
   for (const k of kids) if (!INLINE.test(k.tagName) || k.children.length) return false;
   return /[A-Za-z]{3}/.test(elm.textContent);
+}
+
+// Translate a bare string. Notifications never touch the DOM, so the
+// tree-walking translate() below cannot reach them — without this, every
+// reminder arrives in English regardless of the chosen language.
+export function t(str) {
+  if (!isRTL() || typeof str !== 'string') return str;
+  return tr(str) || str;
 }
 
 export function translate(root) {

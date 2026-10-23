@@ -8,6 +8,7 @@ import { earnings, expenses } from './db.js';
 import { computeTaxYear } from './tax.js';
 import { computeGoal, PERIOD_LABELS } from './goals.js';
 import { daysBetween, todayISO, fmtGBP, fmtDate } from './util.js';
+import { t } from './i18n.js';
 
 const LOG_KEY = 'kerb.notifyLog';
 
@@ -28,6 +29,18 @@ function onceToday(key) {
   l[key] = today; saveLog(l); return true;
 }
 // Fire a given notification key at most once ever (for deadline milestones).
+// ISO-ish week stamp, so a weekly nudge fires at most once per week even if
+// the app is opened every day.
+function weekStamp(d = new Date()) {
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  t.setDate(t.getDate() - ((t.getDay() + 6) % 7));     // back to Monday
+  return t.toISOString().slice(0, 10);
+}
+function onceThisWeek(key) {
+  const l = log(); const w = weekStamp();
+  if (l[key] === w) return false;
+  l[key] = w; saveLog(l); return true;
+}
 function onceEver(key) {
   const l = log();
   if (l[key]) return false;
@@ -36,6 +49,9 @@ function onceEver(key) {
 
 export async function showNotification(title, body, tag = 'kerb') {
   if (!canNotify()) return false;
+  // A notification is built outside the document, so the DOM translator never
+  // sees it. Put both strings through the dictionary here instead.
+  title = t(title); body = t(body);
   const opts = { body, tag, icon: 'icons/icon.svg', badge: 'icons/icon.svg', renotify: false };
   try {
     if ('serviceWorker' in navigator) {
@@ -47,6 +63,20 @@ export async function showNotification(title, body, tag = 'kerb') {
 }
 
 // Check deadlines + goal and fire at most one useful reminder per day each.
+function lastEarningDate(allE) {
+  let best = '';
+  for (const e of allE || []) if (e && e.date && e.date > best) best = e.date;
+  return best || null;
+}
+// Days since the last recorded earning. Before anything is logged, measure
+// from the day trading started instead, so a new driver is still reminded.
+function daysSinceLastEarning(allE, s) {
+  const last = lastEarningDate(allE) || s.seStartDate;
+  if (!last) return null;
+  const d = daysBetween(last, todayISO());
+  return d >= 0 ? d : null;
+}
+
 export async function runChecks() {
   const s = getSettings();
   if (!s.notifyEnabled || !canNotify()) return;
@@ -82,7 +112,28 @@ export async function runChecks() {
     }
   }
 
-  // 2) Goal nudge near the end of the period if not yet met
+  // 2) Capture nudge — Wednesday mornings, and only when there is a gap.
+  // The platforms show earnings on screen with no download and trim their
+  // history, so what is not captured is eventually unrecoverable. A nudge
+  // that fires whether or not anything is missing gets ignored within a
+  // month, and is then silent in the week it actually matters — so this
+  // stays quiet while the records are current.
+  const now = new Date();
+  const isWednesdayMorning = now.getDay() === 3 && now.getHours() >= 9;
+  if (isWednesdayMorning) {
+    const since = daysSinceLastEarning(allE, s);
+    if (since != null && since >= (s.captureGapDays || 7) && onceThisWeek('capture-nudge')) {
+      const last = lastEarningDate(allE);
+      await showNotification(
+        'Capture your earnings',
+        last
+          ? `Nothing logged since ${fmtDate(last, { withYear: true })} — ${since} days. Your platform only keeps recent history and you cannot download it, so capture it before it goes.`
+          : `No earnings logged yet. Your platform only keeps recent history and you cannot download it, so capture it before it goes.`,
+        'kerb-capture');
+    }
+  }
+
+  // 3) Goal nudge near the end of the period if not yet met
   if (s.goalEnabled && s.goalAmount > 0) {
     const g = computeGoal(allE, allX, s);
     const endDays = daysBetween(todayISO(), g.range.end);

@@ -315,6 +315,210 @@ const run = async () => {
     return '2 rows x 3 columns';
   });
 
+  // ================= double-counted payouts =================
+  // A Flex earnings screen lists the blocks AND the week's payout together,
+  // so one photo can carry both. The exact-match duplicate check cannot see
+  // it: the payout has its own date and a different amount.
+  console.log('\n--- weekly payout vs its blocks ---');
+
+  const BLOCKS = `[
+    { date:'2026-09-15', platform:'amazonflex', amount:75, tips:0, hours:4, miles:40 },
+    { date:'2026-09-16', platform:'amazonflex', amount:75, tips:0, hours:4, miles:41 },
+    { date:'2026-09-17', platform:'amazonflex', amount:75, tips:0, hours:4, miles:39 },
+    { date:'2026-09-18', platform:'amazonflex', amount:75, tips:0, hours:4, miles:42 }]`;
+  const PAYOUT = `{ date:'2026-09-18', platform:'amazonflex', amount:300, tips:0, hours:0, miles:0 }`;
+
+  await check('payout — the old duplicate check cannot catch it (why this exists)', async () => {
+    const caught = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const chk = d.makeDupChecker(${BLOCKS}, []);
+      return chk.isDup('earning', ${PAYOUT});`);
+    if (caught) throw new Error('the exact-match check caught it, so this feature would be redundant');
+    return 'confirmed blind to it — different date, different amount';
+  });
+
+  await check('payout — flagged when both come from one scan', async () => {
+    const out = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const r = d.findOverlaps([...${BLOCKS}, ${PAYOUT}], []);
+      return { incoming: r.incoming.map(f => ({ t: f.total, covers: f.covers, summary: f.looksLikeSummary })), saved: r.saved.length };`);
+    eq(out.incoming.length, 1, 'one roll-up flagged');
+    eq(out.incoming[0], { t: 300, covers: 4, summary: true }, 'the payout, not a block');
+    return '£300 flagged, the four £75 blocks left alone';
+  });
+
+  await check('payout — flagged when scanned after the blocks were saved', async () => {
+    const out = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const r = d.findOverlaps([${PAYOUT}], ${BLOCKS});
+      return { incoming: r.incoming.map(f => f.total), saved: r.saved.map(f => f.total) };`);
+    eq(out, { incoming: [300], saved: [] }, 'direction: payout after blocks');
+    return 'caught';
+  });
+
+  await check('payout — flagged when the blocks are scanned after the payout was saved', async () => {
+    // The reverse order, which is just as easy to do and just as wrong.
+    const out = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const r = d.findOverlaps(${BLOCKS}, [${PAYOUT}]);
+      return { incoming: r.incoming.map(f => f.total), saved: r.saved.map(f => f.total) };`);
+    eq(out, { incoming: [], saved: [300] }, 'direction: blocks after payout');
+    return 'caught as an already-saved roll-up';
+  });
+
+  await check('payout — blocks on their own say nothing', async () => {
+    const out = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const r = d.findOverlaps(${BLOCKS}, []);
+      return r.incoming.length + r.saved.length;`);
+    eq(out, 0, 'false positives on ordinary blocks');
+    return 'silent on a normal week';
+  });
+
+  await check('payout — a different platform is not mistaken for one', async () => {
+    const out = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const r = d.findOverlaps([{ ...${PAYOUT}, platform: 'ubereats' }], ${BLOCKS});
+      return r.incoming.length + r.saved.length;`);
+    eq(out, 0, 'cross-platform match');
+    return 'platforms kept apart';
+  });
+
+  await check('payout — an overlap that was already there is not blamed on a new scan', async () => {
+    const out = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const old = [
+        { date:'2026-08-03', platform:'ubereats', amount:20 },
+        { date:'2026-08-04', platform:'ubereats', amount:20 },
+        { date:'2026-08-04', platform:'ubereats', amount:40 }];
+      const r = d.findOverlaps(${BLOCKS}, old);
+      return r.incoming.length + r.saved.length;`);
+    eq(out, 0, 'pre-existing overlap attributed to this import');
+    return 'only flags what this scan would cause';
+  });
+
+  await check('payout — a real day that happens to match is flagged more weakly', async () => {
+    // £50, £50, then £100 is arithmetically identical to a payout. It cannot
+    // be ruled out, so it is flagged — but without the no-hours signal, so
+    // the wording can be softer rather than claiming certainty.
+    const out = await b.eval(`
+      const d = await import('/js/dedupe.js');
+      const r = d.findOverlaps(
+        [{ date:'2026-09-17', platform:'ubereats', amount:100, hours:5, miles:30 }],
+        [{ date:'2026-09-15', platform:'ubereats', amount:50, hours:3, miles:12 },
+         { date:'2026-09-16', platform:'ubereats', amount:50, hours:3, miles:14 }]);
+      return r.incoming.map(f => f.looksLikeSummary);`);
+    eq(out, [false], 'a worked day must not be marked as a summary');
+    return 'flagged, but not called a payout';
+  });
+
+  await check('payout — the scanner is told not to return roll-up rows', async () => {
+    const sent = await b.eval(`
+      window.__sent = null;
+      window.fetch = async (url, init) => {
+        window.__sent = JSON.parse((init && init.body) || '{}');
+        return new Response(JSON.stringify({ content: [{ type: 'text', text: '{"entries":[]}' }] }), { status: 200, headers: { 'content-type': 'application/json' } });
+      };
+      const c = await import('/js/claude.js');
+      const st = await import('/js/store.js');
+      try { await c.extractEarnings({ kind: 'image', dataUrl: 'data:image/png;base64,iVBORw0KGgo=' },
+        { today: '2026-09-20', platforms: st.allPlatforms() }, { claudeModel: 'claude-haiku-5-5', apiKey: '' }); } catch (e) {}
+      return window.__sent.messages[0].content[1].text;`);
+    if (!/do NOT extract roll-up rows/i.test(sent)) throw new Error('the prompt does not warn against roll-ups');
+    if (!/weekly or monthly payout/i.test(sent)) throw new Error('the prompt does not name the payout case');
+    return 'instruction present in the request';
+  });
+
+  // ================= the Wednesday capture nudge =================
+  console.log('\n--- capture nudge ---');
+
+  const nudgeSetup = (opts) => `
+    const n = await import('/js/notify.js');
+    const st = await import('/js/store.js');
+    const db = await import('/js/db.js');
+    localStorage.removeItem('kerb.notifyLog');
+    st.saveSettings({ notifyEnabled: true, taxYear: '2026/27', seStartDate: '2026-09-09', captureGapDays: 7 });
+    await db.wipeAll();
+    for (const e of ${opts.earnings}) await db.earnings.save({ id: 'x' + Math.random(), tips: 0, hours: 0, deliveries: 0, miles: 0, notes: '', ...e });
+    window.__notes = [];
+    window.Notification = function (t, o) { window.__notes.push({ title: t, body: o && o.body }); };
+    window.Notification.permission = 'granted';
+    if (navigator.serviceWorker) { try { const r = await navigator.serviceWorker.getRegistration(); if (r) r.showNotification = async (t, o) => { window.__notes.push({ title: t, body: o && o.body }); }; } catch {} }
+    const RealDate = Date;
+    globalThis.Date = class extends RealDate {
+      constructor(...a) { return a.length ? new RealDate(...a) : new RealDate(${JSON.stringify(opts.now)}); }
+      static now() { return new RealDate(${JSON.stringify(opts.now)}).getTime(); }
+    };
+    await n.runChecks();
+    globalThis.Date = RealDate;
+    return window.__notes.filter(x => /Capture your earnings/.test(x.title));`;
+
+  await check('nudge — speaks on a Wednesday morning when nothing has been logged for a week', async () => {
+    // 2026-09-23 is a Wednesday.
+    const notes = await b.eval(nudgeSetup({ now: '2026-09-23T09:30:00', earnings: `[{ date: '2026-09-10', platform: 'amazonflex', amount: 60 }]` }));
+    eq(notes.length, 1, 'notifications sent');
+    if (!/13 days/.test(notes[0].body)) throw new Error('did not say how long it had been: ' + notes[0].body);
+    return 'told the driver it had been 13 days';
+  });
+
+  await check('nudge — stays silent when the records are current', async () => {
+    const notes = await b.eval(nudgeSetup({ now: '2026-09-23T09:30:00', earnings: `[{ date: '2026-09-22', platform: 'amazonflex', amount: 60 }]` }));
+    eq(notes.length, 0, 'notifications sent');
+    return 'nothing to say, so it said nothing';
+  });
+
+  await check('nudge — does not fire before Wednesday morning', async () => {
+    const tue = await b.eval(nudgeSetup({ now: '2026-09-22T09:30:00', earnings: `[{ date: '2026-09-01', platform: 'amazonflex', amount: 60 }]` }));
+    const early = await b.eval(nudgeSetup({ now: '2026-09-23T07:30:00', earnings: `[{ date: '2026-09-01', platform: 'amazonflex', amount: 60 }]` }));
+    eq([tue.length, early.length], [0, 0], 'Tuesday and 7:30am Wednesday');
+    return 'Wednesday from 9am only';
+  });
+
+  await check('nudge — fires once a week, not on every open', async () => {
+    const out = await b.eval(`
+      ${nudgeSetup({ now: '2026-09-23T09:30:00', earnings: `[{ date: '2026-09-01', platform: 'amazonflex', amount: 60 }]` }).replace('return window.__notes', 'const first = window.__notes')}
+    `.replace('globalThis.Date = RealDate;', `
+      await n.runChecks(); await n.runChecks();
+      globalThis.Date = RealDate;`).replace(/const first = window\.__notes[\s\S]*$/, `
+      return window.__notes.filter(x => /Capture your earnings/.test(x.title)).length;`));
+    eq(out, 1, 'notifications after three runs in the same week');
+    return 'one per week however often the app is opened';
+  });
+
+  await check('nudge — a brand new driver with nothing logged is still reminded', async () => {
+    const notes = await b.eval(nudgeSetup({ now: '2026-09-23T09:30:00', earnings: `[]` }));
+    eq(notes.length, 1, 'notifications sent');
+    if (!/No earnings logged yet/.test(notes[0].body)) throw new Error('wrong wording for an empty account: ' + notes[0].body);
+    return 'measured from the trading start date';
+  });
+
+  await check('nudge — arrives in Arabic when the app is in Arabic', async () => {
+    // Notifications are built outside the document, so the DOM translator
+    // never sees them. Without routing them through the dictionary they
+    // would reach an Arabic user in English.
+    await b.eval(`
+      const raw = JSON.parse(localStorage.getItem('kerb.settings.v1'));
+      raw.lang = 'ar';
+      localStorage.setItem('kerb.settings.v1', JSON.stringify(raw));
+      return true;`);
+    await b.open('/');
+    await b.ready();
+    const notes = await b.eval(nudgeSetup({ now: '2026-09-23T09:30:00', earnings: `[{ date: '2026-09-10', platform: 'amazonflex', amount: 60 }]` })
+      .replace('window.__notes.filter(x => /Capture your earnings/.test(x.title))', 'window.__notes'));
+    if (!notes.length) throw new Error('no notification sent');
+    const { title, body } = notes[0];
+    if (/[A-Za-z]{4}/.test(title)) throw new Error('title still in English: ' + title);
+    if (!/[؀-ۿ]/.test(body)) throw new Error('body not translated: ' + body);
+    if (/\bdays\b/.test(body)) throw new Error('body partly English: ' + body);
+    if (!/13/.test(body)) throw new Error('the day count was lost in translation: ' + body);
+    await b.eval(`
+      const raw = JSON.parse(localStorage.getItem('kerb.settings.v1'));
+      raw.lang = 'en';
+      localStorage.setItem('kerb.settings.v1', JSON.stringify(raw));
+      return true;`);
+    return 'title and body in Arabic, figures preserved';
+  });
+
   await b.close();
 
   const passed = results.filter(Boolean).length;

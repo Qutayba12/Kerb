@@ -8,7 +8,7 @@ import { earnings } from '../db.js';
 import { getSettings, allPlatforms, platformById } from '../store.js';
 import { extractEarnings, hasApiKey } from '../claude.js';
 import { icon, toast, scanCanceller } from './shared.js';
-import { makeDupChecker } from '../dedupe.js';
+import { makeDupChecker, findOverlaps } from '../dedupe.js';
 import { bus } from '../bus.js';
 
 let extracted = null; // array of entries pending confirmation
@@ -74,9 +74,25 @@ export async function render() {
     // Flag likely duplicates once; a duplicate is excluded by default.
     extracted.forEach(e => { if (e._dup === undefined) { e._dup = dupChecker.isDup('earning', e); e._skip = e._dup; } });
 
+    // A Flex screen lists the blocks and the week's payout together, so one
+    // photo can carry both. An entry that adds up the others is left OUT by
+    // default: counting it as well would tax money earned once, twice.
+    const overlap = findOverlaps(extracted, existingE);
+    overlap.incoming.forEach((f) => {
+      if (f.row._overlap === undefined) { f.row._overlap = f; if (f.looksLikeSummary) f.row._skip = true; }
+    });
+
     const included = () => extracted.filter(e => !e._skip);
     const total = included().reduce((t, e) => t + e.amount + e.tips, 0);
     const dupCount = extracted.filter(e => e._dup).length;
+
+    // Warn about both shapes of the mistake before anything is saved.
+    for (const f of overlap.incoming) {
+      preview.append(el('div', { class: 'callout callout--warn', html: `${icon('warn')}<div><b>${fmtGBP(f.total)} on ${fmtDate(f.to)} adds up to ${f.covers} other entries</b> from ${fmtDate(f.from)} to ${fmtDate(f.to)}. That is what a weekly payout looks like — the same money as the blocks it pays for. It is left out below; tick it only if it really is separate work.</div>` }));
+    }
+    for (const f of overlap.saved) {
+      preview.append(el('div', { class: 'callout callout--warn', html: `${icon('warn')}<div><b>You already have ${fmtGBP(f.total)} saved on ${fmtDate(f.to)}</b>, and these ${f.covers} rows add up to exactly that. If that saved entry was the weekly payout, adding these blocks as well would count the week twice — delete it in Income after adding.</div>` }));
+    }
 
     const summaryRow = el('div', { class: 'row row--between', style: 'margin:2px 2px 8px' });
     preview.append(summaryRow);

@@ -162,6 +162,7 @@ const DEFAULTS = {
   utr: '',                       // optional Unique Taxpayer Reference
   apiKey: '',
   claudeModel: 'claude-haiku-5-5',   // see DEFAULT_MODEL below
+  captureGapDays: 7,             // days without a logged shift before the Wednesday nudge speaks
   lockEnabled: false,            // require a PIN to open the app
   pinHash: '',                   // SHA-256(salt + PIN) — never the PIN itself
   pinSalt: '',
@@ -219,6 +220,7 @@ export function sanitiseSettings(raw) {
   put('traderName', sText(raw.traderName, 80));
   put('utr', sText(raw.utr, 20));
   put('claudeModel', sText(raw.claudeModel, 60));
+  put('captureGapDays', sNum(raw.captureGapDays, 1, 90, 7));
 
   if (Array.isArray(raw.customPlatforms)) {
     out.customPlatforms = raw.customPlatforms.slice(0, 50).filter(p => p && typeof p === 'object').map(p => ({
