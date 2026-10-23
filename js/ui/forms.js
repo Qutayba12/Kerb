@@ -18,7 +18,7 @@ export function openEarningsForm(existing = null, opts = {}) {
     id: isEdit ? b.id : uid(), date: b.date || todayISO(), platform: b.platform || allPlatforms()[0].id,
     amount: b.amount ?? '', tips: b.tips ?? '', hours: b.hours ?? '', deliveries: b.deliveries ?? '', miles: b.miles ?? '', notes: b.notes || '',
     vehicleId: b.vehicleId || '', stationId: b.stationId || '',
-    milesBase: b.milesBase ?? null, milesRound: b.milesRound ?? null,
+    milesBase: b.milesBase ?? null,
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
@@ -38,7 +38,7 @@ export function openEarningsForm(existing = null, opts = {}) {
   // number rather than re-entering every shift.
   const stations = allStations();
   const stationSel = stations.length
-    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: `${v.label} · ${fmtNum(v.totalMiles)} mi` }))], e.stationId)
+    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: v.typicalMiles ? `${v.label} · ${fmtNum(v.typicalMiles)} mi` : v.label }))], e.stationId)
     : null;
 
   // Only ask which vehicle when the driver actually has more than one.
@@ -53,12 +53,14 @@ export function openEarningsForm(existing = null, opts = {}) {
     const describe = () => {
       const st = stationById(stationSel.value);
       stationHint.textContent = st
-        ? `${fmtNum(st.baseMiles)} mi there and back + ${fmtNum(st.roundMiles)} mi on the round.`
+        ? (st.typicalMiles
+          ? `Usually ${fmtNum(st.typicalMiles)} mi a block, ${fmtNum(st.baseMiles)} mi of it getting there.`
+          : `${fmtNum(st.baseMiles)} mi to get there. Log a shift by odometer and Kerb learns what a block comes to.`)
         : 'Pick one to fill the miles in automatically.';
     };
     stationSel.addEventListener('change', () => {
       const st = stationById(stationSel.value);
-      if (st) { miles.value = String(st.totalMiles); }
+      if (st && st.typicalMiles) { miles.value = String(st.typicalMiles); }
       describe();
     });
     describe();
@@ -87,9 +89,10 @@ export function openEarningsForm(existing = null, opts = {}) {
     // Record how the miles split, so the home-to-station leg can be separated
     // out later without going back through every shift.
     const st = rec.stationId ? stationById(rec.stationId) : null;
-    if (st && Math.abs(rec.miles - st.totalMiles) < 0.05) {
-      rec.milesBase = st.baseMiles; rec.milesRound = st.roundMiles;
-    } else { rec.milesBase = null; rec.milesRound = null; }
+    // Only the outbound leg is recorded as the questionable part. The way
+    // home begins at the last drop — a work location — so it is not the same
+    // journey as home-to-base, and is not treated as one.
+    if (st && rec.miles >= st.baseMiles) { rec.milesBase = st.baseMiles; } else { rec.milesBase = null; }
     if (!rec.amount && !rec.tips && !rec.miles) { toast('Enter earnings, tips or miles', 'err'); return; }
     await earnings.save(rec);
     closeSheet(); toast(isEdit ? 'Shift updated' : 'Shift added', 'ok'); bus.refresh();

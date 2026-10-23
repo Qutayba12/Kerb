@@ -524,55 +524,58 @@ const run = async () => {
   // another — so a single "typical miles" figure would misstate most blocks.
   console.log('\n--- stations ---');
 
-  await check('stations — each keeps its own distance, split into the two legs', async () => {
+  await check('stations — each holds its own outbound distance', async () => {
     const out = await b.eval(`
       const st = await import('/js/store.js');
       st.saveSettings({ stations: [
-        { id: 'donny', label: 'Doncaster DN11', baseMiles: 43, roundMiles: 12 },
-        { id: 'sheff', label: 'Sheffield S4', baseMiles: 4.6, roundMiles: 12 },
+        { id: 'donny', label: 'Doncaster DN11', baseMiles: 21.5, typicalMiles: 64 },
+        { id: 'sheff', label: 'Sheffield S4', baseMiles: 2.3, typicalMiles: 0 },
       ] });
       const all = st.allStations();
-      return { n: all.length, totals: all.map(x => x.totalMiles), one: st.stationById('sheff').label, missing: st.stationById('nope') };`);
+      return { n: all.length, base: all.map(x => x.baseMiles), typical: all.map(x => x.typicalMiles), one: st.stationById('sheff').label, missing: st.stationById('nope') };`);
     eq(out.n, 2, 'stations stored');
-    eq(out.totals, [55, 16.6], 'each station totals its own two legs');
+    eq(out.base, [21.5, 2.3], 'one-way distance, not doubled');
+    eq(out.typical, [64, 0], 'block distance only where it has been measured');
     eq(out.one, 'Sheffield S4', 'lookup by id');
     eq(out.missing, null, 'an unknown id returns null, not a guess');
-    return 'Doncaster 55 mi a block, Sheffield 16.6 — not one figure for both';
+    return '21.5 and 2.3 mi out, block distance measured separately';
   });
 
   await check('stations — a backup cannot smuggle in a silly distance', async () => {
     const out = await b.eval(`
       const st = await import('/js/store.js');
       const clean = st.sanitiseSettings({ stations: [
-        { id: 'x', label: 'Fine', baseMiles: 20, roundMiles: 10 },
-        { id: 'y', label: 'Mad', baseMiles: 99999, roundMiles: -5 },
+        { id: 'x', label: 'Fine', baseMiles: 20, typicalMiles: 50 },
+        { id: 'y', label: 'Mad', baseMiles: 99999, typicalMiles: -5 },
       ] });
-      return clean.stations.map(s => [s.baseMiles, s.roundMiles]);`);
-    eq(out, [[20, 10], [2000, 0]], 'distances clamped to a sane range');
+      return clean.stations.map(s => [s.baseMiles, s.typicalMiles]);`);
+    eq(out, [[20, 50], [2000, 0]], 'distances clamped to a sane range');
     return 'clamped on import';
   });
 
-  await check('base leg — the claim shows what the home-to-station part is worth', async () => {
+  await check('base leg — only the drive out is counted, not the way home', async () => {
+    // The return begins at the last drop, which is a work location, so it is
+    // not the same journey as home-to-base and is not treated as one.
     const out = await b.eval(`
       const tax = await import('/js/tax.js');
       const st = await import('/js/store.js');
-      st.saveSettings({ taxYear: '2026/27', expenseMethod: 'mileage', vehicle: 'car', region: 'ruk', stations: [] });
-      const s = st.getSettings();
-      // Four blocks: two from the far station, two from the near one.
+      st.saveSettings({ taxYear: '2026/27', expenseMethod: 'mileage', vehicle: 'car', region: 'ruk' });
       const E = [
-        { date: '2026-09-15', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 55, milesBase: 43, milesRound: 12 },
-        { date: '2026-09-16', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 55, milesBase: 43, milesRound: 12 },
-        { date: '2026-09-17', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 16.6, milesBase: 4.6, milesRound: 12 },
-        { date: '2026-09-18', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 16.6, milesBase: 4.6, milesRound: 12 },
+        { date: '2026-09-15', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 64, milesBase: 21.5 },
+        { date: '2026-09-16', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 58, milesBase: 21.5 },
+        { date: '2026-09-17', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 19, milesBase: 2.3 },
       ];
-      const sum = tax.computeTaxYear(E, [], s);
-      return { miles: sum.businessMiles, baseMiles: sum.baseLeg.miles, baseAmount: sum.baseLeg.amount, unsplit: sum.baseLeg.unsplitMiles, mileageDed: sum.mileageDed };`);
-    eq(out.miles, 143.2, 'total business miles');
-    eq(out.baseMiles, 95.2, 'miles that are home-to-station travel');
-    // 95.2 miles at 55p
-    eq(out.baseAmount, 52.36, 'what that leg is worth at the rate it sits at');
+      const sum = tax.computeTaxYear(E, [], st.getSettings());
+      return { miles: sum.businessMiles, baseMiles: sum.baseLeg.miles, baseAmount: sum.baseLeg.amount, unsplit: sum.baseLeg.unsplitMiles };`);
+    eq(out.miles, 141, 'total business miles');
+    eq(out.baseMiles, 45.3, 'outbound legs only: 21.5 + 21.5 + 2.3');
+    // Valued as the difference between the claim with those miles and without
+    // them, which is what removing them would actually change — including any
+    // crossing of the 10,000-mile band. A flat 45.3 x 0.55 comes to 24.92;
+    // the penny is rounding, and the figure that matches the claim wins.
+    eq(out.baseAmount, 24.91, 'what the outbound legs are worth');
     eq(out.unsplit, 0, 'nothing unaccounted for');
-    return `£${out.baseAmount} of £${out.mileageDed} is travel to and from a station`;
+    return '45.3 of 141 miles are the drive out — the way home is not in it';
   });
 
   await check('base leg — shifts logged without a station are reported as unknown, not as zero', async () => {
@@ -580,12 +583,12 @@ const run = async () => {
       const tax = await import('/js/tax.js');
       const st = await import('/js/store.js');
       const E = [
-        { date: '2026-09-15', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 55, milesBase: 43, milesRound: 12 },
+        { date: '2026-09-15', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 64, milesBase: 21.5 },
         { date: '2026-09-16', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 40 },
       ];
       const sum = tax.computeTaxYear(E, [], st.getSettings());
       return { baseMiles: sum.baseLeg.miles, unsplit: sum.baseLeg.unsplitMiles };`);
-    eq(out, { baseMiles: 43, unsplit: 40 }, 'split known vs unknown');
+    eq(out, { baseMiles: 21.5, unsplit: 40 }, 'split known vs unknown');
     return '40 miles flagged as not attributed to a station';
   });
 
@@ -600,30 +603,27 @@ const run = async () => {
     return 'says nothing it cannot support';
   });
 
-  await check('stations — the round distance is worked out from measured shifts', async () => {
-    // "I don't know how far the round is" has a real answer: measure a couple
-    // with the odometer and subtract the home leg, which is already known.
+  await check('stations — what a block comes to is learned from measured shifts', async () => {
+    // The way home varies from ten minutes to an hour, so the block total
+    // cannot be worked out on a map. It can only be measured.
     const out = await b.eval(`
       const st = await import('/js/store.js');
-      st.saveSettings({ stations: [{ id: 'donny', label: 'Doncaster', baseMiles: 43, roundMiles: 0 }] });
-      const E = [
+      st.saveSettings({ stations: [{ id: 'donny', label: 'Doncaster', baseMiles: 21.5, typicalMiles: 0 }] });
+      return st.suggestBlockMiles('donny', [
         { id: '1', date: '2026-09-15', stationId: 'donny', milesSource: 'odometer', miles: 61 },
-        { id: '2', date: '2026-09-16', stationId: 'donny', milesSource: 'odometer', miles: 67 },
-        { id: '3', date: '2026-09-17', stationId: 'donny', milesSource: 'gps', miles: 64 },
-      ];
-      return st.suggestRoundMiles('donny', E);`);
+        { id: '2', date: '2026-09-16', stationId: 'donny', milesSource: 'odometer', miles: 73 },
+        { id: '3', date: '2026-09-17', stationId: 'donny', milesSource: 'gps', miles: 55 },
+      ]);`);
     eq(out.n, 3, 'shifts used');
-    eq(out.average, 21, 'average round: (18 + 24 + 21) / 3');
-    eq([out.lowest, out.highest], [18, 24], 'range shown so one odd shift is visible');
-    return '3 measured shifts -> 21 mi on the round (18–24)';
+    eq(out.average, 63, 'average block: (61 + 73 + 55) / 3');
+    eq([out.lowest, out.highest], [55, 73], 'the spread is shown, not hidden in the average');
+    return '3 measured shifts -> 63 mi a block (55–73)';
   });
 
   await check('stations — a typed-in mileage is not treated as a measurement', async () => {
-    // Deriving the round from a number the driver typed would just hand their
-    // own guess back as if it were evidence.
     const out = await b.eval(`
       const st = await import('/js/store.js');
-      return st.suggestRoundMiles('donny', [
+      return st.suggestBlockMiles('donny', [
         { id: '1', date: '2026-09-15', stationId: 'donny', milesSource: 'manual', miles: 61 },
         { id: '2', date: '2026-09-16', stationId: 'donny', miles: 61 },
       ]);`);
@@ -631,15 +631,15 @@ const run = async () => {
     return 'only odometer or GPS readings count';
   });
 
-  await check('stations — a shift shorter than the home leg is ignored, not counted as negative', async () => {
+  await check('stations — a reading shorter than the drive out is discarded', async () => {
     const out = await b.eval(`
       const st = await import('/js/store.js');
-      return st.suggestRoundMiles('donny', [
-        { id: '1', date: '2026-09-15', stationId: 'donny', milesSource: 'odometer', miles: 30 },
-        { id: '2', date: '2026-09-16', stationId: 'donny', milesSource: 'odometer', miles: 65 },
+      return st.suggestBlockMiles('donny', [
+        { id: '1', date: '2026-09-15', stationId: 'donny', milesSource: 'odometer', miles: 8 },
+        { id: '2', date: '2026-09-16', stationId: 'donny', milesSource: 'odometer', miles: 60 },
       ]);`);
-    eq(out, { n: 1, average: 22, lowest: 22, highest: 22 }, 'impossible reading dropped');
-    return 'a 30-mile reading against a 43-mile home leg is discarded';
+    eq(out, { n: 1, average: 60, lowest: 60, highest: 60 }, 'impossible reading dropped');
+    return 'an 8-mile block against a 21.5-mile drive out is impossible';
   });
 
   await check('stations — a live shift records the station and how the miles were measured', async () => {

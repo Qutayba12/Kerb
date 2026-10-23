@@ -66,7 +66,7 @@ function startPanel() {
     odoWrap,
     note,
   ]);
-  if (stationSel) card.append(field('Station', stationSel, 'Recording it lets Kerb work out this station\'s round distance from a measured shift.'));
+  if (stationSel) card.append(field('Station', stationSel, 'Recording it lets Kerb learn what a block from here comes to.'));
   root.append(card);
   syncMode();
 

@@ -532,14 +532,6 @@ const AR = {
     'المحطة',
   'Station name':
     'اسم المحطة',
-  'Miles there and back':
-    'الأميال ذهاباً وإياباً',
-  'Miles on the round':
-    'أميال جولة التوصيل',
-  'Home to this station and home again.':
-    'من البيت إلى هذه المحطة ثم العودة.',
-  'Roughly how far you drive delivering once you leave it.':
-    'كم تقود تقريباً في التوصيل بعد مغادرتها.',
   'Whatever you call it.':
     'أي اسم تعرفها به.',
   'Pick one to fill the miles in automatically.':
@@ -566,8 +558,16 @@ const AR = {
     'استخدم هذا',
   'Updated from your measured shifts':
     'حُدّث من ورديّاتك المقيسة',
-  'Recording it lets Kerb work out this station\'s round distance from a measured shift.':
-    'تسجيلها يتيح لـ Kerb استنتاج مسافة جولة هذه المحطة من وردية مقيسة.',
+  'Miles from home to this station':
+    'الأميال من البيت إلى هذه المحطة',
+  'Typical miles for a whole block':
+    'الأميال المعتادة للبلوك كاملاً',
+  'One way. This is the only part that is the same every time.':
+    'اتجاه واحد. وهو الجزء الوحيد الثابت في كل مرة.',
+  'Leave it blank — log one shift by odometer and Kerb fills it in.':
+    'اتركه فارغاً — سجّل وردية واحدة بالعدّاد فيملؤه Kerb.',
+  'Recording it lets Kerb learn what a block from here comes to.':
+    'تسجيلها يتيح لـ Kerb معرفة كم يبلغ البلوك من هنا.',
 };
 
 // placeholders (separate so we can target the attribute)
@@ -746,14 +746,18 @@ const AR_PAT = {
     '{0} مُدخلات تساوي مجموع مُدخلات أخرى لديك',
   '{0} on {1} {2} is exactly the total of {3} entries from {4} {5} to {6} {7}, and has no hours or miles of its own. That is the shape of a weekly payout recorded next to the blocks it pays for — which would declare the same money twice and tax you on income you never earned. Check it, and delete whichever one is the summary.':
     '{0} في {1} {2} يساوي تماماً مجموع {3} مُدخلات من {4} {5} إلى {6} {7}، وليست له ساعات ولا أميال خاصة به. هذا شكل الدفعة الأسبوعية مسجّلة بجانب البلوكات التي تدفع عنها — وهو ما يُعلن المال نفسه مرّتين ويفرض عليك ضريبة على دخل لم تكسبه. راجعه، واحذف أيّهما الملخّص.',
-  '{0} mi there and back · {1} mi on the round · {2} mi a block':
-    '{0} ميل ذهاباً وإياباً · {1} ميل في الجولة · {2} ميل للبلوك',
-  '{0} mi there and back + {1} mi on the round.':
-    '{0} ميل ذهاباً وإياباً + {1} ميل في الجولة.',
-  'Measured over {0} shifts: {1} mi on the round ({2}–{3}).':
-    'مقيسة عبر {0} ورديات: {1} ميل في الجولة ({2}–{3}).',
-  'Measured over {0} shift: {1} mi on the round.':
-    'مقيسة عبر وردية {0}: {1} ميل في الجولة.',
+  'Measured over {0} shifts: {1} mi a block ({2}–{3}).':
+    'مقيسة عبر {0} ورديات: {1} ميل للبلوك ({2}–{3}).',
+  'Measured over {0} shift: {1} mi a block.':
+    'مقيسة عبر وردية {0}: {1} ميل للبلوك.',
+  '{0} mi a block · {1} mi of that is getting there':
+    '{0} ميل للبلوك · منها {1} ميل للوصول',
+  '{0} mi to get there · block distance not measured yet':
+    '{0} ميل للوصول · مسافة البلوك لم تُقَس بعد',
+  'Usually {0} mi a block, {1} mi of it getting there.':
+    'عادةً {0} ميل للبلوك، منها {1} ميل للوصول.',
+  '{0} mi to get there. Log a shift by odometer and Kerb learns what a block comes to.':
+    '{0} ميل للوصول. سجّل وردية بالعدّاد ليعرف Kerb كم يبلغ البلوك.',
 };
 
 // Slotted patterns for whole prose units, keyed on inner markup. The Arabic
@@ -886,8 +890,8 @@ const AR_HTML = {
     '<b>لديك {0} محفوظ في {1} {2}</b>، وهذه الصفوف الـ{3} تساوي مجموعه تماماً. لو كان ذلك المُدخل هو الدفعة الأسبوعية، فإضافة هذه البلوكات ستحسب الأسبوع مرّتين — احذفه من شاشة الدخل بعد الإضافة.',
   'Pickup points sit at very different distances, so one "typical miles" figure would overstate the near ones and understate the far ones. Set each station once and Kerb fills the miles in when you log a block there.':
     'نقاط الاستلام تقع على مسافات شديدة التباين، فرقم «أميال نمطية» واحد يُضخّم القريبة ويُنقص البعيدة. اضبط كل محطة مرّة واحدة، فيملأ Kerb الأميال عند تسجيل بلوك فيها.',
-  'Not sure how far the round is? Don\'t guess it. Start a live shift with <b>Odometer</b> selected and pick the station — after a shift or two Kerb works the round out from the reading and offers you the figure.':
-    'لا تعرف طول جولة التوصيل؟ لا تخمّنها. ابدأ وردية مباشرة واختر <b>عدّاد المسافة</b> ثم المحطة — وبعد وردية أو اثنتين يستنتج Kerb الجولة من القراءة ويعرض عليك الرقم.',
+  'Don\'t guess what a block comes to. The way home starts at your last drop, not at the station, so it is different every time and cannot be worked out on a map. Start a live shift with <b>Odometer</b> selected and pick the station — after a shift or two Kerb has the real figure.':
+    'لا تخمّن كم يبلغ البلوك. فطريق العودة يبدأ من آخر نقطة توصيل لا من المحطة، أي أنه يختلف كل مرة ولا يمكن حسابه على خريطة. ابدأ وردية مباشرة واختر <b>عدّاد المسافة</b> ثم المحطة — وبعد وردية أو اثنتين يملك Kerb الرقم الحقيقي.',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).

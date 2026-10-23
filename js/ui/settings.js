@@ -5,7 +5,7 @@
 import { el, uid, todayISO, fmtGBP, fmtNum } from '../util.js';
 import {
   getSettings, saveSettings, resetSettings, getConfig, availableYears,
-  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations, suggestRoundMiles,
+  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations, suggestBlockMiles,
 } from '../store.js';
 import { importAll, wipeAll, earnings } from '../db.js';
 import { ensurePersistentStorage, storageStatus, fmtBytes } from '../storage.js';
@@ -440,17 +440,17 @@ function stationsCard() {
   // rather than asking for another estimate.
   earnings.all().then((all) => {
     list.forEach((v) => {
-      const sug = suggestRoundMiles(v.id, all);
+      const sug = suggestBlockMiles(v.id, all);
       const slot = wrap.querySelector(`[data-sug="${v.id}"]`);
       if (!slot || !sug) return;
-      const same = Math.abs(sug.average - v.roundMiles) < 0.1;
+      const same = Math.abs(sug.average - v.typicalMiles) < 0.1;
       slot.replaceChildren(el('div', { class: 'tiny', style: 'margin-top:4px' }, [
-        el('span', { class: 'muted', text: `Measured over ${sug.n} shift${sug.n === 1 ? '' : 's'}: ${fmtNum(sug.average)} mi on the round${sug.n > 1 ? ` (${fmtNum(sug.lowest)}–${fmtNum(sug.highest)})` : ''}. ` }),
+        el('span', { class: 'muted', text: `Measured over ${sug.n} shift${sug.n === 1 ? '' : 's'}: ${fmtNum(sug.average)} mi a block${sug.n > 1 ? ` (${fmtNum(sug.lowest)}–${fmtNum(sug.highest)})` : ''}. ` }),
       ]));
       if (!same) {
         const use = el('button', { class: 'link tiny', type: 'button', text: 'Use this' });
         use.onclick = () => {
-          const next = (getSettings().stations || []).map(x => (x.id === v.id ? { ...x, roundMiles: sug.average } : x));
+          const next = (getSettings().stations || []).map(x => (x.id === v.id ? { ...x, typicalMiles: sug.average } : x));
           saveSettings({ stations: next });
           toast('Updated from your measured shifts', 'ok'); bus.refresh();
         };
@@ -468,7 +468,7 @@ function stationsCard() {
         el('div', { class: 'item__icon', style: 'background:var(--brand-tint);color:var(--brand)', html: icon('route') }),
         el('div', { class: 'item__main' }, [
           el('div', { class: 'item__title', text: v.label }),
-          el('div', { class: 'item__sub', text: `${fmtNum(v.baseMiles)} mi there and back · ${fmtNum(v.roundMiles)} mi on the round · ${fmtNum(v.totalMiles)} mi a block` }),
+          el('div', { class: 'item__sub', text: v.typicalMiles ? `${fmtNum(v.typicalMiles)} mi a block · ${fmtNum(v.baseMiles)} mi of that is getting there` : `${fmtNum(v.baseMiles)} mi to get there · block distance not measured yet` }),
           el('div', { 'data-sug': v.id }),
         ]),
       ]);
@@ -485,8 +485,8 @@ function stationsCard() {
     wrap.append(rows);
   }
 
-  if (list.some(v => !v.roundMiles)) {
-    wrap.append(el('div', { class: 'callout callout--info', style: 'margin:0 0 10px', html: `${icon('info')}<div>Not sure how far the round is? Don't guess it. Start a live shift with <b>Odometer</b> selected and pick the station — after a shift or two Kerb works the round out from the reading and offers you the figure.</div>` }));
+  if (list.some(v => !v.typicalMiles)) {
+    wrap.append(el('div', { class: 'callout callout--info', style: 'margin:0 0 10px', html: `${icon('info')}<div>Don't guess what a block comes to. The way home starts at your last drop, not at the station, so it is different every time and cannot be worked out on a map. Start a live shift with <b>Odometer</b> selected and pick the station — after a shift or two Kerb has the real figure.</div>` }));
   }
 
   const add = el('button', { class: 'btn btn--sub btn--block', type: 'button' });
@@ -507,18 +507,18 @@ function openStationForm() {
   const form = el('form', { class: 'kform', autocomplete: 'off' });
   const label = el('input', { class: 'input', type: 'text', placeholder: 'e.g. Sheffield S9' });
   const num = (ph) => el('input', { class: 'input', type: 'number', step: '0.1', min: '0', inputMode: 'decimal', placeholder: ph });
-  const base = num('e.g. 28');
-  const round = num('e.g. 12');
+  const base = num('e.g. 21.5');
+  const round = num('leave blank to measure it');
   form.append(
     field('Station name', label, 'Whatever you call it.'),
-    field('Miles there and back', base, 'Home to this station and home again.'),
-    field('Miles on the round', round, 'Roughly how far you drive delivering once you leave it.'),
+    field('Miles from home to this station', base, 'One way. This is the only part that is the same every time.'),
+    field('Typical miles for a whole block', round, 'Leave it blank — log one shift by odometer and Kerb fills it in.'),
   );
   const save = () => {
     const name = label.value.trim();
     if (!name) { toast('Name the station', 'err'); return; }
     const list = (getSettings().stations || []).slice();
-    list.push({ id: 's' + Date.now().toString(36), label: name, baseMiles: parseFloat(base.value) || 0, roundMiles: parseFloat(round.value) || 0 });
+    list.push({ id: 's' + Date.now().toString(36), label: name, baseMiles: parseFloat(base.value) || 0, typicalMiles: parseFloat(round.value) || 0 });
     saveSettings({ stations: list });
     closeSheet(); toast('Station added', 'ok'); bus.refresh();
   };
