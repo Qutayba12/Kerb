@@ -345,6 +345,26 @@ export function allStations() {
 }
 export function stationById(id) { return allStations().find(v => v.id === id) || null; }
 
+// Work out a station's round distance from shifts that were actually
+// measured there. The home leg is already known, so whatever the odometer
+// recorded beyond it is the round. Only readings — odometer or GPS — count:
+// a number typed in afterwards would just be the guess coming back.
+export function suggestRoundMiles(stationId, allEarnings = []) {
+  const st = stationById(stationId);
+  if (!st) return null;
+  const measured = allEarnings.filter(e => e
+    && e.stationId === stationId
+    && (e.milesSource === 'odometer' || e.milesSource === 'gps')
+    && Number(e.miles) > 0);
+  if (!measured.length) return null;
+  const rounds = measured
+    .map(e => round2(Number(e.miles) - st.baseMiles))
+    .filter(v => v > 0);                     // a shorter trip than the home leg is not a round
+  if (!rounds.length) return null;
+  const avg = round2(rounds.reduce((t, v) => t + v, 0) / rounds.length);
+  return { n: rounds.length, average: avg, lowest: Math.min(...rounds), highest: Math.max(...rounds) };
+}
+
 export function allVehicles() {
   const s = loadSettings();
   const list = Array.isArray(s.vehicles) ? s.vehicles.filter(v => v && v.id) : [];

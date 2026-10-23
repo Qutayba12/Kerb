@@ -5,7 +5,7 @@
 // ============================================================
 import { el, fmtGBP, fmtNum, todayISO, toISO, round2, parseMoney, fmtDate } from '../util.js';
 import { earnings } from '../db.js';
-import { getSettings, allPlatforms, platformById } from '../store.js';
+import { getSettings, allPlatforms, platformById, allStations } from '../store.js';
 import { icon, field, selectInput, moneyInput, toast, confirmDialog } from './shared.js';
 import { getActive, startShift, updateShift, stopShift, elapsedMs, elapsedHours, fmtDuration, effectiveMiles, isWakeLockActive } from '../shift.js';
 import { bus } from '../bus.js';
@@ -36,6 +36,14 @@ function startPanel() {
   const odoWrap = field('Odometer reading now (start)', odoStartInput, 'Read the number on your dashboard. At the end, enter the new reading — Kerb works out the miles.');
   const note = el('div', { class: 'callout callout--info', style: 'margin-top:10px' });
 
+  // Which station this block starts from. Recording it is what lets a measured
+  // shift tell us the round distance for that station later: the home leg is
+  // already known, so the rest of the odometer reading is the round.
+  const stations = allStations();
+  const stationSel = stations.length
+    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: v.label }))], '')
+    : null;
+
   const syncMode = () => {
     chips.querySelectorAll('.seg__btn').forEach(b => b.classList.toggle('is-active', b.dataset.m === mode));
     odoWrap.style.display = mode === 'odometer' ? '' : 'none';
@@ -58,6 +66,7 @@ function startPanel() {
     odoWrap,
     note,
   ]);
+  if (stationSel) card.append(field('Station', stationSel, 'Recording it lets Kerb work out this station\'s round distance from a measured shift.'));
   root.append(card);
   syncMode();
 
@@ -65,7 +74,7 @@ function startPanel() {
   start.innerHTML = icon('clock') + '<span>Start shift</span>';
   start.onclick = () => {
     if (mode === 'odometer' && !odoStartInput.value) { toast('Enter the odometer reading, or pick another method', 'err'); return; }
-    startShift({ platform: platform.value, gps: mode === 'gps', odoStart: mode === 'odometer' ? odoStartInput.value : null, milesMode: mode });
+    startShift({ platform: platform.value, gps: mode === 'gps', odoStart: mode === 'odometer' ? odoStartInput.value : null, milesMode: mode, stationId: stationSel ? stationSel.value : '' });
     toast('Shift started — good luck!', 'ok');
     bus.refresh();
   };
@@ -231,6 +240,11 @@ function livePanel(ctx) {
       id: s.id, date: workDate, platform: s.platform,
       amount: round2(s.earnings || 0), tips: round2(s.tips || 0),
       hours: hrs, deliveries: s.deliveries || 0, miles: round2(miles),
+      // How the figure was arrived at. A reading off the dashboard is
+      // evidence; a number typed afterwards is not, and only the first kind
+      // can be used to work out a station's round distance.
+      milesSource: (s.odoStart != null && s.odoEnd != null && s.odoEnd >= s.odoStart) ? 'odometer' : (s.gps ? 'gps' : 'manual'),
+      stationId: s.stationId || '',
       notes: 'Live shift',
     };
     await earnings.save(rec);
