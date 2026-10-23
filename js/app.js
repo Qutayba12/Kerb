@@ -9,7 +9,7 @@ import { openEarningsForm, openExpenseForm, openBillForm } from './ui/forms.js';
 import { maybeOnboard } from './ui/onboarding.js';
 import { resumeIfActive } from './shift.js';
 import { runChecks, registerPeriodicSync } from './notify.js';
-import { applyDir, translate, isRTL } from './i18n.js';
+import { applyDir, translate, isRTL, observeLateContent } from './i18n.js';
 import { ensureUnlocked, installAutoLock } from './lock.js';
 import { ensurePersistentStorage } from './storage.js';
 
@@ -174,7 +174,13 @@ async function boot() {
   applyTheme();
   applyDir();
   wire();
-  if (isRTL()) { translate(document.querySelector('.topbar')); translate(document.querySelector('.tabbar')); }
+  if (isRTL()) {
+    translate(document.querySelector('.topbar'));
+    translate(document.querySelector('.tabbar'));
+    // Async content (storage checks, scan results, import previews) is added
+    // after a view is translated, so watch for it.
+    observeLateContent([$('#view'), document.getElementById('sheet-root')]);
+  }
   lockZoom();
   registerSW();
   // Ask the browser to keep all on-device records permanently (never auto-evicted).

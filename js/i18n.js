@@ -40,7 +40,7 @@ const AR = {
   'Other income (PAYE etc.)': 'دخل آخر (PAYE إلخ)', 'Total income': 'إجمالي الدخل',
   'Income tax on profit': 'ضريبة الدخل على الربح', 'Class 4 NIC': 'تأمين وطني Class 4', 'Class 2 NIC': 'تأمين وطني Class 2',
   'Total to set aside': 'الإجمالي المُجنّب', 'Payments on account': 'الدفعات المقدّمة', 'Key dates': 'مواعيد مهمة',
-  'Register with HMRC': 'التسجيل لدى HMRC', 'Online return & balancing payment': 'الإقرار والدفع أونلاين',
+   'Online return & balancing payment': 'الإقرار والدفع أونلاين',
   '1st payment on account': 'الدفعة المقدّمة الأولى', '2nd payment on account': 'الدفعة المقدّمة الثانية',
   'Export': 'تصدير', 'Summary (CSV)': 'ملخّص (CSV)', 'Transactions (CSV)': 'المعاملات (CSV)',
   'Self Assessment report (print / PDF)': 'تقرير Self Assessment (طباعة / PDF)', 'Net profit': 'صافي الربح',
@@ -56,7 +56,7 @@ const AR = {
   'Less: £1,000 trading allowance': 'ناقص: بدل تداول £1,000', 'Each instalment (×2)': 'كل دفعة (×2)',
   // pots
   'Your weekly plan': 'خطتك الأسبوعية', 'Tax pot': 'وعاء الضريبة', 'Tax & NIC reserve': 'احتياطي الضريبة والتأمين',
-  'Vehicle pot': 'وعاء المركبة', 'Savings': 'المدّخرات', 'Update': 'تحديث', 'Saved': 'مُدّخر', 'Target': 'الهدف',
+  'Vehicle pot': 'وعاء المركبة', 'Savings': 'المدّخرات', 'Update': 'تحديث', 'Saved so far': 'المُدّخر حتى الآن', 'Target': 'الهدف',
   'Set weekly targets & tax mode': 'ضبط الأهداف الأسبوعية ووضع الضريبة', 'Vehicle & maintenance pot': 'وعاء المركبة والصيانة',
   'Savings pot': 'وعاء المدّخرات', 'Spend': 'الصرف', 'Vehicle': 'المركبة',
   // insights
@@ -67,7 +67,7 @@ const AR = {
   'Goals': 'الأهداف', 'Streak': 'السلسلة', 'Recent periods': 'الفترات الأخيرة', 'Your goal': 'هدفك',
   'Measure': 'المقياس', 'Period': 'الفترة', 'Target amount': 'المبلغ المستهدف', 'Update goal': 'تحديث الهدف',
   'Set goal': 'ضبط الهدف', 'Turn off goal': 'إيقاف الهدف', 'Reminders': 'التذكيرات', 'Enable reminders': 'تفعيل التذكيرات',
-  'Send test notification': 'إرسال إشعار تجريبي', 'Income (turnover)': 'الدخل (الإجمالي)', 'Net profit': 'صافي الربح',
+  'Send test notification': 'إرسال إشعار تجريبي', 'Income (turnover)': 'الدخل (الإجمالي)',
   'Daily': 'يومي', 'Weekly': 'أسبوعي', 'Monthly': 'شهري', 'Goal met — great work!': 'تحقّق الهدف — عمل رائع!',
   // shift
   'Live shift': 'الوردية المباشرة', 'Start shift': 'ابدأ الوردية', 'Track miles with GPS': 'تتبّع الأميال بالـ GPS',
@@ -95,7 +95,7 @@ const AR = {
   'Scan photo': 'مسح صورة', 'Upload PDF / file': 'رفع PDF / ملف', 'Import CSV': 'استيراد CSV', 'Add payslip': 'إضافة قسيمة راتب',
   // add-menu group headers
   'Scan or upload': 'مسح أو رفع', 'Add manually': 'إضافة يدوية', 'Track & ask': 'التتبّع والسؤال',
-  'Add expense': 'إضافة مصروف', 'Scan or import…': 'مسح أو استيراد…', 'Scan or import': 'مسح أو استيراد',
+   'Scan or import…': 'مسح أو استيراد…', 'Scan or import': 'مسح أو استيراد',
   // bank statement import
   'Import bank statement': 'استيراد كشف بنكي', 'Expense': 'مصروف', 'Skip': 'تخطّي', 'Won\'t be added': 'لن يُضاف',
   'Income (self-employed)': 'دخل (عمل حر)', 'Salary (PAYE)': 'راتب (PAYE)',
@@ -103,20 +103,20 @@ const AR = {
   // payslips — job ended
   'I\'ve left this job': 'لقد تركت هذه الوظيفة',
   'Use the actual total earned (from your P45 / last payslip) — don\'t project it to a full year.': 'استخدم الإجمالي الفعلي المكتسب (من P45 / آخر قسيمة راتب) — دون توقّعه لسنة كاملة.',
-  'Annual salary': 'الراتب السنوي', 'Annual tax': 'الضريبة السنوية', 'Total salary': 'إجمالي الراتب', 'Total tax': 'إجمالي الضريبة',
+   'Annual tax': 'الضريبة السنوية', 'Total salary': 'إجمالي الراتب', 'Total tax': 'إجمالي الضريبة',
   // quarterly updates, payments, pre-filing review
   'Quarterly updates (MTD-ready)': 'التحديثات الربع سنوية (جاهزة لـ MTD)', 'Paid to HMRC': 'المدفوع لـ HMRC',
   'Paid so far': 'المدفوع حتى الآن', 'Still to pay (est.)': 'المتبقّي للدفع (تقديري)',
   'Record a payment to HMRC': 'تسجيل دفعة لـ HMRC', 'Payment recorded': 'سُجّلت الدفعة', 'Payment removed': 'حُذفت الدفعة',
   'Amount paid': 'المبلغ المدفوع', 'Date paid': 'تاريخ الدفع', 'Save payment': 'حفظ الدفعة',
   'Check before you file': 'تحقّق قبل التقديم', 'Check & file': 'تحقّق وقدّم',
-  'Worth fixing': 'يستحق الإصلاح', 'Good to know': 'معلومات مفيدة', 'Looks fine': 'يبدو سليماً',
+  'Worth fixing': 'يستحق الإصلاح',  'Looks fine': 'يبدو سليماً',
   'Open my Self Assessment report': 'افتح تقرير الإقرار الذاتي',
   // vehicles, losses, terms
   'Vehicles': 'المركبات', 'Add a vehicle': 'إضافة مركبة', 'Add vehicle': 'إضافة مركبة', 'Type': 'النوع',
   'Remove': 'إزالة', 'Remove vehicle?': 'إزالة المركبة؟', 'Vehicle added': 'أُضيفت المركبة', 'Vehicle removed': 'أُزيلت المركبة',
-  'Vehicle': 'المركبة', 'Carry losses forward': 'ترحيل الخسائر',
-  'Net profit': 'صافي الربح', 'Taxable profit': 'الربح الخاضع للضريبة', 'Loss this year': 'خسارة هذه السنة',
+   'Carry losses forward': 'ترحيل الخسائر',
+    'Loss this year': 'خسارة هذه السنة',
   'Less: loss brought forward': 'ناقص: خسارة مُرحّلة', 'Trading losses:': 'الخسائر التجارية:',
   'Terms of use & privacy': 'شروط الاستخدام والخصوصية', 'Terms & privacy': 'الشروط والخصوصية',
   'Back to Settings': 'العودة للإعدادات',
@@ -136,7 +136,7 @@ const AR = {
   'Immediately': 'فوراً', 'After 1 minute': 'بعد دقيقة', 'After 2 minutes': 'بعد دقيقتين', 'After 5 minutes': 'بعد 5 دقائق', 'After 15 minutes': 'بعد 15 دقيقة',
   'On': 'مُفعّل', 'Off': 'مُطفأ',
   // settings
-  'Tax basis': 'أساس الضريبة', 'Region': 'المنطقة', 'Expense method': 'طريقة المصاريف', 'Working tax year': 'السنة الضريبية العاملة',
+  'Tax basis': 'أساس الضريبة', 'Region': 'المنطقة',  'Working tax year': 'السنة الضريبية العاملة',
   'Self-employment start date': 'تاريخ بدء العمل الحر', 'Your income context': 'سياق دخلك',
   'PAYE salary (annual, gross)': 'راتب PAYE (سنوي، إجمالي)', 'Income tax already paid via PAYE': 'ضريبة الدخل المدفوعة عبر PAYE',
   'Other taxable income (annual)': 'دخل خاضع للضريبة آخر (سنوي)', 'Student loan plan': 'خطة القرض الطلابي',
@@ -150,7 +150,7 @@ const AR = {
   'Your name (for SA report)': 'اسمك (للتقرير)', 'UTR (for SA report)': 'UTR (للتقرير)',
   // onboarding
   'Set up Kerb': 'إعداد Kerb', 'Start using Kerb': 'ابدأ استخدام Kerb', 'Skip for now': 'تخطَّ الآن',
-  'PAYE salary (annual, gross)': 'راتب PAYE (سنوي، إجمالي)',
+
   // toasts / statuses
   'Saved': 'تم الحفظ', 'Shift added': 'أُضيفت الوردية', 'Shift updated': 'حُدّثت الوردية',
   'Expense added': 'أُضيف المصروف', 'Expense updated': 'حُدّث المصروف', 'Bill updated': 'حُدّثت الفاتورة', 'Bill added': 'أُضيفت الفاتورة',
@@ -160,6 +160,344 @@ const AR = {
   'Could not send': 'تعذّر الإرسال', 'Rates updated': 'حُدّثت المعدّلات', 'Reset to defaults': 'أُعيد للافتراضي',
   'Backup downloaded': 'نُزّلت النسخة', 'Backup imported': 'استوردت النسخة', 'All data deleted': 'حُذفت كل البيانات',
   'Key saved': 'حُفظ المفتاح', 'Updated': 'تم التحديث', 'Goal turned off': 'أُوقف الهدف',
+
+  // ---- second translation pass: payslips, import, scan, shift, goals,
+  // review, report, settings & guide screens ----
+  '— none —': '— لا شيء —',
+  'Payslips': 'قسائم الراتب',
+  'Your payslips': 'قسائمك',
+  'My scanned payslips': 'قسائم راتبي الممسوحة',
+  'Add a payslip': 'أضف قسيمة راتب',
+  'Add a payslip to populate your PAYE figures.': 'أضف قسيمة راتب لتعبئة أرقام PAYE تلقائياً.',
+  'Use payslips for my tax figures': 'استخدم القسائم لأرقامي الضريبية',
+  'Auto-fills your PAYE salary & tax from these payslips instead of a manual number.': 'يعبّئ راتب PAYE وضريبته من هذه القسائم بدلاً من رقم يدوي.',
+  'A manual salary': 'راتب يدوي',
+  'Delete payslip?': 'حذف قسيمة الراتب؟',
+  'Payslip deleted': 'حُذفت القسيمة',
+  'Enter at least the gross pay': 'أدخل الراتب الإجمالي على الأقل',
+  'Enter manually': 'إدخال يدوي',
+  'Tip: add your Anthropic API key in Settings to auto-read payslips.': 'نصيحة: أضف مفتاح Anthropic API في الإعدادات لقراءة القسائم تلقائياً.',
+  'Add your API key in Settings to auto-read': 'أضف مفتاح API في الإعدادات للقراءة التلقائية',
+  'Annual': 'سنوي',
+  'Quarterly': 'ربع سنوي',
+  'Every 4 weeks': 'كل 4 أسابيع',
+  'Other': 'أخرى',
+  'All time': 'كل الفترات',
+  'Last 30 days': 'آخر 30 يوماً',
+  'Add your Anthropic key to read receipts, statements & payslips': 'أضف مفتاح Anthropic لقراءة الفواتير والكشوف وقسائم الراتب',
+  'Add your API key in Settings to auto-read receipts': 'أضف مفتاح API في الإعدادات لقراءة الفواتير تلقائياً',
+  'Could not read image': 'تعذّر قراءة الصورة',
+  'Could not read the file': 'تعذّر قراءة الملف',
+  'Could not export backup': 'تعذّر تصدير النسخة الاحتياطية',
+  'Enter the amount': 'أدخل المبلغ',
+  'Enter earnings, tips or miles': 'أدخل الدخل أو البقشيش أو الأميال',
+  'Full details': 'التفاصيل الكاملة',
+  'Import as': 'استيراد كـ',
+  'Auto-detect': 'كشف تلقائي',
+  'ISO (YYYY-MM-DD)': 'ISO (سنة-شهر-يوم)',
+  'UK (DD/MM/YYYY)': 'بريطانيا (يوم/شهر/سنة)',
+  'US (MM/DD/YYYY)': 'أمريكا (شهر/يوم/سنة)',
+  'No rows found in that file': 'لا صفوف في هذا الملف',
+  'No valid rows with the current mapping — check the columns above.': 'لا صفوف صالحة بالربط الحالي — تحقّق من الأعمدة أعلاه.',
+  'Nothing to import — check the mapping': 'لا شيء للاستيراد — تحقّق من الربط',
+  'All rows look like duplicates — nothing new to import': 'كل الصفوف تبدو مكرّرة — لا جديد للاستيراد',
+  'Rows without a valid amount (or miles, for earnings) are skipped. Likely duplicates of entries you already have are detected by date and amount.': 'تُتخطّى الصفوف بلا مبلغ صالح (أو بلا أميال، في حالة الدخل). وتُكتشف التكرارات المحتملة لمُدخلات موجودة لديك بالتاريخ والمبلغ.',
+  'Import backup?': 'استيراد النسخة الاحتياطية؟',
+  'No shifts found in that statement': 'لا ورديات في هذا الكشف',
+  'Add anyway': 'أضف على أي حال',
+  'Review the rows, remove any that are wrong, then add. You can edit each shift afterwards in Income.': 'راجع الصفوف، واحذف أي خطأ، ثم أضف. يمكنك تعديل كل وردية لاحقاً في شاشة الدخل.',
+  'No transactions found in that statement': 'لا معاملات في هذا الكشف',
+  'Claude suggested a type for each line — change any that are wrong, or set to Skip to leave a line out. You can edit each entry afterwards in Income or Expenses.': 'اقترح كلود نوعاً لكل سطر — عدّل أي خطأ، أو اختر «تخطّي» لاستثناء سطر. يمكنك تعديل كل مُدخل لاحقاً في شاشة الدخل أو المصاريف.',
+  'Discard this shift?': 'تجاهل هذه الوردية؟',
+  'Add earnings or miles first': 'أضف الدخل أو الأميال أولاً',
+  'That is a very long shift': 'هذه وردية طويلة جداً',
+  'Enter by odometer (most accurate)': 'الإدخال بعدّاد المسافة (الأدقّ)',
+  'Enter the odometer reading, or pick another method': 'أدخل قراءة العدّاد، أو اختر طريقة أخرى',
+  'Enter miles when you finish': 'أدخل الأميال عند الانتهاء',
+  'HMRC-friendly: read your dashboard odometer at the start and end. Overrides GPS/manual miles.': 'مقبول لدى HMRC: اقرأ عدّاد المسافة في البداية والنهاية. يتجاوز أميال GPS أو اليدوية.',
+  'When you finish, enter the dashboard reading here — miles = end − start. No need to keep the app open in between.': 'عند الانتهاء، أدخل قراءة العدّاد هنا — الأميال = النهاية − البداية. لا حاجة لإبقاء التطبيق مفتوحاً بينهما.',
+  'Live tracking while Kerb stays open': 'تتبّع مباشر ما دام Kerb مفتوحاً',
+  'Most accurate · works even if you close the app': 'الأدقّ · يعمل حتى لو أغلقت التطبيق',
+  'Allow notifications first': 'اسمح بالإشعارات أولاً',
+  'Permission not granted': 'لم يُمنح الإذن',
+  'Notifications are blocked in your browser settings — allow them for Kerb to enable reminders.': 'الإشعارات محجوبة في إعدادات متصفّحك — اسمح بها لـ Kerb لتفعيل التذكيرات.',
+  'Notifications are not supported on this browser.': 'هذا المتصفّح لا يدعم الإشعارات.',
+  'Deadline & goal nudges on this device.': 'تنبيهات المواعيد والأهداف على هذا الجهاز.',
+  'Reminders appear when you open Kerb; on installed Android apps they can also appear in the background. Full server push isn\'t used — your data stays on device.': 'تظهر التذكيرات عند فتح Kerb؛ وفي تطبيقات أندرويد المُثبّتة قد تظهر في الخلفية أيضاً. لا يُستخدم إشعار خادم كامل — بياناتك تبقى على جهازك.',
+  'Enter a target amount': 'أدخل المبلغ المستهدف',
+  'No history yet.': 'لا سجل بعد.',
+  'Avg income / week (last 4 wks)': 'متوسط الدخل / أسبوع (آخر 4 أسابيع)',
+  'Register with HMRC as self-employed': 'التسجيل لدى HMRC كعامل حر',
+  'File & pay Self Assessment (online)': 'قدّم وادفع الإقرار الذاتي (أونلاين)',
+  'Finish setting up for HMRC — tap to see your checklist & key dates.': 'أكمل الإعداد لـ HMRC — اضغط لرؤية قائمتك والمواعيد المهمة.',
+  'from your job': 'من وظيفتك',
+  'at source': 'عند المصدر',
+  'Guidance to help you prepare — not tax advice. Confirm with HMRC or an accountant.': 'إرشادات لمساعدتك في التحضير — وليست استشارة ضريبية. تحقّق مع HMRC أو محاسب.',
+  'Hide the setup card from Home': 'إخفاء بطاقة الإعداد من الرئيسية',
+  'Hidden — find this guide in Settings': 'مُخفى — ستجد هذا الدليل في الإعدادات',
+  'Review entries': 'مراجعة المُدخلات',
+  'Review all entries': 'مراجعة كل المُدخلات',
+  'This review looks for common mistakes. It cannot catch everything — you are responsible for the figures you file.': 'تبحث هذه المراجعة عن الأخطاء الشائعة. لا يمكنها اكتشاف كل شيء — وأنت المسؤول عن الأرقام التي تقدّمها.',
+  'Open Income': 'فتح الدخل',
+  'Open Expenses': 'فتح المصاريف',
+  'Export a backup': 'صدّر نسخة احتياطية',
+  'Set it now': 'اضبطه الآن',
+  'Self Assessment Report': 'تقرير الإقرار الذاتي',
+  'SA report': 'تقرير الإقرار',
+  'No income recorded in this tax year.': 'لا دخل مسجّل في هذه السنة الضريبية.',
+  'No expenses recorded in this tax year.': 'لا مصاريف مسجّلة في هذه السنة الضريبية.',
+  'Because your bill is over £1,000 and little tax is collected at source, HMRC asks for two advance payments towards next year on top of this year’s bill.': 'لأن فاتورتك تتجاوز £1,000 ولا يُحصّل سوى قليل من الضريبة عند المصدر، تطلب HMRC دفعتين مقدّمتين على حساب السنة القادمة، فوق فاتورة هذه السنة.',
+  'Your employer already deducted this tax. It is entered on the employment page so your Personal Allowance is shared correctly across both incomes — it is not extra tax to pay.': 'خصم صاحب العمل هذه الضريبة بالفعل. وتُدخل في صفحة الوظيفة ليُقسَم بدلك الشخصي بشكل صحيح بين الدخلين — وليست ضريبة إضافية مستحقة.',
+  'Keep this report and your records for at least 5 years after the 31 January filing deadline, in case HMRC asks to see them.': 'احفظ هذا التقرير وسجلاتك 5 سنوات على الأقل بعد موعد التقديم في 31 يناير، في حال طلبت HMRC الاطلاع عليها.',
+  'Estimates generated by Kerb to help you prepare and file. Not formal tax advice — confirm all figures on your HMRC Self Assessment. Kerb keeps your records digital and export-ready but is not HMRC-recognised filing software.': 'تقديرات يُنتجها Kerb لمساعدتك في التحضير والتقديم. ليست استشارة ضريبية رسمية — تحقّق من كل الأرقام في إقرارك لدى HMRC. يحفظ Kerb سجلاتك رقمياً وجاهزة للتصدير، لكنه ليس برنامج تقديم معتمداً من HMRC.',
+  'Remove this payment?': 'إزالة هذه الدفعة؟',
+  'Plan 1': 'الخطة 1',
+  'Plan 2': 'الخطة 2',
+  'Plan 4 (Scotland)': 'الخطة 4 (اسكتلندا)',
+  'Plan 5': 'الخطة 5',
+  'Postgraduate': 'الدراسات العليا',
+  'Auto — live estimate': 'تلقائي — تقدير مباشر',
+  'Manual — fixed %': 'يدوي — نسبة ثابتة %',
+  'Claude Sonnet 5 (most capable)': 'Claude Sonnet 5 (الأقوى)',
+  'Claude Haiku 4.5 (fast, cheapest)': 'Claude Haiku 4.5 (سريع وأرخص)',
+  'A loss-making year is set against later profits of the same trade, cutting Income Tax and Class 4 NIC.': 'تُخصم السنة الخاسرة من أرباح السنوات التالية للنشاط نفسه، فتُقلّل ضريبة الدخل وتأمين Class 4.',
+  'Save rate overrides': 'حفظ تعديلات المعدّلات',
+  'Reset this year to defaults': 'إعادة هذه السنة للإعدادات الافتراضية',
+  'Protect my data': 'حماية بياناتي',
+  'App lock turned off': 'أُوقف قفل التطبيق',
+  'Delete everything?': 'حذف كل شيء؟',
+  'Simplified mileage (recommended)': 'المسافة المبسّطة (موصى به)',
+
+  'Arabic switches the interface to right-to-left.':
+    'العربية تبدّل الواجهة إلى اليمين-لليسار.',
+  // ---- third pass: measured from the rendered DOM ----
+  'England / Wales / N. Ireland':
+    'إنجلترا / ويلز / أيرلندا الشمالية',
+  'complete':
+    'مكتملة',
+  'in progress':
+    'جارية',
+  'upcoming':
+    'قادمة',
+  'fuel, insurance, repairs':
+    'الوقود، التأمين، الإصلاحات',
+  'HMRC rule: once you claim simplified mileage for a car / van, keep that method for it until you change vehicle.':
+    'قاعدة HMRC: متى طالبت بالمسافة المبسّطة لسيارة أو فان، فالتزم بهذه الطريقة لها حتى تغيّر المركبة.',
+  'Jan':
+    'يناير',
+  'Feb':
+    'فبراير',
+  'Mar':
+    'مارس',
+  'Apr':
+    'أبريل',
+  'May':
+    'مايو',
+  'Jun':
+    'يونيو',
+  'Jul':
+    'يوليو',
+  'Aug':
+    'أغسطس',
+  'Sep':
+    'سبتمبر',
+  'Oct':
+    'أكتوبر',
+  'Nov':
+    'نوفمبر',
+  'Dec':
+    'ديسمبر',
+  'Mon':
+    'اثنين',
+  'Tue':
+    'ثلاثاء',
+  'Wed':
+    'أربعاء',
+  'Thu':
+    'خميس',
+  'Fri':
+    'جمعة',
+  'Sat':
+    'سبت',
+  'Sun':
+    'أحد',
+  'Set an earnings goal to stay motivated — Kerb tracks your progress and streak.':
+    'حدّد هدف دخل لتبقى متحمّساً — ويتابع Kerb تقدّمك وسلسلة إنجازك.',
+  'What to enter on your SA103S':
+    'ما تُدخله في نموذج SA103S',
+  'Voluntary':
+    'تطوّعي',
+  'How the profit is worked out':
+    'كيف يُحسب الربح',
+  'Less: loss brought forward from earlier years':
+    'ناقص: خسارة مُرحّلة من سنوات سابقة',
+  'Employment (PAYE) — SA102':
+    'الوظيفة (PAYE) — SA102',
+  'Your tax & National Insurance':
+    'ضريبتك وتأمينك الوطني',
+  'Personal allowance':
+    'البدل الشخصي',
+  'Income tax on self-employment':
+    'ضريبة الدخل على العمل الحر',
+  'Total to set aside for HMRC':
+    'الإجمالي المُجنّب لـ HMRC',
+  'Estimated take-home':
+    'الصافي المتوقّع',
+  'Effective rate on profit':
+    'المعدّل الفعلي على الربح',
+  'Register with HMRC by':
+    'التسجيل لدى HMRC بحلول',
+  'File online & pay by':
+    'التقديم أونلاين والدفع بحلول',
+  '2nd payment on account by':
+    'الدفعة المقدّمة الثانية بحلول',
+  'They are excluded from this year\'s totals. The usual cause is the date picker landing on the wrong year. Check them and fix the date if needed.':
+    'هي مُستثناة من مجاميع هذه السنة. والسبب المعتاد أن منتقي التاريخ وقع على السنة الخطأ. راجعها وصحّح التاريخ إن لزم.',
+  'Your report is missing your name and your UTR':
+    'تقريرك ينقصه اسمك ورقم UTR',
+  'These appear on the Self Assessment report. Add them so the document is complete.':
+    'يظهران في تقرير الإقرار الذاتي. أضفهما ليكون المستند كاملاً.',
+  'You have never exported a backup':
+    'لم تُصدّر نسخة احتياطية قط',
+  'That is correct while you use simplified mileage — the per-mile rate already covers fuel, insurance and repairs. They are kept for your cash records. Kerb checks the other method for you in Insights.':
+    'هذا صحيح ما دمت تستخدم المسافة المبسّطة — فمعدّل الميل يغطّي أصلاً الوقود والتأمين والإصلاحات. وتُحفظ لسجلاتك النقدية. ويفحص Kerb الطريقة الأخرى لك في شاشة التحليلات.',
+  'This tax year has not ended yet':
+    'هذه السنة الضريبية لم تنتهِ بعد',
+  'No duplicate-looking entries':
+    'لا مُدخلات تبدو مكرّرة',
+  'Your records live only on this device — save a copy':
+    'سجلاتك موجودة على هذا الجهاز فقط — احفظ نسخة',
+  'What Kerb is':
+    'ما هو Kerb',
+  'Kerb is a record-keeping and estimating tool for UK self-employed delivery drivers. It records your income and expenses, applies published HMRC rates, and produces a summary you can use to complete your own tax return.':
+    'Kerb أداة لحفظ السجلات وتقدير الضريبة لسائقي التوصيل العاملين لحسابهم في بريطانيا. يسجّل دخلك ومصاريفك، ويطبّق معدّلات HMRC المنشورة، ويُنتج ملخّصاً تستخدمه لإكمال إقرارك الضريبي بنفسك.',
+  'Kerb is NOT accounting, tax or legal advice, and using it does not create a professional relationship of any kind.':
+    'Kerb ليس استشارة محاسبية أو ضريبية أو قانونية، ولا ينشئ استخدامه أي علاقة مهنية من أي نوع.',
+  'Kerb is not HMRC filing software':
+    'Kerb ليس برنامج تقديم لدى HMRC',
+  'Kerb is not HMRC-recognised software and cannot submit anything to HMRC. It does not file your Self Assessment and does not send Making Tax Digital quarterly updates.':
+    'Kerb ليس برنامجاً معتمداً من HMRC ولا يستطيع إرسال أي شيء إليها. فهو لا يقدّم إقرارك الذاتي ولا يرسل التحديثات الربع سنوية لنظام Making Tax Digital.',
+  'You file through HMRC\'s own online service or through HMRC-recognised software. Kerb only prepares the figures for you to enter.':
+    'أنت تقدّم عبر خدمة HMRC الإلكترونية نفسها أو عبر برنامج معتمد منها. ويكتفي Kerb بتجهيز الأرقام لتُدخلها.',
+  'Your responsibility':
+    'مسؤوليتك',
+  'You are responsible for the accuracy and completeness of everything you enter, and for the figures you submit to HMRC.':
+    'أنت مسؤول عن دقة واكتمال كل ما تُدخله، وعن الأرقام التي ترسلها إلى HMRC.',
+  'Check every number before you rely on it. Scanned receipts, statements and payslips are read automatically and can be misread — always verify amounts and dates.':
+    'تحقّق من كل رقم قبل الاعتماد عليه. فالفواتير والكشوف وقسائم الراتب الممسوحة تُقرأ تلقائياً وقد تُقرأ خطأً — تأكّد دائماً من المبالغ والتواريخ.',
+  'Tax rates, thresholds and rules change, and your own circumstances may need treatment Kerb does not model (for example capital allowances, multiple trades, VAT registration, or complex loss claims). If anything is unclear or significant, speak to a qualified accountant.':
+    'المعدّلات والحدود والقواعد الضريبية تتغيّر، وقد تحتاج ظروفك الخاصة معالجة لا يحسبها Kerb (مثل بدلات رأس المال، أو تعدّد الأنشطة، أو التسجيل في ضريبة القيمة المضافة، أو مطالبات الخسائر المعقّدة). وإن كان أي شيء غير واضح أو كبير الأثر، فاستشر محاسباً مؤهّلاً.',
+  'Limitation of liability':
+    'حدود المسؤولية',
+  'Kerb is provided "as is", without warranty of any kind, express or implied, including fitness for a particular purpose or accuracy of results.':
+    'يُقدَّم Kerb «كما هو»، دون أي ضمان صريح أو ضمني، بما في ذلك الملاءمة لغرض معيّن أو دقّة النتائج.',
+  'To the fullest extent permitted by law, the author is not liable for any loss or damage arising from your use of Kerb — including any tax, interest, penalty, assessment or other cost resulting from figures that are incorrect, incomplete, misread or relied upon.':
+    'إلى أقصى حدّ يسمح به القانون، لا يتحمّل المؤلّف أي مسؤولية عن أي خسارة أو ضرر ينشأ عن استخدامك Kerb — بما في ذلك أي ضريبة أو فائدة أو غرامة أو تقدير أو تكلفة أخرى تنتج عن أرقام خاطئة أو ناقصة أو مقروءة خطأً أو تم الاعتماد عليها.',
+  'Nothing here excludes or limits liability where it cannot lawfully be excluded.':
+    'لا شيء هنا يستثني أو يحدّ المسؤولية حيث لا يجوز استثناؤها قانوناً.',
+  'Privacy — your data stays on your device':
+    'الخصوصية — بياناتك تبقى على جهازك',
+  'Your records are stored only on this device. There is no Kerb server and no account, so your income, expenses and tax figures are never uploaded to us, and we cannot see them.':
+    'تُحفظ سجلاتك على هذا الجهاز فقط. لا يوجد خادم لـ Kerb ولا حساب، لذا لا تُرفع إلينا أرقام دخلك ومصاريفك وضريبتك أبداً، ولا نستطيع رؤيتها.',
+  'The one exception is scanning: if you add your own Anthropic API key and choose to scan a receipt, statement or payslip, that single image or file is sent directly from your device to Anthropic to be read, under your own key and their terms. It is not stored by Kerb.':
+    'الاستثناء الوحيد هو المسح: إن أضفت مفتاح Anthropic الخاص بك واخترت مسح فاتورة أو كشف أو قسيمة راتب، فتُرسل تلك الصورة أو الملف وحده مباشرةً من جهازك إلى Anthropic لقراءته، بمفتاحك الخاص ووفق شروطهم. ولا يحفظه Kerb.',
+  'Because the data is only on this device, losing or wiping the device loses the records. Export a backup regularly, and keep your device\'s own screen lock on.':
+    'ولأن البيانات على هذا الجهاز فقط، فإن فقدانه أو مسحه يفقدك السجلات. صدّر نسخة احتياطية بانتظام، وأبقِ قفل شاشة جهازك مُفعّلاً.',
+  'Deleting the app, or clearing its data, permanently deletes your records.':
+    'حذف التطبيق أو مسح بياناته يحذف سجلاتك نهائياً.',
+  'Changes':
+    'التغييرات',
+  'These terms may be updated as the app changes. The date at the top shows the current version. Continuing to use Kerb means you accept the terms in force at the time.':
+    'قد تُحدّث هذه الشروط مع تطوّر التطبيق. والتاريخ في الأعلى يوضّح النسخة الحالية. ويعني استمرارك في استخدام Kerb قبولك للشروط السارية حينها.',
+  'Scotland':
+    'اسكتلندا',
+  'Car / Van':
+    'سيارة / فان',
+  'Motorcycle / Scooter':
+    'دراجة نارية / سكوتر',
+  'Bicycle':
+    'دراجة هوائية',
+  'Claim a flat rate per business mile.':
+    'طالِب بمعدّل ثابت لكل ميل عمل.',
+  'Used for your HMRC registration reminder.':
+    'يُستخدم لتذكيرك بالتسجيل لدى HMRC.',
+  'Optional — appears on the printable report.':
+    'اختياري — يظهر في التقرير القابل للطباعة.',
+  'Optional Unique Taxpayer Reference.':
+    'المرجع الضريبي الفريد (اختياري).',
+  'PAYE figures from':
+    'أرقام PAYE من',
+  'Choose “scanned payslips” to auto-fill your PAYE salary & tax from uploaded payslips.':
+    'اختر «القسائم الممسوحة» لتعبئة راتب PAYE وضريبته تلقائياً من القسائم المرفوعة.',
+  'Manage payslips (scan / PDF)':
+    'إدارة قسائم الراتب (مسح / PDF)',
+  'Your employed job\'s yearly pay before tax. Delivery profit is taxed on top of this.':
+    'أجر وظيفتك السنوي قبل الضريبة. ويُفرض على ربح التوصيل فوق هذا المبلغ.',
+  'Optional — improves the payments-on-account estimate.':
+    'اختياري — يُحسّن تقدير الدفعات المقدّمة.',
+  'Rent, other self-employment, etc.':
+    'الإيجار، عمل حر آخر، إلخ.',
+  'Simplified flat-rate relief if you do admin from home (25h+/month).':
+    'خصم ثابت مبسّط إن كنت تؤدّي أعمالاً إدارية من المنزل (25 ساعة+/شهر).',
+  'Set aside weekly for fuel, servicing, insurance renewal.':
+    'جنّب أسبوعياً للوقود والصيانة وتجديد التأمين.',
+  'Personal allowance (£)':
+    'البدل الشخصي (£)',
+  'Mileage rate — first 10k (£/mile)':
+    'معدّل المسافة — أول 10 آلاف (£/ميل)',
+  'Mileage rate — over 10k (£/mile)':
+    'معدّل المسافة — بعد 10 آلاف (£/ميل)',
+  'Trading allowance (£)':
+    'بدل التداول (£)',
+  'App lock (PIN)':
+    'قفل التطبيق (PIN)',
+  'Off — anyone with your phone can open Kerb.':
+    'مُطفأ — أي شخص بحوزته هاتفك يمكنه فتح Kerb.',
+  'Import platform CSV':
+    'استيراد CSV من المنصّة',
+  'No payslips yet':
+    'لا قسائم راتب بعد',
+  'Scan or upload your latest payslip to get started.':
+    'امسح أو ارفع آخر قسيمة راتب للبدء.',
+  'Export your weekly statement from Amazon Flex / Uber Eats (or any app) as CSV, then import it here. Kerb auto-detects the columns — you can adjust the mapping before importing.':
+    'صدّر كشفك الأسبوعي من Amazon Flex أو Uber Eats (أو أي تطبيق) بصيغة CSV، ثم استورده هنا. يكتشف Kerb الأعمدة تلقائياً — ويمكنك تعديل الربط قبل الاستيراد.',
+  'Earnings':
+    'الدخل',
+  'Choose CSV file':
+    'اختر ملف CSV',
+  'Add your Anthropic API key in Settings to read statements. Your statement is sent only to Anthropic to read it — never stored anywhere else.':
+    'أضف مفتاح Anthropic في الإعدادات لقراءة الكشوف. ويُرسل كشفك إلى Anthropic فقط لقراءته — ولا يُحفظ في أي مكان آخر.',
+  'Add your Anthropic API key in Settings to scan statements. You can still add earnings manually or import a CSV.':
+    'أضف مفتاح Anthropic في الإعدادات لمسح الكشوف. ويمكنك مع ذلك إضافة الدخل يدوياً أو استيراد ملف CSV.',
+  'Add your Anthropic API key in Settings to use the assistant (quick-add by text, questions about your data, and summaries).':
+    'أضف مفتاح Anthropic في الإعدادات لاستخدام المساعد (الإضافة السريعة بالنص، والأسئلة عن بياناتك، والملخّصات).',
+  'Read the number on your dashboard. At the end, enter the new reading — Kerb works out the miles.':
+    'اقرأ الرقم على لوحة عدّادات سيارتك. وفي النهاية أدخل القراءة الجديدة — ويحسب Kerb الأميال.',
+  'Best choice. You only open Kerb twice — now, and when you finish. Nothing runs in the background.':
+    'الخيار الأفضل. تفتح Kerb مرّتين فقط — الآن، وعند الانتهاء. ولا شيء يعمل في الخلفية.',
+
+  'Handled automatically by your employer — nothing to set aside. Kept separate from your delivery figures above.':
+    'يتولّاها صاحب العمل تلقائياً — فلا شيء لتجنيبه. وتُحفظ منفصلة عن أرقام التوصيل أعلاه.',
+  'not deductible':
+    'غير قابل للخصم',
+
+  // ---- expense categories ----
+  'Phone & Internet': 'الهاتف والإنترنت',
+  'Bags & Equipment': 'الحقائب والمستلزمات',
+  'Parking & Tolls': 'المواقف والرسوم',
+  'Platform / Service Fees': 'رسوم المنصّة / الخدمة',
+  'Protective Clothing': 'الملابس الواقية',
+  'Accountancy & Software': 'المحاسبة والبرمجيات',
+  'Stationery & Postage': 'القرطاسية والبريد',
+  'Fuel': 'الوقود',
+  'Vehicle Insurance': 'تأمين المركبة',
+  'Repairs & Servicing': 'الإصلاحات والصيانة',
+  'Road Tax & MOT': 'ضريبة الطريق والفحص الفني',
+  'Vehicle Cleaning': 'تنظيف المركبة',
+  'vs': 'مقابل',
+  'today': 'اليوم',
+  'tomorrow': 'غداً',
+  'no hours logged': 'لا ساعات مسجّلة',
 };
 
 // placeholders (separate so we can target the attribute)
@@ -170,6 +508,288 @@ const AR_PH = {
   'Ask anything about your earnings…': 'اسأل أي شيء عن دخلك…', 'e.g. Amazon Flex £52, 4 hours, 40 miles': 'مثال Amazon Flex £52، 4 ساعات، 40 ميلاً',
   'sk-ant-…': 'sk-ant-…', 'Add platform (e.g. Stuart)': 'إضافة منصّة (مثل Stuart)',
   'Search platform or note…': 'ابحث بالمنصّة أو الملاحظة…', 'Search vendor, category or note…': 'ابحث بالمتجر أو التصنيف أو الملاحظة…',
+
+  'street address': 'عنوان الشارع',
+  'town / city / area': 'البلدة / المدينة / المنطقة',
+  'postcode': 'الرمز البريدي',
+  'e.g. Visa ****1234': 'مثال Visa ****1234',
+  'receipt / invoice no.': 'رقم الفاتورة',
+  'VAT reg no.': 'رقم تسجيل VAT',
+  'items summary': 'ملخّص البنود',
+  'e.g. Phone contract': 'مثال عقد الهاتف',
+  'sk-ant-…  (optional, for receipt scanning)': 'sk-ant-…  (اختياري، لقراءة الفواتير)',
+  'e.g. Corsa (AB12 CDE)': 'مثال Corsa (AB12 CDE)',
+  'e.g. 84213': 'مثال 84213',
+  'start': 'البداية',
+  'end': 'النهاية',
+  'e.g. Balancing payment, 1st payment on account': 'مثال دفعة التسوية، الدفعة المقدّمة الأولى',
+};
+
+// Slotted patterns for plain text nodes: '… {0} …' -> '… {0} …'.
+const AR_PAT = {
+  '{0} days':
+    '{0} يوماً',
+  'Nothing recorded for last {0} days.':
+    'لا شيء مسجّل في آخر {0} يوماً.',
+  'Income tax {0} + Class {1} NIC {2}':
+    'ضريبة الدخل {0} + تأمين وطني Class {1} {2}',
+  'Class {0} NIC':
+    'تأمين وطني Class {0}',
+  'Class {0} NIC — to pay':
+    'تأمين وطني Class {0} — مستحق',
+  'Income {0} · Expenses {1} · due {2} {3} {4}':
+    'دخل {0} · مصاريف {1} · الاستحقاق {2} {3} {4}',
+  'Each instalment (×{0})':
+    'كل دفعة (×{0})',
+  'Estimates for guidance using {0} rates (Car / Van, simplified mileage). Always confirm figures on your HMRC Self Assessment. Adjust rates or your PAYE salary in Settings.':
+    'تقديرات إرشادية بمعدّلات {0} (سيارة / فان، مسافة مبسّطة). تحقّق دائماً من الأرقام في إقرارك لدى HMRC. ويمكنك تعديل المعدّلات أو راتب PAYE من الإعدادات.',
+  'Avg income / week (last {0} wks)':
+    'متوسط الدخل / أسبوع (آخر {0} أسابيع)',
+  'Recommended reserve for {0}. Live estimate ({1} of profit).':
+    'الاحتياطي الموصى به لسنة {0}. تقدير مباشر ({1} من الربح).',
+  'On track ({0} buffer)':
+    'على المسار ({0} هامش)',
+  '{0}/week × {1} weeks this tax year.':
+    '{0}/أسبوع × {1} أسبوعاً في هذه السنة الضريبية.',
+  '{0} short':
+    'ناقص {0}',
+  '{0}/week × {1} weeks.':
+    '{0}/أسبوع × {1} أسبوعاً.',
+  '{0} mi claim':
+    'مطالبة {0} ميل',
+  'Best rate: {0} at {1}/hour':
+    'أفضل معدّل: {0} بـ {1}/ساعة',
+  'Based on {0} of the tax year elapsed. Assumes a steady pace.':
+    'بناءً على انقضاء {0} من السنة الضريبية. ويفترض وتيرة ثابتة.',
+  'Tax year {0} ({1} {2} {3} – {4} {5} {6})':
+    'السنة الضريبية {0} ({1} {2} {3} – {4} {5} {6})',
+  'Turnover is your total takings before any costs. Put the single total of your allowable expenses in box {0} (the short form does not need them itemised while turnover is under {1}).':
+    'إجمالي الدخل هو كل متحصّلاتك قبل أي تكاليف. اكتب مجموعاً واحداً لمصاريفك القابلة للخصم في خانة {0} (النموذج المختصر لا يطلب تفصيلها ما دام إجمالي الدخل أقل من {1}).',
+  'Mileage is claimed at HMRC\'s simplified rate. For a car that is {0}/mile for the first {1} business miles and {2} after. When you claim mileage you cannot also claim fuel, insurance or repairs for the same vehicle.':
+    'تُطالَب المسافة بالمعدّل المبسّط من HMRC. وللسيارة يكون {0}/ميل لأول {1} ميل عمل، و{2} بعدها. وعند المطالبة بالمسافة لا يمكنك المطالبة أيضاً بالوقود أو التأمين أو الإصلاحات للمركبة نفسها.',
+  '1st payment on account — by {0} {1} {2}':
+    'الدفعة المقدّمة الأولى — بحلول {0} {1} {2}',
+  '2nd payment on account — by {0} {1} {2}':
+    'الدفعة المقدّمة الثانية — بحلول {0} {1} {2}',
+  'Because your bill is over {0} and little tax is collected at source, HMRC asks for two advance payments towards next year on top of this year’s bill.':
+    'لأن فاتورتك تتجاوز {0} ولا يُحصّل سوى قليل من الضريبة عند المصدر، تطلب HMRC دفعتين مقدّمتين على حساب السنة القادمة، فوق فاتورة هذه السنة.',
+  'Keep this report and your records for at least {0} years after the {1} {2} filing deadline, in case HMRC asks to see them.':
+    'احفظ هذا التقرير وسجلاتك {0} سنوات على الأقل بعد موعد التقديم في {1} {2}، في حال طلبت HMRC الاطلاع عليها.',
+  'A review of your {0} records — the things an accountant would look at.':
+    'مراجعة لسجلات سنة {0} — الأمور التي ينظر فيها المحاسب.',
+  '{0} entry is dated outside {1}':
+    '{0} مُدخل تاريخه خارج {1}',
+  'Your records live only on this device, and HMRC expects you to keep them for {0} years after filing.':
+    'سجلاتك موجودة على هذا الجهاز فقط، وتتوقّع HMRC أن تحفظها {0} سنوات بعد التقديم.',
+  '{0} of vehicle running costs are not separately claimed':
+    '{0} من تكاليف تشغيل المركبة غير مُطالَب بها منفصلة',
+  'It runs to {0} {1} {2}. You can file from {3} {4}, and the deadline is {5} {6} {7}.':
+    'تنتهي في {0} {1} {2}. ويمكنك التقديم من {3} {4}، والموعد النهائي {5} {6} {7}.',
+  '{0} business miles claimed':
+    'مُطالَب بـ {0} ميل عمل',
+  '{0} / {1} done':
+    '{0} / {1} مُنجزة',
+  'Started {0} {1} {2}':
+    'بدأت في {0} {1} {2}',
+  'HMRC sends it ~{0} days after registering — add it when it arrives':
+    'ترسله HMRC بعد نحو {0} يوماً من التسجيل — أضفه عند وصوله',
+  '{0} shifts logged':
+    '{0} وردية مسجّلة',
+  '{0} in your tax pot':
+    '{0} في وعاء ضريبتك',
+  'Key dates · {0}':
+    'مواعيد مهمة · {0}',
+  '{0} {1} {2} · you\'ve done this ✓':
+    '{0} {1} {2} · أنجزت هذا ✓',
+  '{0} {1} {2} · first Self Assessment':
+    '{0} {1} {2} · أول إقرار ذاتي',
+  'Last updated {0} {1} {2}':
+    'آخر تحديث {0} {1} {2}',
+  'HMRC expects you to keep your business records for at least {0} years after the {1} {2} filing deadline. Keeping those records — including your own backups — is your responsibility.':
+    'تتوقّع HMRC أن تحفظ سجلات عملك {0} سنوات على الأقل بعد موعد التقديم في {1} {2}. وحفظ تلك السجلات — بما فيها نسخك الاحتياطية — مسؤوليتك.',
+  'A loss-making year is set against later profits of the same trade, cutting Income Tax and Class {0} NIC.':
+    'تُخصم السنة الخاسرة من أرباح السنوات التالية للنشاط نفسه، فتُقلّل ضريبة الدخل وتأمين Class {0}.',
+  'Plan {0}':
+    'الخطة {0}',
+  'Plan {0} (Scotland)':
+    'الخطة {0} (اسكتلندا)',
+  'Claude Haiku {0} (fast, cheapest)':
+    'Claude Haiku {0} (سريع وأرخص)',
+  'Claude Sonnet {0} (most capable)':
+    'Claude Sonnet {0} (الأقوى)',
+  'Haiku {0} is plenty for receipts and the cheapest.':
+    'Haiku {0} يكفي تماماً للفواتير وهو الأرخص.',
+  'Editing {0}. Changes are saved as overrides for this year only.':
+    'تعديل سنة {0}. تُحفظ التغييرات كتعديلات لهذه السنة فقط.',
+  'Class {0} NIC main rate ({1}–{2})':
+    'المعدّل الأساسي لتأمين Class {0} ({1}–{2})',
+  'Class {0} NIC upper rate ({1}–{2})':
+    'المعدّل الأعلى لتأمين Class {0} ({1}–{2})',
+
+  'Q1 · {0} {1} – {2} {3} {4}':
+    'الربع 1 · {0} {1} – {2} {3} {4}',
+  'Q2 · {0} {1} – {2} {3} {4}':
+    'الربع 2 · {0} {1} – {2} {3} {4}',
+  'Q3 · {0} {1} – {2} {3} {4}':
+    'الربع 3 · {0} {1} – {2} {3} {4}',
+  'Q4 · {0} {1} – {2} {3} {4}':
+    'الربع 4 · {0} {1} – {2} {3} {4}',
+  'Net profit {0} after {1} tax & NIC':
+    'صافي الربح {0} بعد {1} ضريبة وتأمين',
+  '≈ {0} of profit (live estimate)':
+    '≈ {0} من الربح (تقدير مباشر)',
+  'Last {0} days':
+    'آخر {0} يوماً',
+  '{0} shifts':
+    '{0} وردية',
+  '{0} items':
+    '{0} عنصراً',
+  '{0} worked':
+    '{0} عمل',
+  '{0} {1} {2} · {3} ago':
+    '{0} {1} {2} · قبل {3}',
+  'Simplified flat-rate relief if you do admin from home ({0}+/month).':
+    'خصم ثابت مبسّط إن كنت تؤدّي أعمالاً إدارية من المنزل ({0}+/شهر).',
+  '{0}, {1} {2}':
+    '{0}، {1} {2}',
+  '{0} mi':
+    '{0} ميل',
+  '{0} drops':
+    '{0} توصيلة',
+  '{0} tips':
+    '{0} بقشيش',
+  '{0}% biz':
+    '{0}% عمل',
+  '{0} claimable':
+    '{0} قابل للخصم',
+  'Less: mileage ({0} mi)': 'ناقص المسافة ({0} ميل)',
+  'Less: mileage — {0} ({1} mi)': 'ناقص المسافة — {0} ({1} ميل)',
+  '{0} ago': 'قبل {0}',
+  'in {0}': 'خلال {0}',
+  'in ~{0}': 'خلال ~{0}',
+  '{0} · {1}/hr': '{0} · {1}/ساعة',
+};
+
+// Slotted patterns for whole prose units, keyed on inner markup. The Arabic
+// value carries its own tags and may place the slots in any order.
+const AR_HTML = {
+  '<b>Class {0} NIC:</b> Below threshold — voluntary only. You can pay voluntarily ({1}/week) to protect your State Pension.':
+    '<b>تأمين وطني Class {0}:</b> دون الحد — تطوّعي فقط. يمكنك الدفع تطوّعاً ({1}/أسبوع) لحماية معاش الدولة.',
+  '<b>Trading losses:</b> <b>{0}</b> of earlier losses has been set against this year\'s profit, cutting your Income Tax and Class {1} NIC. Declare these in the losses section of your SA103S.':
+    '<b>الخسائر التجارية:</b> خُصم <b>{0}</b> من خسائر سابقة من ربح هذه السنة، فقلّل ضريبة الدخل وتأمين Class {1}. أعلن عنها في قسم الخسائر من نموذج SA103S.',
+  'Your employer already deducts this tax &amp; NI from each payslip — <b>you don\'t set anything aside for it</b>. It only matters here because your salary uses your Personal Allowance, which is why your delivery profit is taxed from the first £.':
+    'يخصم صاحب العمل هذه الضريبة والتأمين من كل قسيمة راتب — <b>فلا تجنّب لها شيئاً</b>. وتظهر هنا فقط لأن راتبك يستهلك بدلك الشخصي، ولذلك يُفرض على ربح التوصيل من أول جنيه.',
+  'These are the four standard MTD periods. If you become required to send quarterly updates, these are the <b>income and expense totals</b> each update needs (reported cumulatively). Kerb prepares them — it cannot submit them.':
+    'هذه هي فترات MTD الأربع القياسية. إن أصبحت مُلزماً بإرسال تحديثات ربع سنوية، فهذه هي <b>مجاميع الدخل والمصاريف</b> التي يحتاجها كل تحديث (تُرفع تراكمياً). يُجهّزها Kerb — لكنه لا يستطيع إرسالها.',
+  'Your SA bill exceeds {0} and under {1} is collected at source, so HMRC will ask for two advance payments. On top of your balancing payment, budget ~<b>{2}</b> on {3} {4} and again on {5} {6}.':
+    'فاتورة إقرارك تتجاوز {0} ويُحصّل أقل من {1} عند المصدر، لذا ستطلب HMRC دفعتين مقدّمتين. فوق دفعة التسوية، خصّص نحو <b>{2}</b> في {3} {4} ومثلها في {5} {6}.',
+  '<b>VAT:</b> you register only if turnover passes <b>{0}</b>/year. You\'re at {1} ({2}).':
+    '<b>ضريبة القيمة المضافة:</b> لا تُسجّل إلا إذا تجاوز إجمالي دخلك <b>{0}</b>/سنة. أنت عند {1} ({2}).',
+  'From each week\'s pay, keep about <b>{0}</b> for tax, <b>{1}</b> for the vehicle, <b>{2}</b> to savings — leaving about <b>{3}</b> to spend.':
+    'من دخل كل أسبوع، احتفظ بنحو <b>{0}</b> للضريبة، و<b>{1}</b> للمركبة، و<b>{2}</b> للمدّخرات — فيتبقّى نحو <b>{3}</b> للصرف.',
+  'Saved so far <b style="color:var(--text)">{0}</b>':
+    'المُدّخر حتى الآن <b style="color:var(--text)">{0}</b>',
+  'Target <b style="color:var(--text)">{0}</b>':
+    'الهدف <b style="color:var(--text)">{0}</b>',
+  '<b>Net £/hour</b> is what you actually keep after tax, NIC and mileage costs — the number that really matters when choosing shifts.':
+    '<b>صافي £/ساعة</b> هو ما تحتفظ به فعلاً بعد الضريبة والتأمين وتكاليف المسافة — وهو الرقم الذي يهمّ حقاً عند اختيار الورديات.',
+  'You\'re on the better method — <b>Simplified mileage</b> saves you about <b>{0}/yr</b> vs the other.':
+    'أنت على الطريقة الأفضل — <b>المسافة المبسّطة</b> توفّر لك نحو <b>{0}/سنة</b> مقارنة بالأخرى.',
+  'This is built so you can file your own Self Assessment. Each figure shows the <b>SA103S</b> box to type it into on HMRC. Save as a PDF from the <b>Print</b> dialog (choose “Save as PDF”). Always confirm figures on HMRC.':
+    'أُعدّ هذا لتقدّم إقرارك الذاتي بنفسك. كل رقم يوضّح خانة <b>SA103S</b> التي تكتبه فيها على موقع HMRC. احفظه كـ PDF من نافذة <b>الطباعة</b> (اختر “Save as PDF”). تحقّق من الأرقام على HMRC دائماً.',
+  '<span class="k">Name</span><span class="v">—</span>':
+    '<span class="k">الاسم</span><span class="v">—</span>',
+  '<span class="k">UTR</span><span class="v">—</span>':
+    '<span class="k">UTR</span><span class="v">—</span>',
+  '<span class="k">Business</span><span class="v">Self-employed delivery driver</span>':
+    '<span class="k">النشاط</span><span class="v">سائق توصيل يعمل لحسابه</span>',
+  '<span class="k">Region</span><span class="v">England / Wales / N. Ireland</span>':
+    '<span class="k">المنطقة</span><span class="v">إنجلترا / ويلز / أيرلندا الشمالية</span>',
+  '<span class="k">Accounting basis</span><span class="v">Cash basis</span>':
+    '<span class="k">الأساس المحاسبي</span><span class="v">الأساس النقدي</span>',
+  '<span class="k">Vehicle</span><span class="v">Car / Van</span>':
+    '<span class="k">المركبة</span><span class="v">سيارة / فان</span>',
+  '<span class="k">Expense method</span><span class="v">Simplified (mileage)</span>':
+    '<span class="k">طريقة المصاريف</span><span class="v">المبسّطة (المسافة)</span>',
+  '<span class="k">Prepared</span><span class="v">{0} {1} {2}</span>':
+    '<span class="k">تاريخ الإعداد</span><span class="v">{0} {1} {2}</span>',
+  'Your turnover — total takings <span class="report__box">Box {0}</span>':
+    'إجمالي دخلك — كل المتحصّلات <span class="report__box">خانة {0}</span>',
+  'Total allowable business expenses <span class="report__box">Box {0}</span>':
+    'إجمالي مصاريف العمل القابلة للخصم <span class="report__box">خانة {0}</span>',
+  'Net profit <span class="report__box">Box {0}</span>':
+    'صافي الربح <span class="report__box">خانة {0}</span>',
+  'Loss brought forward, set against this year <span class="report__box">losses section</span>':
+    'خسارة مُرحّلة، تُخصم من هذه السنة <span class="report__box">قسم الخسائر</span>',
+  'Taxable profit <span class="report__box">Box {0}</span>':
+    'الربح الخاضع للضريبة <span class="report__box">خانة {0}</span>',
+  'Class {0} NIC <span class="report__box">Box {1}</span>':
+    'تأمين وطني Class {0} <span class="report__box">خانة {1}</span>',
+  'Turnover (all delivery income incl. tips) <span class="report__box">Box {0}</span>':
+    'إجمالي الدخل (كل دخل التوصيل شاملاً البقشيش) <span class="report__box">خانة {0}</span>',
+  'Business mileage ({0} miles) <span class="report__box">in Box {1}</span>':
+    'أميال العمل ({0} ميل) <span class="report__box">داخل خانة {1}</span>',
+  'Other allowable expenses <span class="report__box">in Box {0}</span>':
+    'مصاريف أخرى قابلة للخصم <span class="report__box">داخل خانة {0}</span>',
+  'Total allowable expenses <span class="report__box">Box {0}</span>':
+    'إجمالي المصاريف القابلة للخصم <span class="report__box">خانة {0}</span>',
+  'Pay from employment (from your P60/P45) <span class="report__box">SA102 box {0}</span>':
+    'أجر الوظيفة (من P60/P45) <span class="report__box">SA102 خانة {0}</span>',
+  'Tax taken off that pay <span class="report__box">SA102 box {0}</span>':
+    'الضريبة المخصومة من ذلك الأجر <span class="report__box">SA102 خانة {0}</span>',
+  '<b>{0} things to look at</b> before you file your {1} return.':
+    '<b>{0} أمور تستحق النظر</b> قبل تقديم إقرار {1}.',
+  '<b>You\'re registered as self-employed 🎉</b> Here\'s everything to stay on top of it — Kerb ticks each step as you go.':
+    '<b>أنت مُسجّل كعامل حر 🎉</b> هذا كل ما تحتاجه للبقاء مُسيطراً — ويعلّم Kerb كل خطوة وأنت تتقدّم.',
+  '<b>Nothing to pay yet.</b> You pay after the tax year ends — by <b>{0} {1} {2}</b>. Set money aside as you go so it\'s easy.':
+    '<b>لا شيء مستحق بعد.</b> تدفع بعد انتهاء السنة الضريبية — بحلول <b>{0} {1} {2}</b>. جنّب المال تدريجياً ليكون الأمر سهلاً.',
+  '<b>First {0} is tax-free.</b> The {1} trading allowance means your first {2} of delivery income each year isn\'t taxed. Kerb applies it automatically.':
+    '<b>أول {0} معفاة من الضريبة.</b> بدل التداول لسنة {1} يعني أن أول {2} من دخل التوصيل سنوياً غير خاضعة للضريبة. ويطبّقه Kerb تلقائياً.',
+  '<b>Mileage covers car costs.</b> {0}/mile (first {1} miles) covers fuel, servicing, insurance &amp; repairs — so you don\'t claim those separately. Log parking, tolls, phone &amp; kit on top.':
+    '<b>المسافة تغطّي تكاليف السيارة.</b> {0}/ميل (أول {1} ميل) تغطّي الوقود والصيانة والتأمين والإصلاحات — فلا تطالب بها منفصلة. وسجّل فوقها المواقف والرسوم والهاتف والمستلزمات.',
+  '<b>NI is handled for you.</b> Class {0} &amp; Class {1} National Insurance are worked out and paid through the same Self Assessment — Kerb calculates them.':
+    '<b>التأمين الوطني مُدار نيابة عنك.</b> يُحسب تأمين Class {0} و Class {1} ويُدفع من خلال الإقرار الذاتي نفسه — ويحسبهما Kerb لك.',
+  '<b>Keep records {0}+ years.</b> HMRC can ask to see your records. Export a backup now and then and keep it somewhere safe.':
+    '<b>احفظ السجلات {0}+ سنوات.</b> قد تطلب HMRC الاطلاع على سجلاتك. صدّر نسخة احتياطية من وقت لآخر واحفظها في مكان آمن.',
+  '<b>Kerb gives estimates, not tax advice.</b> It helps you keep records and understand what you may owe. It is not a substitute for an accountant or for HMRC\'s own figures. Always confirm the final numbers on your HMRC Self Assessment before you file.':
+    '<b>يقدّم Kerb تقديرات، لا استشارة ضريبية.</b> يساعدك في حفظ السجلات وفهم ما قد تكون مديناً به. وليس بديلاً عن محاسب ولا عن أرقام HMRC نفسها. تحقّق دائماً من الأرقام النهائية في إقرارك لدى HMRC قبل التقديم.',
+  'HMRC gives <b>each vehicle</b> its own first {0} business miles at the higher rate. Add a vehicle if you changed car or use more than one — then pick the vehicle when you log a shift.':
+    'تمنح HMRC <b>كل مركبة</b> أول {0} ميل عمل خاصة بها بالمعدّل الأعلى. أضف مركبة إن غيّرت سيارتك أو كنت تستخدم أكثر من واحدة — ثم اختر المركبة عند تسجيل وردية.',
+  'Get a key at <b>console.anthropic.com</b> → API keys, and add a little credit. Stored only on this device; sent only to Anthropic.':
+    'احصل على مفتاح من <b>console.anthropic.com</b> → API keys، وأضف رصيداً بسيطاً. يُحفظ على هذا الجهاز فقط، ولا يُرسل إلا إلى Anthropic.',
+  'The PIN keeps casual snoopers out. Your data still lives <b>unencrypted</b> on this device, so keep your phone\'s own screen lock on and export a backup now and then. If you forget the PIN, you\'ll need to clear the app\'s data to get back in.':
+    'يمنع الرمز المتطفّلين العابرين. لكن بياناتك تبقى <b>غير مُشفّرة</b> على هذا الجهاز، فأبقِ قفل شاشة هاتفك مُفعّلاً وصدّر نسخة احتياطية من وقت لآخر. وإن نسيت الرمز، فستحتاج لمسح بيانات التطبيق للعودة إليه.',
+  '<b>Storage is permanent.</b> Your records won\'t be auto-deleted by the browser · {0} KB used. Still export a backup occasionally — it\'s the only copy off this device.':
+    '<b>الحفظ دائم.</b> لن يحذف المتصفّح سجلاتك تلقائياً · {0} كيلوبايت مُستخدمة. ومع ذلك صدّر نسخة احتياطية أحياناً — فهي النسخة الوحيدة خارج هذا الجهاز.',
+  '<b>Kerb</b> keeps everything on this device — your entries never leave it, except a receipt image you choose to scan, which goes only to Anthropic via your own key. Figures are estimates to help you budget; confirm on your HMRC Self Assessment.':
+    'يحفظ <b>Kerb</b> كل شيء على هذا الجهاز — فمُدخلاتك لا تخرج منه، إلا صورة فاتورة تختار مسحها، وتذهب إلى Anthropic فقط عبر مفتاحك الخاص. والأرقام تقديرات تساعدك في وضع ميزانيتك؛ تحقّق منها في إقرارك لدى HMRC.',
+  'Scan a photo or upload the <b>PDF</b> of your monthly payslip — Claude reads the pay, tax, NI, hours, dates and your/employer details, and can keep your tax estimate accurate automatically.':
+    'صوّر أو ارفع ملف <b>PDF</b> لقسيمة راتبك الشهرية — يقرأ كلود الأجر والضريبة والتأمين والساعات والتواريخ وبياناتك وبيانات صاحب العمل، ويمكنه إبقاء تقديرك الضريبي دقيقاً تلقائياً.',
+  'Scan a photo or upload the <b>PDF</b> of your bank / card statement — Claude reads every transaction and suggests which are delivery <b>income</b> and which are business <b>expenses</b>. You confirm each one before it\'s added.':
+    'صوّر أو ارفع ملف <b>PDF</b> لكشف حسابك البنكي أو بطاقتك — يقرأ كلود كل معاملة ويقترح أيّها <b>دخل</b> توصيل وأيّها <b>مصاريف</b> عمل. وتؤكّد كل واحدة قبل إضافتها.',
+  'Scan a photo or upload the <b>PDF</b> of your Amazon Flex / Uber Eats (or any) earnings statement — Claude reads each shift (date, pay, tips, hours, miles) so you can add them all at once.':
+    'صوّر أو ارفع ملف <b>PDF</b> لكشف أرباحك من Amazon Flex أو Uber Eats (أو أي منصّة) — يقرأ كلود كل وردية (التاريخ، الأجر، البقشيش، الساعات، الأميال) لتضيفها كلها مرة واحدة.',
+  'Clock in to track your <b>time</b> and <b>miles</b>. Pick how to count miles below.':
+    'ابدأ الوردية لتتبّع <b>وقتك</b> و<b>أميالك</b>. واختر طريقة حساب الأميال أدناه.',
+
+  '<span class="dot" style="background:var(--warn)"></span>Tax · {0}':
+    '<span class="dot" style="background:var(--warn)"></span>الضريبة · {0}',
+  '<span class="dot" style="background:var(--info)"></span>Vehicle · {0}':
+    '<span class="dot" style="background:var(--info)"></span>المركبة · {0}',
+  '<span class="dot" style="background:var(--gold)"></span>Savings · {0}':
+    '<span class="dot" style="background:var(--gold)"></span>المدّخرات · {0}',
+  '<span class="dot" style="background:var(--pos)"></span>Spend · {0}':
+    '<span class="dot" style="background:var(--pos)"></span>الصرف · {0}',
+  '<b>Make storage permanent.</b> The browser could clear this app\'s data under storage pressure · {0} KB used. Tap below to protect it — on iPhone, also add Kerb to your Home Screen.':
+    '<b>اجعل الحفظ دائماً.</b> قد يمسح المتصفّح بيانات هذا التطبيق عند ضغط المساحة · {0} كيلوبايت مُستخدمة. اضغط أدناه لحمايتها — وعلى الآيفون، أضف Kerb إلى الشاشة الرئيسية أيضاً.',
+  'Your records are stored on this device. Export a backup now and then so nothing is lost.':
+    'تُحفظ سجلاتك على هذا الجهاز. صدّر نسخة احتياطية من وقت لآخر حتى لا يضيع شيء.',
+  '<b>{0}</b> entry is dated outside <b>{1}</b>, so it isn\'t in the totals here. Tap to review &amp; fix the date.':
+    '<b>{0}</b> مُدخل تاريخه خارج <b>{1}</b>، فلا يدخل في المجاميع هنا. اضغط للمراجعة وتصحيح التاريخ.',
+  '<b>Back up your records.</b> Everything is stored only on this device — you haven\'t exported a backup yet. HMRC records should be kept for {0}+ years. Tap to save a backup file.':
+    '<b>خذ نسخة احتياطية من سجلاتك.</b> كل شيء محفوظ على هذا الجهاز فقط — ولم تُصدّر نسخة احتياطية بعد. وينبغي حفظ سجلات HMRC {0}+ سنوات. اضغط لحفظ ملف النسخة الاحتياطية.',
+  'For every <b>{0}</b> profit from now, keep about <b>{1}</b> for tax &amp; NIC — the rest is yours.':
+    'من كل <b>{0}</b> ربح من الآن، احتفظ بنحو <b>{1}</b> للضريبة والتأمين — والباقي لك.',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).
@@ -177,25 +797,125 @@ const AR_PREFIX = [
   ['Self-employment take-home · ', 'صافي العمل الحر · '],
   ['Estimated take-home · ', 'صافي متوقّع · '],
   ['Set aside for HMRC · ', 'جنّب لـ HMRC · '],
-  ['Less: mileage', 'ناقص المسافة'],
   ['Self-employment take-home', 'صافي العمل الحر'],
+  ['Import failed: ', 'فشل الاستيراد: '],
 ];
 
+// ---------- patterns ----------
+// Most prose in this app carries figures ("keep about £20.00 for tax"), and a
+// lot of it is split across inline <b> tags. Neither can be translated by
+// exact-matching a text node: the figures differ per user, and a fragment like
+// "and which are business" cannot be reordered into correct Arabic on its own.
+//
+// So a pattern key is the string with every figure replaced by {0}, {1}, …
+// The Arabic side reuses those slots in whatever order Arabic needs, and may
+// carry its own inline markup. slotify() is exported so the tooling that
+// harvests these keys derives them with this exact function, never a copy.
+// Month and weekday names are slotted too, so one pattern covers all twelve
+// months instead of twelve near-identical keys. They are localised when the
+// slot is filled. Only the CAPITALISED forms, and only in a date position, so
+// the modal "may" in prose is never mistaken for the month.
+const MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MON_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DOW_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MON_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+const DOW_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const DATE_WORD = new Map([
+  ...MON_FULL.map((m, i) => [m, MON_AR[i]]),
+  ...MON_EN.map((m, i) => [m, MON_AR[i]]),
+  ...DOW_EN.map((d, i) => [d, DOW_AR[i]]),
+]);
+// Longest first, so 'June' is matched before 'Jun' leaves a stray 'e'.
+const MON_ANY = [...MON_FULL, ...MON_EN].sort((a, b) => b.length - a.length);
+
+// A figure is a standalone money/number/percent/pence/tax-year token. The
+// lookaround keeps it from biting into identifiers: SA103S, P45 and Class2
+// must survive intact, or every key would depend on a box number.
+// Unit suffixes are part of the figure (2.5h, 18d, 12mo, 55p, 80%), so one key
+// covers every value instead of one key per hour count. The tax-year
+// alternative comes first or 2026/27 would match as a bare 2026.
+const FIGURE_SRC = String.raw`(?<![A-Za-z\d.,])(?:£\s?\d[\d,]*(?:\.\d+)?|\d{4}\/\d{2}|\d[\d,]*(?:\.\d+)?(?:%|p|h|d|mo)?)(?![A-Za-z\d]|\.\d)`;
+const MON_SRC = String.raw`(?<=\d\s)(?:${MON_ANY.join('|')})\b|\b(?:${MON_ANY.join('|')})(?=\s\d{4})`;
+const DOW_SRC = String.raw`\b(?:${DOW_EN.join('|')})(?=,|\s+at\b)`;
+const FIGURE = new RegExp(`${FIGURE_SRC}|${MON_SRC}|${DOW_SRC}`, 'g');
+
+export function slotify(str) {
+  const slots = [];
+  // Split on tags so figures inside attributes (colours, widths) are never
+  // slotted — a key must not change when a style value does.
+  const key = str
+    .split(/(<[^>]*>)/)
+    .map((part) => (part.startsWith('<')
+      ? part
+      : part.replace(FIGURE, (m) => '{' + (slots.push(m) - 1) + '}')))
+    .join('');
+  return { key, slots };
+}
+
+// Put the captured values back, localising month and weekday names on the way.
+const fill = (tpl, slots) => tpl.replace(/\{(\d+)\}/g, (m, i) => {
+  const v = slots[+i];
+  if (v === undefined) return m;
+  return DATE_WORD.get(v) || v;
+});
+
+// Look a string up: exact first, then prefix rules, then slotted patterns.
 function tr(text) {
   const key = text.trim();
   if (!key) return null;
   if (AR[key]) return AR[key];
   for (const [en, ar] of AR_PREFIX) if (key.startsWith(en)) return ar + key.slice(en.length);
+  const { key: pat, slots } = slotify(key);
+  if (slots.length && AR_PAT[pat]) return fill(AR_PAT[pat], slots);
+  // No phrase matched, but a bare date ("5 Oct 2027") still has a month or
+  // weekday to localise. Rebuilding from the slots does that without needing
+  // a dictionary entry for every date in the app.
+  if (slots.some((v) => DATE_WORD.has(v))) return fill(pat, slots);
   return null;
+}
+
+// Translate an element's whole inner markup as one unit, so Arabic word order
+// is free and the emphasis tags survive. Returns true if it was replaced.
+function trHtml(elm) {
+  const raw = elm.innerHTML;
+  const key = raw.trim();
+  if (!key) return false;
+  if (AR_HTML[key]) { elm.innerHTML = AR_HTML[key]; return true; }
+  const { key: pat, slots } = slotify(key);
+  if (AR_HTML[pat]) { elm.innerHTML = fill(AR_HTML[pat], slots); return true; }
+  return false;
+}
+
+// An element is a single prose unit when all its children are inline and leaf:
+// its text reads as one sentence, so it must be translated as one.
+const INLINE = /^(B|I|EM|STRONG|SPAN|A|CODE|BR|SMALL)$/;
+function isProseUnit(elm) {
+  const kids = elm.children;
+  if (!kids.length) return false;
+  for (const k of kids) if (!INLINE.test(k.tagName) || k.children.length) return false;
+  return /[A-Za-z]{3}/.test(elm.textContent);
 }
 
 export function translate(root) {
   if (!isRTL() || !root) return;
+  // Whole prose units first (a sentence broken up by <b>/<span> tags). Anything
+  // replaced here is skipped by the text-node pass below, which would otherwise
+  // translate the Arabic fragments it just produced.
+  const done = new Set();
+  if (root.querySelectorAll) {
+    // The root itself is included: when late content is handed here directly,
+    // the added node often IS the prose unit, not an ancestor of one.
+    for (const elm of [...(root.nodeType === 1 ? [root] : []), ...root.querySelectorAll('*')]) {
+      if (done.has(elm) || !isProseUnit(elm)) continue;
+      if (trHtml(elm)) { done.add(elm); for (const d of elm.querySelectorAll('*')) done.add(d); }
+    }
+  }
   // text nodes
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const n of nodes) {
+    if (n.parentElement && done.has(n.parentElement)) continue;
     const val = tr(n.nodeValue);
     if (val != null) n.nodeValue = n.nodeValue.replace(n.nodeValue.trim(), val);
   }
@@ -207,6 +927,34 @@ export function translate(root) {
   // titles / aria-labels
   root.querySelectorAll?.('[title]').forEach((elm) => { const v = tr(elm.title); if (v) elm.title = v; });
   root.querySelectorAll?.('[aria-label]').forEach((elm) => { const v = tr(elm.getAttribute('aria-label')); if (v) elm.setAttribute('aria-label', v); });
+}
+
+// Content that arrives after a screen is rendered — an awaited storage check,
+// a scan result, an import preview — misses the translate() that ran when the
+// view was built. Watching for added nodes covers every such flow in one place.
+let lateObserver = null;
+export function observeLateContent(roots) {
+  if (!isRTL() || typeof MutationObserver !== 'function') return;
+  const list = (Array.isArray(roots) ? roots : [roots]).filter(Boolean);
+  if (!list.length) return;
+  const watch = () => list.forEach((r) => lateObserver.observe(r, { childList: true, subtree: true }));
+  if (lateObserver) lateObserver.disconnect();
+  lateObserver = new MutationObserver((records) => {
+    const added = [];
+    for (const r of records) {
+      for (const n of r.addedNodes) {
+        if (n.nodeType === 1) added.push(n);
+        else if (n.nodeType === 3 && n.parentElement) added.push(n.parentElement);
+      }
+    }
+    if (!added.length) return;
+    // Translating mutates the DOM, so stop listening first. disconnect() also
+    // drops the pending queue, which is what stops this from looping on its
+    // own writes.
+    lateObserver.disconnect();
+    try { for (const n of added) if (n.isConnected) translate(n); } finally { watch(); }
+  });
+  watch();
 }
 
 export function applyDir() {

@@ -16,12 +16,12 @@ export function earningItem(e) {
   if (e.miles) bits.push(`${fmtNum(e.miles)} mi`);
   if (e.deliveries) bits.push(`${e.deliveries} drops`);
   if (e.tips) bits.push(`${fmtGBP(e.tips)} tips`);
-  const sub = [fmtDate(e.date, { weekday: true }), bits.join(' · ')].filter(Boolean).join('  ·  ');
+  const sub = subLine([fmtDate(e.date, { weekday: true }), ...bits]);
   const node = el('div', { class: 'item' }, [
     el('div', { class: 'item__icon', style: `background:${hex(p.color, .16)};color:${p.color}` , html: icon('route') }),
     el('div', { class: 'item__main' }, [
       el('div', { class: 'item__title', text: p.name }),
-      el('div', { class: 'item__sub', text: sub }),
+      el('div', { class: 'item__sub' }, sub),
     ]),
     el('div', { class: 'item__amt amt-pos', text: '+' + fmtGBP(total) }),
   ]);
@@ -44,13 +44,31 @@ export function expenseItem(x) {
   const node = el('div', { class: 'item' }, [
     el('div', { class: 'item__icon', style: `background:var(--neg-tint);color:var(--neg-text)`, html: icon(cat.icon) }),
     el('div', { class: 'item__main' }, [
-      el('div', { class: 'item__title', text: cat.label + (x.source === 'claude' ? '  ✨' : '') }),
-      el('div', { class: 'item__sub', text: subBits.join('  ·  ') }),
+      // The scanned-by-Claude marker is its own node: appended to the label it
+      // would make the text 'Fuel  ✨', which matches no category name.
+      el('div', { class: 'item__title' }, [
+        el('span', { text: cat.label }),
+        ...(x.source === 'claude' ? [el('span', { text: '  ✨' })] : []),
+      ]),
+      el('div', { class: 'item__sub' }, subLine(subBits)),
     ]),
     el('div', { class: 'item__amt amt-neg', text: '−' + fmtGBP(x.amount) }),
   ]);
   node.addEventListener('click', () => openExpenseForm(x));
   return node;
+}
+
+// Each piece of a sub-line gets its own span. The pieces mix UI wording
+// ("not deductible", "9 drops") with the user's own data (a vendor, an area),
+// and joining them into one string leaves nothing a translation can match
+// without also matching whatever the user typed.
+function subLine(bits) {
+  const out = [];
+  bits.filter(Boolean).forEach((b, i) => {
+    if (i) out.push(document.createTextNode('  ·  '));
+    out.push(el('span', { text: String(b) }));
+  });
+  return out;
 }
 
 // hex + alpha helper (accepts #rrggbb)
