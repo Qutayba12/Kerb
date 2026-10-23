@@ -264,6 +264,12 @@ export async function render() {
   reportBtn.onclick = () => bus.navigate('report');
   root.append(reportBtn);
 
+  // HMRC publishes each year's rates in advance; until they exist for this
+  // year the engine carries the previous year's forward. Say so, rather than
+  // presenting last year's allowances under this year's name.
+  if (sum.config && sum.config.carriedFrom) {
+    root.append(el('div', { class: 'callout callout--warn', style: 'margin-top:14px', html: `${icon('warn')}<div><b>These use ${sum.config.carriedFrom} rates.</b> HMRC has not published the ${sum.taxYear} figures in Kerb yet, so the previous year's allowances and thresholds are being used as a placeholder. Treat the result as a rough guide and check back once the new rates are in.</div>` }));
+  }
   root.append(el('div', { class: 'callout callout--brand', style: 'margin-top:14px', html: `${icon('info')}<div>Estimates for guidance using ${sum.taxYear} rates (${VEHICLE_LABELS[s.vehicle]}, ${s.expenseMethod === 'mileage' ? 'simplified mileage' : 'actual costs'}). Always confirm figures on your HMRC Self Assessment. Adjust rates or your PAYE salary in Settings.</div>` }));
 
   return root;

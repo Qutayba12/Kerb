@@ -500,6 +500,45 @@ const run = async () => {
     eq(after, 'claude-sonnet-5-5', 'current-generation choice untouched');
     return 'a current model is not rewritten';
   });
+  // ---------------- rates for a year HMRC has not published ----------------
+  await check('tax year — carried-over rates are flagged, not passed off as this year\'s', async () => {
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      const known = Object.keys(st.TAX_YEARS);
+      const latest = known.sort()[known.length - 1];
+      const future = (parseInt(latest, 10) + 1) + '/' + String((parseInt(latest, 10) + 2) % 100).padStart(2, '0');
+      const real = st.getConfig(latest), carried = st.getConfig(future);
+      return { latest, future, realFlag: real.carriedFrom, carriedFlag: carried.carriedFrom,
+               sameAllowance: real.personalAllowance === carried.personalAllowance };`);
+    if (out.realFlag) throw new Error('a published year must not be marked as carried over');
+    if (out.carriedFlag !== out.latest) throw new Error(`a future year must record where its rates came from, got ${JSON.stringify(out.carriedFlag)}`);
+    if (!out.sameAllowance) throw new Error('the carried rates should be a copy of the latest known year');
+    return `${out.future} marked as using ${out.carriedFlag} rates`;
+  });
+
+  await check('tax year — the Tax screen says so when the rates are a placeholder', async () => {
+    await b.eval(`
+      const st = await import('/js/store.js');
+      const known = Object.keys(st.TAX_YEARS).sort();
+      const latest = known[known.length - 1];
+      const future = (parseInt(latest, 10) + 1) + '/' + String((parseInt(latest, 10) + 2) % 100).padStart(2, '0');
+      st.saveSettings({ taxYear: future });
+      return true;`);
+    await b.goto('#/tax');
+    const warned = await b.eval(`/rates\\./.test(document.getElementById('view').textContent) && /has not published/.test(document.getElementById('view').textContent)`);
+    if (!warned) throw new Error('the Tax screen showed no warning for a year with no published rates');
+    // And no warning on a year that does have real figures.
+    await b.eval(`
+      const st = await import('/js/store.js');
+      const known = Object.keys(st.TAX_YEARS).sort();
+      st.saveSettings({ taxYear: known[known.length - 1] });
+      return true;`);
+    await b.goto('#/tax');
+    const quiet = await b.eval(`!/has not published/.test(document.getElementById('view').textContent)`);
+    if (!quiet) throw new Error('warned about a year that does have published rates');
+    return 'warns only when the figures are a placeholder';
+  });
+
   await b.close();
 
   const passed = results.filter((r) => r.pass).length;
