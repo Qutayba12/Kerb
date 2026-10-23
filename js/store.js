@@ -331,10 +331,13 @@ export function getConfig(yearLabel) {
   const s = loadSettings();
   let base = TAX_YEARS[yearLabel];
   if (!base) {
-    // clone latest known year for unknown/future labels
+    // No published figures for this year yet, so carry the latest known ones
+    // forward. They are a placeholder, not the real rates: `carriedFrom`
+    // records that, so the screens can say so instead of presenting last
+    // year's allowances under this year's name.
     const latest = Object.values(TAX_YEARS).sort((a, b) => b.startYear - a.startYear)[0];
     const startYear = parseInt(String(yearLabel).split('/')[0], 10) || latest.startYear;
-    base = { ...structuredClone(latest), label: yearLabel, startYear };
+    base = { ...structuredClone(latest), label: yearLabel, startYear, carriedFrom: latest.label };
   }
   const override = (s.rateOverrides || {})[yearLabel];
   if (override) base = deepMerge(structuredClone(base), override);

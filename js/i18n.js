@@ -812,6 +812,8 @@ const AR_HTML = {
     'من كل <b>{0}</b> ربح من الآن، احتفظ بنحو <b>{1}</b> للضريبة والتأمين — والباقي لك.',
   '<b>Kerb</b> keeps everything on this device — your entries never leave it. Only a file you choose to scan is sent: straight to Anthropic when you have added your own key, otherwise via Kerb\'s endpoint using the free allowance. Figures are estimates to help you budget; confirm on your HMRC Self Assessment.':
     'يحفظ <b>Kerb</b> كل شيء على هذا الجهاز — فمُدخلاتك لا تغادره. ولا يُرسل سوى ملف تختار مسحه: مباشرةً إلى Anthropic إن أضفت مفتاحك الخاص، وإلا فعبر خادم Kerb باستخدام الحصّة المجانية. والأرقام تقديرات تساعدك في وضع ميزانيتك؛ تحقّق منها في إقرارك لدى HMRC.',
+  '<b>These use {0} rates.</b> HMRC has not published the {1} figures in Kerb yet, so the previous year\'s allowances and thresholds are being used as a placeholder. Treat the result as a rough guide and check back once the new rates are in.':
+    '<b>هذه بمعدّلات {0}.</b> لم تُضَف أرقام سنة {1} إلى Kerb بعد، لذا تُستخدم بدلات وحدود السنة السابقة مؤقتاً. اعتبر النتيجة دليلاً تقريبياً وراجعها عند إضافة المعدّلات الجديدة.',
 };
 
 // Prefix rules for dynamic strings (a number/year follows the label).
