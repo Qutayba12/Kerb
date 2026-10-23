@@ -377,6 +377,12 @@ function normFreq(v) {
 function earningsPrompt(context) {
   return `You are reading a UK delivery driver's EARNINGS statement/summary (e.g. Amazon Flex, Uber Eats, Deliveroo, Just Eat).
 Extract each work session/block/day as a SEPARATE entry. Reply with ONLY a JSON object (no prose, no fences):
+IMPORTANT — do NOT extract roll-up rows. These screens show the individual
+blocks AND a payment summary for the week together. Return only the rows for
+work actually done (a block, a session, a single day). Skip anything that
+totals a period: a weekly or monthly payout, a "total paid", a running
+balance, a transfer to a bank account. Including one would double-count the
+same money against the blocks it is made of.
 {
   "entries": [
     { "date":"<YYYY-MM-DD>", "platform":"<one of the platform ids>", "amount": <base earnings for this entry, GBP number>,

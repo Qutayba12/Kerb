@@ -11,6 +11,7 @@ import { computeTaxYear } from '../tax.js';
 import { icon, downloadBackup } from './shared.js';
 import { setPeriod as setIncomePeriod } from './income.js';
 import { bus } from '../bus.js';
+import { findPeriodTotals } from '../dedupe.js';
 
 export async function render() {
   const s = getSettings();
@@ -94,6 +95,18 @@ function buildChecks({ s, sum, ty, E, X, allE, allX }) {
       'Some entries share the same date and amount. If a payout was added twice, your figures will be overstated. Worth a quick look.',
       { label: 'Review entries', run: () => { setIncomePeriod('ty'); bus.navigate('income'); } });
   } else add('ok', 'No duplicate-looking entries', '');
+
+  // 5b) a weekly payout recorded alongside the blocks it pays for.
+  // The check above cannot see this one: the payout has its own date and a
+  // different amount, so nothing matches. It only shows up as one entry that
+  // equals the sum of several others.
+  const rollups = findPeriodTotals(E, []).filter(f => f.looksLikeSummary);
+  if (rollups.length) {
+    const f = rollups[0];
+    add('bad', `${rollups.length === 1 ? 'An entry adds' : rollups.length + ' entries add'} up to other entries you already have`,
+      `${fmtGBP(f.total)} on ${fmtDate(f.to)} is exactly the total of ${f.covers} entries from ${fmtDate(f.from)} to ${fmtDate(f.to)}, and has no hours or miles of its own. That is the shape of a weekly payout recorded next to the blocks it pays for — which would declare the same money twice and tax you on income you never earned. Check it, and delete whichever one is the summary.`,
+      { label: 'Review entries', run: () => { setIncomePeriod('ty'); bus.navigate('income'); } });
+  }
 
   // 6) missing details needed on the report
   const missing = [];

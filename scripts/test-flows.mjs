@@ -539,6 +539,38 @@ const run = async () => {
     return 'warns only when the figures are a placeholder';
   });
 
+  // ---------------- the review screen catches a double-counted payout ----------------
+  await check('review — a weekly payout sitting next to its blocks is flagged before filing', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js');
+      const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ taxYear: '2026/27', expenseMethod: 'mileage' });
+      const mk = (date, amount, hours, miles) => ({ id: 'r' + date + amount, date, platform: 'amazonflex', amount, tips: 0, hours, deliveries: 0, miles, notes: '' });
+      for (const e of [mk('2026-09-15', 75, 4, 40), mk('2026-09-16', 75, 4, 41), mk('2026-09-17', 75, 4, 39), mk('2026-09-18', 75, 4, 42)]) await db.earnings.save(e);
+      await db.earnings.save(mk('2026-09-18', 300, 0, 0));   // the week's payout
+      return true;`);
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/adds? up to/i.test(txt)) throw new Error('the review screen did not flag the roll-up');
+    if (!/£300/.test(txt)) throw new Error('the flagged amount is not shown: ' + txt.slice(0, 200));
+    if (!/same money twice|income you never earned/i.test(txt)) throw new Error('does not explain the consequence');
+    return 'flagged £300 as the total of its own blocks';
+  });
+
+  await check('review — an ordinary week is not flagged', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js');
+      await db.wipeAll();
+      const mk = (date, amount) => ({ id: 'n' + date, date, platform: 'amazonflex', amount, tips: 0, hours: 4, deliveries: 0, miles: 40, notes: '' });
+      for (const e of [mk('2026-09-15', 75), mk('2026-09-16', 82), mk('2026-09-17', 68), mk('2026-09-18', 91)]) await db.earnings.save(e);
+      return true;`);
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (/adds? up to other entries/i.test(txt)) throw new Error('false positive on a normal week');
+    return 'silent';
+  });
+
   await b.close();
 
   const passed = results.filter((r) => r.pass).length;
