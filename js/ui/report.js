@@ -127,6 +127,15 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
     const perVeh = (sum.mileageRows || []).length > 1
       ? ' Each vehicle has its own first 10,000 business miles at the higher rate, which is why they are listed separately.'
       : '';
+    // An estimate with a stated method is a record; the same figure with
+    // nothing behind it is a guess. If HMRC asks how the mileage was arrived
+    // at, this is the answer, and it belongs on the document itself.
+    if ((s.mileageBasis || '').trim()) {
+      sheet.append(el('div', { class: 'report__note', text: `How the mileage was worked out: ${s.mileageBasis.trim()}` }));
+    }
+    if (sum.baseLeg && sum.baseLeg.miles > 0) {
+      sheet.append(el('div', { class: 'report__note', text: `Of ${fmtNum(sum.businessMiles)} business miles, ${fmtNum(sum.baseLeg.miles)} are travel between home and a pickup station, across stations at differing distances.` }));
+    }
     sheet.append(el('div', { class: 'report__note', text: `Mileage is claimed at HMRC's simplified rate. For a car that is 55p/mile for the first 10,000 business miles and 25p after.${perVeh} When you claim mileage you cannot also claim fuel, insurance or repairs for the same vehicle.` }));
   }
 

@@ -209,6 +209,23 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
   const expensesPaidTotal = round2(X.reduce((s, x) => s + num(x.amount), 0));
   const mileageSplit = mileageByVehicle(E, settings, config);
   const mileageDed = method === 'mileage' ? mileageSplit.total : 0;
+  // How much of the claim is travel between home and a pickup station.
+  // Whether that leg is deductible turns on where HMRC considers the base of
+  // operations to be — a question of fact, not a fixed rule — so the figure
+  // is surfaced rather than decided here. Only shifts logged against a
+  // station carry the split; the rest are unknown and counted as such.
+  const baseLegMiles = round2(E.reduce((t, e) => t + (Number(e.milesBase) > 0 ? num(e.milesBase) : 0), 0));
+  const splitKnownMiles = round2(E.reduce((t, e) => t + (Number(e.milesBase) > 0 ? num(e.miles) : 0), 0));
+  const baseLeg = {
+    miles: baseLegMiles,
+    unsplitMiles: round2(businessMiles - splitKnownMiles),
+    // Valued at the marginal rate the claim actually sits at, so removing it
+    // shows the real change rather than a headline rate.
+    amount: method === 'mileage' && businessMiles > 0
+      ? round2(mileageDed - mileageByVehicle(E.map(e => (Number(e.milesBase) > 0
+        ? { ...e, miles: round2(num(e.miles) - num(e.milesBase)) } : e)), settings, config).total)
+      : 0,
+  };
   const homeDed = round2(homeOfficeDeduction(settings.homeOfficeHoursPerMonth, config));
   let otherDeductible = 0, vehicleTracked = 0;
   for (const x of X) {
@@ -290,7 +307,7 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
     method, expensesPaidTotal, mileageDed, homeDed, otherDeductible, vehicleTracked,
     rawDeductions, tradingAllowance, usedTradingAllowance, effectiveDeduction, netProfit,
     taxableProfit, lossThisYear, lossBroughtForward: lossBF, lossUsed, lossCarriedForward: lossCF,
-    mileageRows: mileageSplit.rows,
+    mileageRows: mileageSplit.rows, baseLeg,
     base, payeSalary: settings.payeSalary || 0, otherIncome: settings.otherIncome || 0, totalIncome,
     personalAllowance: config.personalAllowance,
     incomeTaxBase, incomeTaxTotal, incomeTaxSE,

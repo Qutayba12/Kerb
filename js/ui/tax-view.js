@@ -264,6 +264,15 @@ export async function render() {
   reportBtn.onclick = () => bus.navigate('report');
   root.append(reportBtn);
 
+  // Travel between home and a pickup station is the one part of the claim
+  // whose deductibility depends on facts the app cannot settle. Show what it
+  // is worth so the driver knows the size of the question, not just that one
+  // exists.
+  if (sum.baseLeg && sum.baseLeg.amount > 0) {
+    const b = sum.baseLeg;
+    root.append(el('div', { class: 'callout callout--info', style: 'margin-top:14px', html: `${icon('info')}<div><b>${fmtGBP(b.amount)} of your mileage claim is travel to and from a station</b> (${fmtNum(b.miles)} of ${fmtNum(sum.businessMiles)} miles).${b.unsplitMiles > 0 ? ` Another ${fmtNum(b.unsplitMiles)} miles are logged without a station, so are not counted here.` : ''} Whether that leg counts as business travel depends on whether HMRC treats your pickup points as a fixed base — if you work from several stations at different distances, it usually does count. Worth confirming once with an accountant.</div>` }));
+  }
+
   // HMRC publishes each year's rates in advance; until they exist for this
   // year the engine carries the previous year's forward. Say so, rather than
   // presenting last year's allowances under this year's name.

@@ -519,6 +519,87 @@ const run = async () => {
     return 'title and body in Arabic, figures preserved';
   });
 
+  // ================= stations and the home-to-base leg =================
+  // Pickup points sit at very different distances — 21.5 miles to one, 2.3 to
+  // another — so a single "typical miles" figure would misstate most blocks.
+  console.log('\n--- stations ---');
+
+  await check('stations — each keeps its own distance, split into the two legs', async () => {
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      st.saveSettings({ stations: [
+        { id: 'donny', label: 'Doncaster DN11', baseMiles: 43, roundMiles: 12 },
+        { id: 'sheff', label: 'Sheffield S4', baseMiles: 4.6, roundMiles: 12 },
+      ] });
+      const all = st.allStations();
+      return { n: all.length, totals: all.map(x => x.totalMiles), one: st.stationById('sheff').label, missing: st.stationById('nope') };`);
+    eq(out.n, 2, 'stations stored');
+    eq(out.totals, [55, 16.6], 'each station totals its own two legs');
+    eq(out.one, 'Sheffield S4', 'lookup by id');
+    eq(out.missing, null, 'an unknown id returns null, not a guess');
+    return 'Doncaster 55 mi a block, Sheffield 16.6 — not one figure for both';
+  });
+
+  await check('stations — a backup cannot smuggle in a silly distance', async () => {
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      const clean = st.sanitiseSettings({ stations: [
+        { id: 'x', label: 'Fine', baseMiles: 20, roundMiles: 10 },
+        { id: 'y', label: 'Mad', baseMiles: 99999, roundMiles: -5 },
+      ] });
+      return clean.stations.map(s => [s.baseMiles, s.roundMiles]);`);
+    eq(out, [[20, 10], [2000, 0]], 'distances clamped to a sane range');
+    return 'clamped on import';
+  });
+
+  await check('base leg — the claim shows what the home-to-station part is worth', async () => {
+    const out = await b.eval(`
+      const tax = await import('/js/tax.js');
+      const st = await import('/js/store.js');
+      st.saveSettings({ taxYear: '2026/27', expenseMethod: 'mileage', vehicle: 'car', region: 'ruk', stations: [] });
+      const s = st.getSettings();
+      // Four blocks: two from the far station, two from the near one.
+      const E = [
+        { date: '2026-09-15', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 55, milesBase: 43, milesRound: 12 },
+        { date: '2026-09-16', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 55, milesBase: 43, milesRound: 12 },
+        { date: '2026-09-17', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 16.6, milesBase: 4.6, milesRound: 12 },
+        { date: '2026-09-18', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 16.6, milesBase: 4.6, milesRound: 12 },
+      ];
+      const sum = tax.computeTaxYear(E, [], s);
+      return { miles: sum.businessMiles, baseMiles: sum.baseLeg.miles, baseAmount: sum.baseLeg.amount, unsplit: sum.baseLeg.unsplitMiles, mileageDed: sum.mileageDed };`);
+    eq(out.miles, 143.2, 'total business miles');
+    eq(out.baseMiles, 95.2, 'miles that are home-to-station travel');
+    // 95.2 miles at 55p
+    eq(out.baseAmount, 52.36, 'what that leg is worth at the rate it sits at');
+    eq(out.unsplit, 0, 'nothing unaccounted for');
+    return `£${out.baseAmount} of £${out.mileageDed} is travel to and from a station`;
+  });
+
+  await check('base leg — shifts logged without a station are reported as unknown, not as zero', async () => {
+    const out = await b.eval(`
+      const tax = await import('/js/tax.js');
+      const st = await import('/js/store.js');
+      const E = [
+        { date: '2026-09-15', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 55, milesBase: 43, milesRound: 12 },
+        { date: '2026-09-16', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 40 },
+      ];
+      const sum = tax.computeTaxYear(E, [], st.getSettings());
+      return { baseMiles: sum.baseLeg.miles, unsplit: sum.baseLeg.unsplitMiles };`);
+    eq(out, { baseMiles: 43, unsplit: 40 }, 'split known vs unknown');
+    return '40 miles flagged as not attributed to a station';
+  });
+
+  await check('base leg — no stations used means nothing is claimed about it', async () => {
+    const out = await b.eval(`
+      const tax = await import('/js/tax.js');
+      const st = await import('/js/store.js');
+      const E = [{ date: '2026-09-15', platform: 'amazonflex', amount: 80, tips: 0, hours: 4, miles: 40 }];
+      const sum = tax.computeTaxYear(E, [], st.getSettings());
+      return { amount: sum.baseLeg.amount, miles: sum.baseLeg.miles };`);
+    eq(out, { amount: 0, miles: 0 }, 'silent without the data');
+    return 'says nothing it cannot support';
+  });
+
   await b.close();
 
   const passed = results.filter(Boolean).length;
