@@ -5,7 +5,7 @@
 import { el, uid, todayISO, fmtGBP, fmtNum, fmtMiles } from '../util.js';
 import {
   getSettings, saveSettings, resetSettings, getConfig, availableYears,
-  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations, suggestBlockMiles,
+  VEHICLE_LABELS, REGION_LABELS, DEFAULT_PLATFORMS, TAX_YEARS, allVehicles, allStations, suggestBlockMiles, MILEAGE_BASIS_MAX,
 } from '../store.js';
 import { importAll, wipeAll, earnings } from '../db.js';
 import { ensurePersistentStorage, storageStatus, fmtBytes } from '../storage.js';
@@ -504,10 +504,23 @@ function stationsCard() {
 
   // How the distances were arrived at. An estimate with a stated method is a
   // record; the same number with nothing behind it is a guess.
-  const basis = el('textarea', { class: 'input', rows: 3, value: s.mileageBasis || '' });
+  const basis = el('textarea', { class: 'input', rows: 5, value: s.mileageBasis || '' });
   basis.placeholder = 'e.g. measured each station on the map; round is about 12 miles';
-  basis.addEventListener('change', () => { saveSettings({ mileageBasis: basis.value.trim().slice(0, 400) }); toast('Saved', 'ok'); });
-  wrap.append(el('hr', { class: 'soft' }), field('How you worked these out', basis, 'Shown on your Self Assessment report. If HMRC asks how you arrived at your mileage, this is the answer.'));
+  // A real explanation needs room: where the distances came from, whether they
+  // were measured or estimated, and anything that was inferred rather than
+  // recorded. Silently cutting that mid-sentence on a tax document is worse
+  // than refusing it, so the limit is stated and the count shown as it fills.
+  basis.maxLength = MILEAGE_BASIS_MAX;
+  const left = el('div', { class: 'tiny faint', style: 'text-align:end;margin-top:4px' });
+  const paint = () => {
+    const n = basis.value.length;
+    left.textContent = `${n} / ${MILEAGE_BASIS_MAX}`;
+    left.style.color = n >= MILEAGE_BASIS_MAX ? 'var(--warn)' : '';
+  };
+  basis.addEventListener('input', paint);
+  paint();
+  basis.addEventListener('change', () => { saveSettings({ mileageBasis: basis.value.trim().slice(0, MILEAGE_BASIS_MAX) }); toast('Saved', 'ok'); });
+  wrap.append(el('hr', { class: 'soft' }), field('How you worked these out', basis, 'Shown on your Self Assessment report. If HMRC asks how you arrived at your mileage, this is the answer.'), left);
   return wrap;
 }
 

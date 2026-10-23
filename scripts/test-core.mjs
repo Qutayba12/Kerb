@@ -620,6 +620,35 @@ const run = async () => {
     return '3 measured shifts -> 63 mi a block (55–73)';
   });
 
+  await check('stations — the mileage note holds a real explanation, not a truncated one', async () => {
+    // This note is the evidence behind the largest deduction on the return.
+    // A disclosure cut off mid-sentence is worse than none, so it has to fit:
+    // where the distances came from, measured or estimated, and anything
+    // inferred rather than recorded.
+    const out = await b.eval(`
+      const st = await import('/js/store.js');
+      const note = "Distances from home to each collection station were measured postcode to postcode "
+        + "on Google Maps and recorded once per station. Each block's mileage is the whole shift, home "
+        + "to home; I travel nowhere other than work for its duration. These are reasonable estimates, "
+        + "not odometer readings. The Amazon Flex payment statement does not name the station, so for "
+        + "earlier blocks I identified it from the block's scheduled hours, and where I could not "
+        + "identify it with confidence I assumed the nearest of my three stations. That under-states "
+        + "rather than over-states the mileage claimed.";
+      st.saveSettings({ mileageBasis: note });
+      const kept = st.getSettings().mileageBasis;
+      // A backup is foreign data, so that is where the bound is enforced.
+      const smuggled = st.sanitiseSettings({ mileageBasis: 'x'.repeat(5000) }).mileageBasis.length;
+      return { len: note.length, kept, intact: kept === note, smuggled, max: st.MILEAGE_BASIS_MAX };`);
+    // The floor is asserted against a real note rather than a round number:
+    // the limit exists to fit an explanation, so shrinking it below one that
+    // a driver actually needs has to fail here.
+    if (out.max < out.len) throw new Error(`the limit (${out.max}) cannot hold a real explanation (${out.len} characters)`);
+    if (!out.intact) throw new Error('the note was cut at ' + out.kept.length + ' of ' + out.len + ' characters');
+    if (!/under-states rather than over-states/.test(out.kept)) throw new Error('the disclosure did not survive');
+    eq(out.smuggled, out.max, 'an absurd note in a backup is still bounded');
+    return `${out.len}-character note fits a ${out.max} limit`;
+  });
+
   await check('stations — a typed-in mileage is not treated as a measurement', async () => {
     const out = await b.eval(`
       const st = await import('/js/store.js');
