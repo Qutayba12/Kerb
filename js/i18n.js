@@ -602,6 +602,8 @@ const AR = {
     'كل محطة خلف أميالها بلوك مقيس',
   'Start a tracked shift':
     'ابدأ وردية متتبَّعة',
+  'How the mileage was worked out:':
+    'كيف حُسبت المسافة:',
   'That is one shift, so it is one route rather than a typical distance. Use it only if that block was an ordinary one, and check the miles against the drive you actually made each time. A second reading will show the spread.':
     'هذه وردية واحدة، فهي مسار واحد لا مسافة معتادة. استخدمها فقط إن كان ذلك البلوك عادياً، وراجع الأميال في كل مرة مقابل المسافة التي قطعتها فعلاً. والقراءة الثانية ستُظهر لك المدى.',
 };
@@ -795,6 +797,8 @@ const AR_PAT = {
     'لم تُقرأ أميال أي من الورديات الـ{0} المطالَب بها هذه السنة من عدّاد السيارة ولم تُتبَّع؛ فكل رقم فيها تقدير تم التوصل إليه بالطريقة الموضّحة أعلاه.',
   'All {0} shifts claimed this year had their mileage read from an odometer or tracked at the time.':
     'كل الورديات الـ{0} المطالَب بها هذه السنة قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها.',
+  'Of {0} business miles, {1} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.':
+    'من أصل {0} ميل عمل، {1} ميل هي رحلة الذهاب من البيت إلى محطة الاستلام، عبر محطات متفاوتة البُعد. أما رحلات العودة فتبدأ من نقطة التسليم الأخيرة وهي غير داخلة في هذا الرقم.',
   'Of the {0} shifts claimed this year, {1} had their mileage read from an odometer or tracked at the time ({2} miles); the remaining {3} miles are estimates arrived at as described above.':
     'من أصل {0} وردية مطالَب بها هذه السنة، {1} قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها ({2} ميل)؛ والأميال الـ{3} الباقية تقديرات تم التوصل إليها بالطريقة الموضّحة أعلاه.',
   'A trading loss of {0} remains to carry forward against profits of the same trade in future years. Record it in the losses section of your SA103S so HMRC carries it over.':

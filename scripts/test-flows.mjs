@@ -775,6 +775,29 @@ const run = async () => {
     return 'cautioned at 1 reading, a range at 2';
   });
 
+  await check('report — the basis label translates, the driver\'s words do not', async () => {
+    // Label and note were one string, so the whole thing carried user text and
+    // could never match a translation key: the label shipped in English in
+    // every language. Split, the label translates and the note stays verbatim
+    // — which it must, because HMRC reads it.
+    await b.eval(seedEvidence([{ miles: 40, src: 'odometer' }]) + '');
+    const NOTE = 'Measured postcode to postcode on Google Maps. These are estimates, not odometer readings.';
+    await b.eval(`(await import('/js/store.js')).saveSettings({ mileageBasis: ${JSON.stringify(NOTE)}, lang: 'ar' }); return true;`);
+    await b.goto('#/income');
+    await b.goto('#/report');
+    const out = await b.eval(`
+      const v = document.getElementById('view');
+      const note = v.querySelector('.report__verbatim');
+      return { note: note && note.textContent, dir: note && note.getAttribute('dir'),
+               labelInEnglish: /How the mileage was worked out/.test(v.textContent) };`);
+    if (out.note !== NOTE) throw new Error('the note was not printed word for word: ' + JSON.stringify(out.note));
+    if (out.dir !== 'auto') throw new Error('the note does not carry its own direction, so an English note on an Arabic report is mangled');
+    if (out.labelInEnglish) throw new Error('the label is still English on an Arabic report');
+    await b.eval(`(await import('/js/store.js')).saveSettings({ lang: 'en' }); return true;`);
+    await b.goto('#/income');
+    return 'label translated, note verbatim, direction its own';
+  });
+
   // ---------------- the mileage-basis note ----------------
   // The note is the stated basis for the biggest deduction on the return, so
   // what the field accepts is a correctness question, not a cosmetic one: a
