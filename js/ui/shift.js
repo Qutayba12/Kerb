@@ -268,6 +268,13 @@ function livePanel(ctx) {
       // evidence; a number typed afterwards is not, and only the first kind
       // can be used to work out a station's round distance.
       milesSource: (s.odoStart != null && s.odoEnd != null && s.odoEnd >= s.odoStart) ? 'odometer' : (s.gps ? 'gps' : 'manual'),
+      // The readings themselves, not just the fact that there were some. The
+      // subtraction used to be done and both numbers thrown away, leaving a
+      // bare 'odometer' flag — and when an edit dropped that flag there was
+      // nothing left to rebuild it from, and nothing to show HMRC beyond the
+      // word. Two dated numbers are the evidence; the flag is derived.
+      odoStart: s.odoStart != null ? round2(s.odoStart) : null,
+      odoEnd: s.odoEnd != null ? round2(s.odoEnd) : null,
       stationId: s.stationId || '',
       notes: 'Live shift',
     };

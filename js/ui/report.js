@@ -6,9 +6,9 @@
 // pack — every income and expense line — for HMRC's 5-year
 // record-keeping rule. Save as PDF from the Print dialog.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, fmtDate, todayISO, fmtMiles } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, fmtDate, todayISO, fmtMiles, round2 } from '../util.js';
 import { earnings, expenses } from '../db.js';
-import { getSettings, availableYears, VEHICLE_LABELS, REGION_LABELS, EXPENSE_CATEGORIES } from '../store.js';
+import { getSettings, availableYears, VEHICLE_LABELS, REGION_LABELS, EXPENSE_CATEGORIES, stationById } from '../store.js';
 import { computeTaxYear } from '../tax.js';
 import { icon, toast } from './shared.js';
 import { printSheet } from '../pdf.js';
@@ -33,7 +33,7 @@ export async function render() {
   const btns = el('div', { class: 'btn-grid no-print', style: 'margin-bottom:14px' });
   const pdfBtn = el('button', { class: 'btn btn--primary', type: 'button' });
   pdfBtn.innerHTML = icon('download') + '<span>Save report (PDF)</span>';
-  pdfBtn.onclick = () => printSheet(buildReportSheet(sum, s), { title: `Kerb SA report ${sum.taxYear.replace('/', '-')}` });
+  pdfBtn.onclick = () => printSheet(buildReportSheet(sum, s, { allE }), { title: `Kerb SA report ${sum.taxYear.replace('/', '-')}` });
   const packBtn = el('button', { class: 'btn btn--sub', type: 'button' });
   packBtn.innerHTML = icon('note') + '<span>Save full records (PDF)</span>';
   packBtn.onclick = () => {
@@ -44,7 +44,7 @@ export async function render() {
   root.append(btns);
 
   // the printable sheet (on-screen preview = the summary)
-  root.append(buildReportSheet(sum, s));
+  root.append(buildReportSheet(sum, s, { allE }));
   return root;
 }
 
@@ -159,6 +159,23 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
           ? `All ${fmtNum(ev.shifts)} shifts claimed this year had their mileage read from an odometer or tracked at the time.`
           : `Of the ${fmtNum(ev.shifts)} shifts claimed this year, ${fmtNum(ev.measuredShifts)} had their mileage read from an odometer or tracked at the time (${fmtMiles(ev.measuredMiles)} miles); the remaining ${fmtMiles(ev.estimatedMiles)} miles are estimates arrived at as described above.`;
       sheet.append(el('div', { class: 'report__note', text: txt }));
+    }
+    // The readings behind the measured shifts, shift by shift. "Measured" is a
+    // word; two dated numbers and the distance between them are a record, and
+    // this is the part of the document an inspector can actually check.
+    const read = allE.filter(r => r.date >= sum.ty.start && r.date <= sum.ty.end
+      && r.milesSource === 'odometer' && r.odoStart != null && r.odoEnd != null)
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (read.length) {
+      sheet.append(section('Odometer readings behind the measured shifts'));
+      const t = recordTable(['Date', 'Station', 'Start', 'End', 'Miles']);
+      read.forEach((r) => {
+        const st = r.stationId ? stationById(r.stationId) : null;
+        recRow(t, [fmtDate(r.date, { withYear: true }), st ? st.label : '—',
+          fmtNum(r.odoStart), fmtNum(r.odoEnd), fmtMiles(round2(r.odoEnd - r.odoStart))]);
+      });
+      sheet.append(t);
+      sheet.append(el('div', { class: 'report__note', text: 'Each line is the dashboard reading taken at the start and at the end of that shift. The miles claimed for it are the difference between them.' }));
     }
     if (sum.baseLeg && sum.baseLeg.miles > 0) {
       sheet.append(el('div', { class: 'report__note', text: `Of ${fmtNum(sum.businessMiles)} business miles, ${fmtMiles(sum.baseLeg.miles)} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.` }));

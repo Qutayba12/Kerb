@@ -903,6 +903,81 @@ const run = async () => {
     return 'blocked saves now name the field and the reason';
   });
 
+  // ---------------- the readings, not just the word ----------------
+  await check('shift — the two readings are kept, not just the fact there were some', async () => {
+    await b.eval(`
+      const sh = await import('/js/shift.js');
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage', vehicleCostClaimed: 'no',
+        stations: [{ id: 'donny', label: 'Doncaster', baseMiles: 21.5, typicalMiles: 0 }] });
+      sh.startShift({ platform: 'amazonflex', gps: false, odoStart: 84213, milesMode: 'odometer', stationId: 'donny', bookedHours: 4 });
+      sh.updateShift({ earnings: 70, odoEnd: 84377 });
+      return true;`);
+    await b.goto('#/shift');
+    const rec = await b.eval(`
+      const stop = [...document.querySelectorAll('#view button')].find(x => /Stop|Finish|End/i.test(x.textContent));
+      stop.click();
+      await new Promise(r => setTimeout(r, 600));
+      const db = await import('/js/db.js');
+      const r = (await db.earnings.all())[0];
+      return r ? { start: r.odoStart, end: r.odoEnd, miles: r.miles, source: r.milesSource } : null;`);
+    if (!rec) throw new Error('the shift did not save');
+    if (rec.start !== 84213 || rec.end !== 84377) throw new Error(`the readings were thrown away: ${JSON.stringify(rec)}`);
+    if (rec.miles !== 164) throw new Error('miles should be the difference, got ' + rec.miles);
+    return '84,213 → 84,377 = 164, both numbers kept';
+  });
+
+  await check('report — prints the readings, not the word "measured"', async () => {
+    await b.goto('#/report');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/Odometer readings behind the measured shifts/.test(txt)) throw new Error('no readings section on the report');
+    if (!/84,213/.test(txt) || !/84,377/.test(txt)) throw new Error('the readings themselves are not printed: ' + txt.slice(0, 400));
+    if (!/Doncaster/.test(txt)) throw new Error('the station is not named against the reading');
+    return 'the dashboard figures are on the document';
+  });
+
+  await check('edit — a mistyped reading can be corrected and the miles follow', async () => {
+    await b.goto('#/income');
+    await b.eval(openFirstShiftForEdit);
+    const out = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      const end = [...sheet.querySelectorAll('input[type=number]')].find(i => i.value === '84377');
+      if (!end) return { error: 'the end reading is not shown for correction' };
+      end.value = '84387';                       // a transcription slip
+      end.dispatchEvent(new Event('input', { bubbles: true }));
+      const miles = [...sheet.querySelectorAll('input[type=number]')].find(i => i.placeholder === 'business miles');
+      const followed = miles.value;
+      sheet.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 500));
+      const db = await import('/js/db.js');
+      const r = (await db.earnings.all())[0];
+      return { followed, miles: r.miles, end: r.odoEnd, source: r.milesSource };`);
+    if (out.error) throw new Error(out.error);
+    if (out.followed !== '174') throw new Error('the miles did not follow the correction: ' + out.followed);
+    if (out.miles !== 174 || out.end !== 84387) throw new Error('the correction did not save: ' + JSON.stringify(out));
+    if (out.source !== 'odometer') throw new Error('correcting a reading cost it its standing');
+    return 'corrected to 84,387, miles now 174, still a reading';
+  });
+
+  await check('edit — a reading cannot be invented on a shift that never had one', async () => {
+    // The point of keeping them is that they were taken at the time. A record
+    // with none does not offer the fields at all.
+    await b.eval(`
+      const db = await import('/js/db.js');
+      await db.wipeAll();
+      await db.earnings.save({ id: 'typed', date: '2026-10-20', platform: 'amazonflex', amount: 60,
+        tips: 0, hours: 4, deliveries: 0, miles: 50, notes: '' });
+      return true;`);
+    await b.goto('#/income');
+    await b.eval(openFirstShiftForEdit);
+    const shown = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      return [...sheet.querySelectorAll('input[type=number]')].some(i => i.placeholder === 'start' || i.placeholder === 'end');`);
+    if (shown) throw new Error('offered to add readings to a shift that was never measured');
+    return 'no fields offered, so nothing can be back-dated into one';
+  });
+
   // ---------------- booked hours against what it took ----------------
   await check('shift — the booked block is kept and the clock measures the rest', async () => {
     const out = await b.eval(`
