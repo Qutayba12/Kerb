@@ -606,7 +606,7 @@ const AR = {
     'كيف حُسبت المسافة:',
   'Your mileage claim may not be allowed':
     'قد لا تكون مطالبة الأميال مسموحة',
-  'You have said you deducted a vehicle\u2019s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle \u2014 you claim one or the other. This is the biggest figure on your return, so settle it with an accountant before you file, or switch to the actual-costs method.':
+  'You have said you deducted a vehicle’s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle — you claim one or the other. This is the biggest figure on your return, so settle it with an accountant before you file, or switch to the actual-costs method.':
     'ذكرت أنك خصمت ثمن شراء مركبة كمصروف. وتحت الأساس النقدي لا تسمح HMRC بمعدّل المسافة المبسّط للمركبة نفسها — فإما هذا أو ذاك. وهذا أكبر رقم في إقرارك، فاحسمه مع محاسب قبل التقديم، أو انتقل إلى طريقة التكاليف الفعلية.',
   'One question still decides whether your mileage claim stands':
     'سؤال واحد ما زال يحدّد هل تصمد مطالبة الأميال',
@@ -662,9 +662,9 @@ const AR = {
     'هل طالبت بثمن شراء مركبة كمصروف؟',
   'On the cash basis you cannot claim simplified mileage for a vehicle whose purchase cost you already deducted. Kerb cannot tell from your records, so it asks.':
     'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت تكلفتها من قبل. ولا يستطيع Kerb معرفة ذلك من سجلاتك، لذلك يسأل.',
-  '\u2014 not answered \u2014':
+  '— not answered —':
     '— بلا إجابة —',
-  'Yes \u2014 I deducted the cost of buying one':
+  'Yes — I deducted the cost of buying one':
     'نعم — خصمت تكلفة شراء واحدة',
   'No':
     'لا',
