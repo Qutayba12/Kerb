@@ -456,6 +456,15 @@ function stationsCard() {
         };
         slot.firstChild.append(use);
       }
+      // One reading is one route, not a typical distance — the way home starts
+      // wherever the last drop was. This figure then pre-fills every later
+      // block from the station, so a single long day would quietly raise the
+      // claim on all of them. Over-stating is the direction that creates a
+      // problem with HMRC, so say so while n is 1 rather than after.
+      if (sug.n === 1) {
+        slot.append(el('div', { class: 'tiny', style: 'margin-top:4px;color:var(--warn)',
+          text: 'That is one shift, so it is one route rather than a typical distance. Use it only if that block was an ordinary one, and check the miles against the drive you actually made each time. A second reading will show the spread.' }));
+      }
     });
   }).catch(() => {});
 

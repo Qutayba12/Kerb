@@ -686,6 +686,95 @@ const run = async () => {
     return 'flags 3, then confirms when none are left';
   });
 
+  // ---------------- what the report discloses about the mileage ----------------
+  // The basis note states a method in the driver's own words. This states the
+  // facts behind it, counted from the records, so it cannot claim more than
+  // they hold — which is the point: it is the answer to the question that
+  // follows "how did you work this out".
+  const seedEvidence = (rows) => `
+    const db = await import('/js/db.js');
+    const st = await import('/js/store.js');
+    await db.wipeAll();
+    st.saveSettings({ taxYear: '2026/27', expenseMethod: 'mileage', lang: 'en', mileageBasis: '',
+      stations: [{ id: 'sheff', label: 'Amazon Logistics (S4 8AL)', baseMiles: 2.3, typicalMiles: 0 }] });
+    const rows = ${JSON.stringify(rows)};
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      await db.earnings.save({ id: 'ev' + i, date: '2026-09-' + String(10 + i).padStart(2, '0'),
+        platform: 'amazonflex', amount: 70, tips: 0, hours: 4, deliveries: 0,
+        miles: r.miles, stationId: 'sheff', notes: '', ...(r.src ? { milesSource: r.src } : {}) });
+    }
+    return true;`;
+
+  await check('report — says plainly when not one mile was measured', async () => {
+    await b.eval(seedEvidence([{ miles: 40 }, { miles: 30, src: 'manual' }]));
+    await b.goto('#/report');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/None of the 2 shifts claimed this year had its mileage read from an odometer or tracked/.test(txt)) {
+      throw new Error('the report does not disclose that the claim is entirely estimated: ' + txt.slice(0, 300));
+    }
+    return 'discloses an entirely estimated claim';
+  });
+
+  await check('report — counts measured against estimated, and the miles with them', async () => {
+    await b.eval(seedEvidence([{ miles: 40, src: 'odometer' }, { miles: 30, src: 'gps' }, { miles: 50, src: 'manual' }]));
+    await b.goto('#/report');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/Of the 3 shifts claimed this year, 2 had their mileage read from an odometer or tracked at the time \(70 miles\); the remaining 50 miles are estimates/.test(txt)) {
+      throw new Error('the split is not stated as counted: ' + txt.slice(0, 400));
+    }
+    return '2 of 3 measured, 70 mi against 50 mi';
+  });
+
+  await check('report — a typed-in figure is never disclosed as measured', async () => {
+    // The disclosure is only worth having if it cannot overstate. 'manual' is
+    // what the entry form records, however carefully the figure was worked out.
+    await b.eval(seedEvidence([{ miles: 40, src: 'manual' }, { miles: 30, src: 'manual' }]));
+    await b.goto('#/report');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/None of the 2 shifts/.test(txt)) throw new Error('a typed-in figure was disclosed as measured: ' + txt.slice(0, 300));
+    return 'manual counts as an estimate on the document too';
+  });
+
+  await check('report — confirms it when every shift was measured', async () => {
+    await b.eval(seedEvidence([{ miles: 40, src: 'odometer' }, { miles: 30, src: 'odometer' }]));
+    await b.goto('#/report');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/All 2 shifts claimed this year had their mileage read from an odometer or tracked at the time/.test(txt)) {
+      throw new Error('no confirmation when the whole claim is measured: ' + txt.slice(0, 300));
+    }
+    return 'states a fully measured claim';
+  });
+
+  await check('settings — a single reading is not offered as a typical distance', async () => {
+    // One reading is one route. It then pre-fills every later block from that
+    // station, so an unusually long day would quietly raise the claim on all
+    // of them — the direction that creates a problem with HMRC.
+    await b.eval(seedEvidence([{ miles: 19, src: 'odometer' }]));
+    await b.goto('#/settings');
+    const one = await b.eval(`
+      await new Promise(r => setTimeout(r, 400));
+      const v = document.getElementById('view');
+      return { txt: v.textContent, warned: [...v.querySelectorAll('div')].some(d =>
+        /one route rather than a typical distance/.test(d.textContent) && /warn/.test(d.style.color)) };`);
+    if (!/Measured over 1 shift: 19 mi a block/.test(one.txt)) throw new Error('the measured figure is not shown');
+    if (!one.warned) throw new Error('a sample of one is offered with no caution');
+    // A second reading makes it a range, and the caution goes.
+    await b.eval(`
+      const db = await import('/js/db.js');
+      await db.earnings.save({ id: 'ev1', date: '2026-09-11', platform: 'amazonflex', amount: 70, tips: 0,
+        hours: 4, deliveries: 0, miles: 25, stationId: 'sheff', milesSource: 'odometer', notes: '' });
+      return true;`);
+    await b.goto('#/settings');
+    const two = await b.eval(`
+      await new Promise(r => setTimeout(r, 400));
+      const v = document.getElementById('view');
+      return { txt: v.textContent, warned: /one route rather than a typical distance/.test(v.textContent) };`);
+    if (!/Measured over 2 shifts: 22 mi a block \(19–25\)/.test(two.txt)) throw new Error('the spread is not shown at two readings: ' + two.txt.slice(0, 300));
+    if (two.warned) throw new Error('still cautioning once there is a spread to see');
+    return 'cautioned at 1 reading, a range at 2';
+  });
+
   // ---------------- the mileage-basis note ----------------
   // The note is the stated basis for the biggest deduction on the return, so
   // what the field accepts is a correctness question, not a cosmetic one: a

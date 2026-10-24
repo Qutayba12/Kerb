@@ -602,6 +602,8 @@ const AR = {
     'كل محطة خلف أميالها بلوك مقيس',
   'Start a tracked shift':
     'ابدأ وردية متتبَّعة',
+  'That is one shift, so it is one route rather than a typical distance. Use it only if that block was an ordinary one, and check the miles against the drive you actually made each time. A second reading will show the spread.':
+    'هذه وردية واحدة، فهي مسار واحد لا مسافة معتادة. استخدمها فقط إن كان ذلك البلوك عادياً، وراجع الأميال في كل مرة مقابل المسافة التي قطعتها فعلاً. والقراءة الثانية ستُظهر لك المدى.',
 };
 
 // Both "all estimated" details open the same way and differ only in their
@@ -789,6 +791,16 @@ const AR_PAT = {
     'مقيسة عبر {0} ورديات: {1} ميل للبلوك ({2}–{3}).',
   'Measured over {0} shift: {1} mi a block.':
     'مقيسة عبر وردية {0}: {1} ميل للبلوك.',
+  'None of the {0} shifts claimed this year had its mileage read from an odometer or tracked; every figure is an estimate arrived at as described above.':
+    'لم تُقرأ أميال أي من الورديات الـ{0} المطالَب بها هذه السنة من عدّاد السيارة ولم تُتبَّع؛ فكل رقم فيها تقدير تم التوصل إليه بالطريقة الموضّحة أعلاه.',
+  'All {0} shifts claimed this year had their mileage read from an odometer or tracked at the time.':
+    'كل الورديات الـ{0} المطالَب بها هذه السنة قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها.',
+  'Of the {0} shifts claimed this year, {1} had their mileage read from an odometer or tracked at the time ({2} miles); the remaining {3} miles are estimates arrived at as described above.':
+    'من أصل {0} وردية مطالَب بها هذه السنة، {1} قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها ({2} ميل)؛ والأميال الـ{3} الباقية تقديرات تم التوصل إليها بالطريقة الموضّحة أعلاه.',
+  'A trading loss of {0} remains to carry forward against profits of the same trade in future years. Record it in the losses section of your SA103S so HMRC carries it over.':
+    'تبقى خسارة تجارية بمقدار {0} تُرحَّل لتُخصم من أرباح النشاط نفسه في السنوات القادمة. سجّلها في قسم الخسائر من نموذج SA103S ليُرحّلها HMRC.',
+  'Your takings are low enough that the {0} trading allowance beats your actual expenses, so claim the allowance in box {1} (you then do not deduct expenses).':
+    'متحصّلاتك منخفضة بما يكفي ليتجاوز بدل الدخل التجاري {0} مصاريفك الفعلية، فطالب بالبدل في الخانة {1} (ولا تخصم المصاريف حينها).',
   '{0} mi a block · {1} mi of that is getting there':
     '{0} ميل للبلوك · منها {1} ميل للوصول',
   '{0} mi to get there · block distance not measured yet':
@@ -886,6 +898,18 @@ const AR_HTML = {
     'صافي الربح <span class="report__box">خانة {0}</span>',
   'Loss brought forward, set against this year <span class="report__box">losses section</span>':
     'خسارة مُرحّلة، تُخصم من هذه السنة <span class="report__box">قسم الخسائر</span>',
+  'Total loss to carry forward <span class="report__box">losses section</span>':
+    'إجمالي الخسارة المُرحَّلة إلى ما بعد <span class="report__box">قسم الخسائر</span>',
+  'Net loss for the year <span class="report__box">Box {0}</span>':
+    'صافي خسارة السنة <span class="report__box">خانة {0}</span>',
+  'Net loss for the year <span class="report__box">losses section</span>':
+    'صافي خسارة السنة <span class="report__box">قسم الخسائر</span>',
+  'Net profit (taxable) <span class="report__box">Box {0} / {1}</span>':
+    'صافي الربح (الخاضع للضريبة) <span class="report__box">خانة {0} / {1}</span>',
+  'Trading income allowance (instead of expenses) <span class="report__box">Box {0}</span>':
+    'بدل الدخل التجاري (بدلاً من المصاريف) <span class="report__box">خانة {0}</span>',
+  'Trading income allowance <span class="report__box">Box {0}</span>':
+    'بدل الدخل التجاري <span class="report__box">خانة {0}</span>',
   'Taxable profit <span class="report__box">Box {0}</span>':
     'الربح الخاضع للضريبة <span class="report__box">خانة {0}</span>',
   'Class {0} NIC <span class="report__box">Box {1}</span>':

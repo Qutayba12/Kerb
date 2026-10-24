@@ -133,6 +133,20 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
     if ((s.mileageBasis || '').trim()) {
       sheet.append(el('div', { class: 'report__note', text: `How the mileage was worked out: ${s.mileageBasis.trim()}` }));
     }
+    // A count of what is a reading and what is an estimate. The prose note
+    // above states a method; this states the facts behind it, taken from the
+    // records rather than written by hand, so it cannot claim more than the
+    // data holds. It is the answer to the question that follows "how did you
+    // work this out", and understating it is not possible.
+    const ev = sum.evidence;
+    if (ev && ev.shifts > 0) {
+      const txt = ev.measuredShifts === 0
+        ? `None of the ${fmtNum(ev.shifts)} shifts claimed this year had its mileage read from an odometer or tracked; every figure is an estimate arrived at as described above.`
+        : ev.measuredShifts === ev.shifts
+          ? `All ${fmtNum(ev.shifts)} shifts claimed this year had their mileage read from an odometer or tracked at the time.`
+          : `Of the ${fmtNum(ev.shifts)} shifts claimed this year, ${fmtNum(ev.measuredShifts)} had their mileage read from an odometer or tracked at the time (${fmtMiles(ev.measuredMiles)} miles); the remaining ${fmtMiles(ev.estimatedMiles)} miles are estimates arrived at as described above.`;
+      sheet.append(el('div', { class: 'report__note', text: txt }));
+    }
     if (sum.baseLeg && sum.baseLeg.miles > 0) {
       sheet.append(el('div', { class: 'report__note', text: `Of ${fmtNum(sum.businessMiles)} business miles, ${fmtMiles(sum.baseLeg.miles)} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.` }));
     }

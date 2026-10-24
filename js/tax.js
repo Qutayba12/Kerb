@@ -226,6 +226,22 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
         ? { ...e, miles: round2(num(e.miles) - num(e.milesBase)) } : e)), settings, config).total)
       : 0,
   };
+  // How much of the mileage claim is a reading and how much is a figure the
+  // driver worked out. HMRC accepts a reasonable estimate, so this decides
+  // nothing — but it is the first thing asked after "how did you arrive at
+  // this", and a count taken from the records answers it better than prose
+  // can. Only the live tracker sets milesSource, so anything typed into the
+  // form afterwards is an estimate however carefully it was worked out.
+  const withMiles = E.filter(e => num(e.miles) > 0);
+  const measuredShifts = withMiles.filter(e => e.milesSource === 'odometer' || e.milesSource === 'gps');
+  const evidence = {
+    shifts: withMiles.length,
+    measuredShifts: measuredShifts.length,
+    measuredMiles: round2(measuredShifts.reduce((t, e) => t + num(e.miles), 0)),
+    estimatedMiles: round2(withMiles.reduce((t, e) => t + num(e.miles), 0)
+      - measuredShifts.reduce((t, e) => t + num(e.miles), 0)),
+  };
+
   const homeDed = round2(homeOfficeDeduction(settings.homeOfficeHoursPerMonth, config));
   let otherDeductible = 0, vehicleTracked = 0;
   for (const x of X) {
@@ -307,7 +323,7 @@ export function computeTaxYear(allEarnings, allExpenses, settings, yearLabel = s
     method, expensesPaidTotal, mileageDed, homeDed, otherDeductible, vehicleTracked,
     rawDeductions, tradingAllowance, usedTradingAllowance, effectiveDeduction, netProfit,
     taxableProfit, lossThisYear, lossBroughtForward: lossBF, lossUsed, lossCarriedForward: lossCF,
-    mileageRows: mileageSplit.rows, baseLeg,
+    mileageRows: mileageSplit.rows, baseLeg, evidence,
     base, payeSalary: settings.payeSalary || 0, otherIncome: settings.otherIncome || 0, totalIncome,
     personalAllowance: config.personalAllowance,
     incomeTaxBase, incomeTaxTotal, incomeTaxSE,
