@@ -67,6 +67,8 @@ function startPanel() {
     note,
   ]);
   if (stationSel) card.append(field('Station', stationSel, 'Recording it lets Kerb learn what a block from here comes to.'));
+  const booked = el('input', { class: 'input', type: 'number', step: '0.25', min: '0', inputMode: 'decimal', placeholder: 'e.g. 4' });
+  card.append(field('Block hours (as booked)', booked, 'What the block was offered as. Kerb times what it actually takes, so you can see the difference later.'));
   root.append(card);
   syncMode();
 
@@ -74,7 +76,7 @@ function startPanel() {
   start.innerHTML = icon('clock') + '<span>Start shift</span>';
   start.onclick = () => {
     if (mode === 'odometer' && !odoStartInput.value) { toast('Enter the odometer reading, or pick another method', 'err'); return; }
-    startShift({ platform: platform.value, gps: mode === 'gps', odoStart: mode === 'odometer' ? odoStartInput.value : null, milesMode: mode, stationId: stationSel ? stationSel.value : '' });
+    startShift({ platform: platform.value, gps: mode === 'gps', odoStart: mode === 'odometer' ? odoStartInput.value : null, milesMode: mode, stationId: stationSel ? stationSel.value : '', bookedHours: parseFloat(booked.value) || 0 });
     toast('Shift started — good luck!', 'ok');
     bus.refresh();
   };
@@ -257,7 +259,11 @@ function livePanel(ctx) {
     const rec = {
       id: s.id, date: workDate, platform: s.platform,
       amount: round2(s.earnings || 0), tips: round2(s.tips || 0),
-      hours: hrs, deliveries: s.deliveries || 0, miles: round2(miles),
+      // The booked block is the basis; the clock measured what it took. With
+      // no booked figure the measured one stands in, so nothing is lost.
+      hours: s.bookedHours > 0 ? round2(s.bookedHours) : hrs,
+      hoursActual: hrs,
+      deliveries: s.deliveries || 0, miles: round2(miles),
       // How the figure was arrived at. A reading off the dashboard is
       // evidence; a number typed afterwards is not, and only the first kind
       // can be used to work out a station's round distance.

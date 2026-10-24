@@ -31,10 +31,13 @@ export function getActive() { try { return JSON.parse(localStorage.getItem(KEY) 
 export function isActive() { return !!getActive(); }
 function write(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} emit(); }
 
-export function startShift({ platform, gps, odoStart = null, milesMode, stationId = '' }) {
+export function startShift({ platform, gps, odoStart = null, milesMode, stationId = '', bookedHours = 0 }) {
   const os = (odoStart === '' || odoStart == null) ? null : Number(odoStart);
   const s = {
     id: uid(), startedAt: Date.now(), platform, gps: !!gps, stationId: stationId || '',
+    // The block as offered, taken at the start because that is when it is on
+    // screen in the platform's own app. What it really takes is measured.
+    bookedHours: Number(bookedHours) > 0 ? Number(bookedHours) : 0,
     milesMode: milesMode || (gps ? 'gps' : (os != null ? 'odometer' : 'manual')),
     miles: 0, lastLat: null, lastLng: null, fixes: 0,
     odoStart: isFinite(os) ? os : null, odoEnd: null,

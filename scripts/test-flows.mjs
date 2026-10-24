@@ -301,7 +301,8 @@ const run = async () => {
     await b.eval(fillByLabel('Date', '2026-09-20'));
     await b.eval(fillByLabel('Earnings (before tips)', '73.40'));
     await b.eval(fillByLabel('Tips', '6.10'));
-    await b.eval(fillByLabel('Hours worked', '5'));
+    await b.eval(fillByLabel('Block hours (as booked)', '5'));
+    await b.eval(fillByLabel('Hours it actually took', '6.25'));
     await b.eval(fillByLabel('Deliveries', '14'));
     await b.eval(fillByLabel('Business miles driven', '52'));
     await b.eval(clickText('^\s*Save\s*$', '.sheet'));
@@ -310,8 +311,8 @@ const run = async () => {
       const db = await import('/js/db.js');
       const all = await db.earnings.all();
       const hit = all.find(r => r.date === '2026-09-20');
-      return hit ? { amount: hit.amount, tips: hit.tips, hours: hit.hours, deliveries: hit.deliveries, miles: hit.miles } : null;`);
-    eq(rec, { amount: 73.4, tips: 6.1, hours: 5, deliveries: 14, miles: 52 }, 'saved shift');
+      return hit ? { amount: hit.amount, tips: hit.tips, hours: hit.hours, hoursActual: hit.hoursActual, deliveries: hit.deliveries, miles: hit.miles } : null;`);
+    eq(rec, { amount: 73.4, tips: 6.1, hours: 5, hoursActual: 6.25, deliveries: 14, miles: 52 }, 'saved shift');
     const errs = b.errors();
     if (errs.length) throw new Error('page errors: ' + errs.join(' | '));
     return 'amount, tips, hours, drops and miles all round-trip';
@@ -834,6 +835,92 @@ const run = async () => {
     await b.open('/');
     await b.ready();
     return 'the sign stays where it belongs on an RTL page';
+  });
+
+  // ---------------- booked hours against what it took ----------------
+  await check('shift — the booked block is kept and the clock measures the rest', async () => {
+    const out = await b.eval(`
+      const sh = await import('/js/shift.js');
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage', stations: [] });
+      sh.startShift({ platform: 'amazonflex', gps: false, odoStart: 100, milesMode: 'odometer', bookedHours: 4 });
+      // Backdate the start so the clock reads a real overrun.
+      const raw = JSON.parse(localStorage.getItem('kerb.activeShift'));
+      raw.startedAt = Date.now() - (5.5 * 3600 * 1000);
+      localStorage.setItem('kerb.activeShift', JSON.stringify(raw));
+      sh.updateShift({ earnings: 70, odoEnd: 264 });
+      return true;`);
+    await b.goto('#/shift');
+    const saved = await b.eval(`
+      const stop = [...document.querySelectorAll('#view button')].find(x => /Stop|Finish|End/i.test(x.textContent));
+      stop.click();
+      await new Promise(r => setTimeout(r, 600));
+      const db = await import('/js/db.js');
+      const r = (await db.earnings.all())[0];
+      return r ? { hours: r.hours, actual: r.hoursActual, miles: r.miles, source: r.milesSource } : null;`);
+    if (!saved) throw new Error('the shift did not save');
+    if (saved.hours !== 4) throw new Error(`booked hours should stay 4, got ${saved.hours}`);
+    if (!(saved.actual > 5.4 && saved.actual < 5.6)) throw new Error(`the clock should read ~5.5h, got ${saved.actual}`);
+    if (saved.miles !== 164) throw new Error('miles came out as ' + saved.miles);
+    if (saved.source !== 'odometer') throw new Error('saved as ' + saved.source);
+    return `4h booked, ${saved.actual}h actual, 164 measured miles`;
+  });
+
+  await check('shift — with no booked figure the measured time stands in', async () => {
+    const out = await b.eval(`
+      const sh = await import('/js/shift.js');
+      const db = await import('/js/db.js');
+      await db.wipeAll();
+      sh.startShift({ platform: 'amazonflex', gps: false, milesMode: 'manual' });
+      const raw = JSON.parse(localStorage.getItem('kerb.activeShift'));
+      raw.startedAt = Date.now() - (3 * 3600 * 1000);
+      localStorage.setItem('kerb.activeShift', JSON.stringify(raw));
+      sh.updateShift({ earnings: 50, miles: 20 });
+      return true;`);
+    await b.goto('#/shift');
+    const saved = await b.eval(`
+      const stop = [...document.querySelectorAll('#view button')].find(x => /Stop|Finish|End/i.test(x.textContent));
+      stop.click();
+      await new Promise(r => setTimeout(r, 600));
+      const db = await import('/js/db.js');
+      const r = (await db.earnings.all())[0];
+      return r ? { hours: r.hours, actual: r.hoursActual } : null;`);
+    if (!saved) throw new Error('the shift did not save');
+    if (!(saved.hours > 2.9 && saved.hours < 3.1)) throw new Error(`hours should fall back to the clock, got ${saved.hours}`);
+    return 'no booked figure, so the clock stands in';
+  });
+
+  await check('income — the real rate is shown against the advertised one', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage' });
+      const d = ['2026-10-24', '2026-10-20'];
+      for (let i = 0; i < 2; i++) {
+        await db.earnings.save({ id: 'h' + i, date: d[i], platform: 'amazonflex', amount: 70, tips: 0,
+          hours: 4, hoursActual: i ? 4.6 : 5.4, deliveries: 0, miles: 100, notes: '' });
+      }
+      return true;`);
+    await b.goto('#/income');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (!/Your real rate is £14\.00 an hour, not £17\.50/.test(txt)) {
+      throw new Error('the two rates are not put side by side: ' + txt.slice(0, 300));
+    }
+    if (!/ran 2 hours past/.test(txt)) throw new Error('does not say by how much the blocks overran');
+    return '£14.00 real against £17.50 advertised';
+  });
+
+  await check('income — nothing is claimed when no shift was timed', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      for (const e of all) await db.earnings.save({ ...e, hoursActual: 0 });
+      return true;`);
+    await b.goto('#/income');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (/Your real rate is/.test(txt)) throw new Error('a rate was claimed with nothing timed behind it');
+    return 'silent without timed shifts';
   });
 
   // ---------------- editing must not destroy a measurement ----------------

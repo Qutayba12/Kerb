@@ -168,7 +168,12 @@ function cleanEarning(o) {
   if (!o || typeof o !== 'object' || !isDate(o.date)) return null;
   return { ...o, id: str(o.id, 60) || newId(), date: o.date,
     platform: str(o.platform, 40) || 'amazonflex', vehicleId: str(o.vehicleId, 60),
-    amount: num(o.amount), tips: num(o.tips), hours: num(o.hours), miles: num(o.miles),
+    // hours is the block as booked — the figure the work was offered at, and
+    // the one every rate in the app is quoted against. hoursActual is what
+    // the shift really took, door to door. They are different questions and
+    // a block routinely answers them differently.
+    amount: num(o.amount), tips: num(o.tips), hours: num(o.hours),
+    hoursActual: num(o.hoursActual), miles: num(o.miles),
     deliveries: Math.round(num(o.deliveries)), notes: str(o.notes, 300) };
 }
 function cleanExpense(o) {

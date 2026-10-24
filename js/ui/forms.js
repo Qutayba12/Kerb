@@ -16,7 +16,8 @@ export function openEarningsForm(existing = null, opts = {}) {
   const b = existing || {};
   const e = {
     id: isEdit ? b.id : uid(), date: b.date || todayISO(), platform: b.platform || allPlatforms()[0].id,
-    amount: b.amount ?? '', tips: b.tips ?? '', hours: b.hours ?? '', deliveries: b.deliveries ?? '', miles: b.miles ?? '', notes: b.notes || '',
+    amount: b.amount ?? '', tips: b.tips ?? '', hours: b.hours ?? '', hoursActual: b.hoursActual ?? '',
+    deliveries: b.deliveries ?? '', miles: b.miles ?? '', notes: b.notes || '',
     vehicleId: b.vehicleId || '', stationId: b.stationId || '',
     milesBase: b.milesBase ?? null,
     // Carried so an edit cannot quietly destroy it. Only the live tracker
@@ -31,6 +32,7 @@ export function openEarningsForm(existing = null, opts = {}) {
   const amount = moneyInput({ value: e.amount, placeholder: '0.00' });
   const tips = moneyInput({ value: e.tips, placeholder: '0.00' });
   const hours = el('input', { class: 'input', type: 'number', step: '0.25', min: '0', inputMode: 'decimal', value: e.hours, placeholder: 'e.g. 4' });
+  const hoursActual = el('input', { class: 'input', type: 'number', step: '0.25', min: '0', inputMode: 'decimal', value: e.hoursActual, placeholder: 'e.g. 5.5' });
   const deliveries = el('input', { class: 'input', type: 'number', step: '1', min: '0', inputMode: 'numeric', value: e.deliveries, placeholder: 'e.g. 12' });
   const miles = el('input', { class: 'input', type: 'number', step: '0.1', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
   const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
@@ -74,7 +76,12 @@ export function openEarningsForm(existing = null, opts = {}) {
   form.append(
     field('Earnings (before tips)', amount, 'What the app/platform paid you for the work.'),
     field('Tips', tips, 'Tips are taxable income — kept separate for your records.'),
-    el('div', { class: 'grid-2' }, [field('Hours worked', hours), field('Deliveries', deliveries)]),
+    el('div', { class: 'grid-2' }, [
+      field('Block hours (as booked)', hours),
+      field('Hours it actually took', hoursActual),
+    ]),
+    el('div', { class: 'hint', style: 'margin:-6px 0 12px' , text: 'The booked block is what the pay was offered against. What it actually took is door to door — the two are rarely the same, and the difference is what tells you whether a block is worth taking.' }),
+    el('div', { class: 'grid-2' }, [field('Deliveries', deliveries), el('div')]),
     field('Business miles driven', miles, s.expenseMethod === 'mileage'
       ? mileageHint(s)
       : `Tracked for your records (you use the actual-costs method).`),
@@ -85,7 +92,8 @@ export function openEarningsForm(existing = null, opts = {}) {
     const rec = {
       id: e.id, date: dateInput.value || todayISO(), platform: platformSel.value,
       amount: parseMoney(amount.input.value), tips: parseMoney(tips.input.value),
-      hours: parseFloat(hours.value) || 0, deliveries: parseInt(deliveries.value) || 0,
+      hours: parseFloat(hours.value) || 0, hoursActual: parseFloat(hoursActual.value) || 0,
+      deliveries: parseInt(deliveries.value) || 0,
       miles: parseFloat(miles.value) || 0, notes: notes.value.trim(),
       vehicleId: vehicleSel ? vehicleSel.value : (e.vehicleId || ''),
       stationId: stationSel ? stationSel.value : (e.stationId || ''),

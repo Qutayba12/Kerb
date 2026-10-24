@@ -83,7 +83,7 @@ const AR = {
   'Best day & platform': 'أفضل يوم ومنصّة', 'How much tax so far?': 'كم الضريبة حتى الآن؟',
   // forms
   'Edit shift': 'تعديل الوردية', 'Add expense': 'إضافة مصروف', 'Edit expense': 'تعديل المصروف', 'Date': 'التاريخ',
-  'Earnings (before tips)': 'الدخل (قبل البقشيش)', 'Hours worked': 'ساعات العمل', 'Business miles driven': 'أميال العمل المقطوعة',
+  'Earnings (before tips)': 'الدخل (قبل البقشيش)', 'Block hours (as booked)': 'ساعات البلوك (كما حُجزت)', 'Hours it actually took': 'الساعات التي استغرقها فعلاً', 'Business miles driven': 'أميال العمل المقطوعة',
   'Note': 'ملاحظة', 'Save': 'حفظ', 'Delete': 'حذف', 'Cancel': 'إلغاء', 'Scan receipt with Claude': 'تصوير الفاتورة بكلود',
   'Category': 'التصنيف', 'Amount paid (inc. VAT)': 'المبلغ المدفوع (شامل VAT)', 'Vendor': 'المتجر',
   'Business use %': 'نسبة الاستخدام للعمل %', 'VAT (optional)': 'VAT (اختياري)', 'Amount': 'المبلغ', 'Frequency': 'التكرار',
@@ -614,6 +614,10 @@ const AR = {
     'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت ثمن شرائها كمصروف. ولا يستطيع Kerb معرفة ذلك من سجلاتك. أجب عنه مرة واحدة في الإعدادات ويختفي هذا.',
   'No vehicle purchase was claimed against this mileage':
     'لم يُطالَب بثمن شراء مركبة مقابل هذه الأميال',
+  'The booked block is what the pay was offered against. What it actually took is door to door — the two are rarely the same, and the difference is what tells you whether a block is worth taking.':
+    'البلوك المحجوز هو ما عُرض الأجر مقابله. وما استغرقه فعلاً هو من الباب إلى الباب — وقلّما يتطابقان، والفرق بينهما هو ما يخبرك إن كان البلوك يستحق.',
+  'What the block was offered as. Kerb times what it actually takes, so you can see the difference later.':
+    'ما عُرض البلوك عليه. ويقيس Kerb ما يستغرقه فعلاً لترى الفرق لاحقاً.',
   'The closing odometer reading is missing':
     'قراءة العدّاد الختامية ناقصة',
   'You started this shift by odometer. Without the reading you finished on, these miles are saved as an estimate — and that cannot be changed later, because a figure entered after the drive is not a reading. Enter it now if the car is still where you parked it.':
@@ -843,6 +847,12 @@ const AR_PAT = {
     'كل الورديات الـ{0} المطالَب بها هذه السنة قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها.',
   'The {0} trading allowance is being used':
     'يُستخدَم بدل الدخل التجاري {0}',
+  '{0} booked · {1} actual':
+    '{0} محجوزة · {1} فعلية',
+  'Your real rate is {0} an hour, not {1}.':
+    'أجرك الحقيقي {0} للساعة، لا {1}.',
+  'Across {0} timed shifts the blocks ran {1} hours past what they were booked as. The pay does not change when a block overruns, so the booked rate is the one being advertised and this is the one you are actually getting.':
+    'عبر {0} ورديات مُوقَّتة تجاوزت البلوكات ما حُجزت عليه بـ{1} ساعة. والأجر لا يتغيّر حين يتجاوز البلوك وقته، فالمعدّل المحجوز هو المُعلَن، وهذا هو ما تحصل عليه فعلاً.',
   'You have said you deducted a vehicle’s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle — you claim one or the other. The {0} trading allowance is still ahead of your mileage, so nothing is at risk this moment — but once your miles pass it, this becomes the largest figure on your return. Settle it with an accountant before then.':
     'ذكرت أنك خصمت ثمن شراء مركبة كمصروف. وتحت الأساس النقدي لا تسمح HMRC بمعدّل المسافة المبسّط للمركبة نفسها — فإما هذا أو ذاك. وبدل الدخل التجاري {0} ما زال متقدّماً على أميالك، فلا شيء في خطر هذه اللحظة — لكن حين تتجاوزه أميالك يصبح هذا أكبر رقم في إقرارك. احسمه مع محاسب قبل ذلك.',
   '{0} of losses carried forward':
