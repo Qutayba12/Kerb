@@ -836,6 +836,72 @@ const run = async () => {
     return 'the sign stays where it belongs on an RTL page';
   });
 
+  // ---------------- editing must not destroy a measurement ----------------
+  const openFirstShiftForEdit = `
+    const rows = [...document.querySelectorAll('#view .item')];
+    const row = rows.find(r => /Amazon Flex/i.test(r.textContent)) || rows[0];
+    row.click();
+    await new Promise(r => setTimeout(r, 400));
+    return !!document.querySelector('.sheet');`;
+
+  await check('edit — correcting the hours keeps an odometer reading', async () => {
+    // This happened on real records: a block was driven specifically to be
+    // measured, the live timer had overrun the booked block, the hours were
+    // corrected — and the form, which rebuilt the record from its fields,
+    // dropped milesSource. The measurement was gone and the report went on
+    // saying nothing had been measured.
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage', vehicleCostClaimed: 'no',
+        stations: [{ id: 'donny', label: 'Doncaster', baseMiles: 21.5, typicalMiles: 0 }] });
+      await db.earnings.save({ id: 'live1', date: '2026-10-24', platform: 'amazonflex', amount: 70,
+        tips: 0, hours: 5.4, deliveries: 0, miles: 164, stationId: 'donny',
+        milesSource: 'odometer', notes: 'Live shift' });
+      return true;`);
+    await b.goto('#/income');
+    const opened = await b.eval(openFirstShiftForEdit);
+    if (!opened) throw new Error('could not open the shift for editing');
+    const after = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      const hours = [...sheet.querySelectorAll('input[type=number]')].find(i => i.value === '5.4');
+      if (!hours) return { error: 'hours field not found' };
+      hours.value = '4';
+      hours.dispatchEvent(new Event('input', { bubbles: true }));
+      sheet.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 500));
+      const db = await import('/js/db.js');
+      const rec = (await db.earnings.all())[0];
+      return { hours: rec.hours, miles: rec.miles, source: rec.milesSource };`);
+    if (after.error) throw new Error(after.error);
+    if (after.hours !== 4) throw new Error('the hours edit did not save: ' + after.hours);
+    if (after.source !== 'odometer') throw new Error(`the reading was destroyed by the edit — milesSource is now ${JSON.stringify(after.source)}`);
+    if (after.miles !== 164) throw new Error('the miles changed on their own: ' + after.miles);
+    return 'hours corrected, reading intact';
+  });
+
+  await check('edit — changing the miles themselves drops the reading', async () => {
+    // A figure typed over a reading is not that reading any more, and the
+    // whole app rests on never treating one as the other.
+    await b.goto('#/income');
+    await b.eval(openFirstShiftForEdit);
+    const after = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      const miles = [...sheet.querySelectorAll('input[type=number]')].find(i => i.value === '164');
+      if (!miles) return { error: 'miles field not found' };
+      miles.value = '150';
+      miles.dispatchEvent(new Event('input', { bubbles: true }));
+      sheet.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 500));
+      const db = await import('/js/db.js');
+      const rec = (await db.earnings.all())[0];
+      return { miles: rec.miles, source: rec.milesSource };`);
+    if (after.error) throw new Error(after.error);
+    if (after.miles !== 150) throw new Error('the miles edit did not save: ' + after.miles);
+    if (after.source === 'odometer') throw new Error('a hand-typed figure is still being called a reading');
+    return 'typed over, so no longer a reading';
+  });
+
   // ---------------- a vehicle name is text, not markup ----------------
   await check('tax — a vehicle named with a tag is shown, not parsed', async () => {
     // The Tax screen writes this label as HTML because some labels carry

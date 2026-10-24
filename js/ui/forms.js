@@ -19,6 +19,10 @@ export function openEarningsForm(existing = null, opts = {}) {
     amount: b.amount ?? '', tips: b.tips ?? '', hours: b.hours ?? '', deliveries: b.deliveries ?? '', miles: b.miles ?? '', notes: b.notes || '',
     vehicleId: b.vehicleId || '', stationId: b.stationId || '',
     milesBase: b.milesBase ?? null,
+    // Carried so an edit cannot quietly destroy it. Only the live tracker
+    // sets this, and it is the difference between a mileage claim backed by
+    // a reading and one backed by nothing.
+    milesSource: b.milesSource || '',
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
@@ -93,6 +97,16 @@ export function openEarningsForm(existing = null, opts = {}) {
     // home begins at the last drop — a work location — so it is not the same
     // journey as home-to-base, and is not treated as one.
     if (st && rec.miles >= st.baseMiles) { rec.milesBase = st.baseMiles; } else { rec.milesBase = null; }
+    // A reading survives an edit to the hours, the pay or the station, but not
+    // to the miles themselves: change that figure and it is no longer the
+    // number the odometer showed, so it becomes what it now is — one typed in
+    // afterwards. Rebuilding the record without this at all, as this form used
+    // to, threw the reading away whatever was edited: a block driven to be
+    // measured came back from a correction to its hours as an estimate, and
+    // the report went on reporting nothing measured.
+    if (e.milesSource && Math.abs((Number(e.miles) || 0) - rec.miles) < 0.005) {
+      rec.milesSource = e.milesSource;
+    }
     if (!rec.amount && !rec.tips && !rec.miles) { toast('Enter earnings, tips or miles', 'err'); return; }
     await earnings.save(rec);
     closeSheet(); toast(isEdit ? 'Shift updated' : 'Shift added', 'ok'); bus.refresh();
