@@ -220,6 +220,24 @@ function livePanel(ctx) {
     if (!s.earnings && !miles) { toast('Add earnings or miles first', 'err'); return; }
     const hrs = round2(elapsedHours(s));
 
+    // Starting by odometer and stopping without the closing reading saves the
+    // miles as an estimate — silently, and for good: a reading cannot be
+    // added afterwards, because a number typed once the drive is over is not
+    // a reading. The whole point of the shift was the measurement, so say so
+    // while it can still be entered rather than let it be discovered weeks
+    // later on the report.
+    const startedByOdo = (s.milesMode || (s.odoStart != null ? 'odometer' : '')) === 'odometer';
+    const closed = s.odoStart != null && s.odoEnd != null && s.odoEnd >= s.odoStart;
+    if (startedByOdo && !closed) {
+      const anyway = await confirmDialog({
+        title: 'The closing odometer reading is missing',
+        message: 'You started this shift by odometer. Without the reading you finished on, these miles are saved as an estimate — and that cannot be changed later, because a figure entered after the drive is not a reading. Enter it now if the car is still where you parked it.',
+        confirmText: 'Save as an estimate',
+        danger: true,
+      });
+      if (!anyway) return;
+    }
+
     // A shift left running overnight would otherwise be filed with wildly
     // inflated hours, which quietly skews every £/hour figure.
     if (hrs > 16) {

@@ -121,6 +121,66 @@ const run = async () => {
   // ================= PIN lock =================
   console.log('\n--- PIN lock ---');
 
+  await check('shift — stopping without the closing reading warns before it downgrades', async () => {
+    // Starting by odometer and stopping without the end reading saves the
+    // miles as an estimate, for good. That is the one failure the whole
+    // shift existed to avoid, so it must not happen silently.
+    const out = await b.eval(`
+      const sh = await import('/js/shift.js');
+      const db = await import('/js/db.js');
+      const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ taxYear: '2026/27', expenseMethod: 'mileage', lang: 'en',
+        stations: [{ id: 'donny', label: 'Doncaster', baseMiles: 21.5, typicalMiles: 0 }] });
+      sh.startShift({ platform: 'amazonflex', gps: false, odoStart: 84213, milesMode: 'odometer', stationId: 'donny' });
+      sh.updateShift({ earnings: 70 });
+      return true;`);
+    await b.goto('#/shift');
+    const warned = await b.eval(`
+      const stop = [...document.querySelectorAll('#view button')].find(x => /Stop|Finish|End/i.test(x.textContent));
+      if (!stop) return { error: 'no stop button on the live shift screen' };
+      stop.click();
+      await new Promise(r => setTimeout(r, 400));
+      const sheet = document.querySelector('.sheet');
+      return { asked: !!sheet && /closing odometer reading is missing/i.test(sheet.textContent),
+               saysWhy: !!sheet && /cannot be changed later/i.test(sheet.textContent) };`);
+    if (warned.error) throw new Error(warned.error);
+    if (!warned.asked) throw new Error('it stopped and saved without a word about the missing reading');
+    if (!warned.saysWhy) throw new Error('warns, but does not say the downgrade is permanent');
+    // Backing out must leave the shift running so the reading can still go in.
+    const backedOut = await b.eval(`
+      const cancel = [...document.querySelectorAll('.sheet button')].find(x => /Cancel/i.test(x.textContent));
+      cancel.click();
+      await new Promise(r => setTimeout(r, 300));
+      const sh = await import('/js/shift.js');
+      const db = await import('/js/db.js');
+      return { stillRunning: !!sh.getActive(), saved: (await db.earnings.all()).length };`);
+    if (!backedOut.stillRunning) throw new Error('backing out ended the shift anyway');
+    if (backedOut.saved !== 0) throw new Error('it saved the record despite backing out');
+    return 'asked, said why, and the shift stayed open';
+  });
+
+  await check('shift — with both readings it stops without being asked', async () => {
+    const out = await b.eval(`
+      const sh = await import('/js/shift.js');
+      sh.updateShift({ odoEnd: 84261 });
+      return true;`);
+    await b.goto('#/shift');
+    const result = await b.eval(`
+      const stop = [...document.querySelectorAll('#view button')].find(x => /Stop|Finish|End/i.test(x.textContent));
+      stop.click();
+      await new Promise(r => setTimeout(r, 600));
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      return { asked: !!document.querySelector('.sheet'), rows: all.length,
+               source: all[0] && all[0].milesSource, miles: all[0] && all[0].miles };`);
+    if (result.asked) throw new Error('asked even though both readings were there');
+    if (result.rows !== 1) throw new Error('the shift did not save');
+    if (result.source !== 'odometer') throw new Error('saved as ' + result.source + ', not a measurement');
+    if (result.miles !== 48) throw new Error('miles came out as ' + result.miles + ', expected 48');
+    return '48 measured miles, saved as a reading';
+  });
+
   await check('lock — a PIN is stored only as a salted hash', async () => {
     const out = await b.eval(`
       const lock = await import('/js/lock.js');

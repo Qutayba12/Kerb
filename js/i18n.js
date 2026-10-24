@@ -614,6 +614,12 @@ const AR = {
     'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت ثمن شرائها كمصروف. ولا يستطيع Kerb معرفة ذلك من سجلاتك. أجب عنه مرة واحدة في الإعدادات ويختفي هذا.',
   'No vehicle purchase was claimed against this mileage':
     'لم يُطالَب بثمن شراء مركبة مقابل هذه الأميال',
+  'The closing odometer reading is missing':
+    'قراءة العدّاد الختامية ناقصة',
+  'You started this shift by odometer. Without the reading you finished on, these miles are saved as an estimate — and that cannot be changed later, because a figure entered after the drive is not a reading. Enter it now if the car is still where you parked it.':
+    'بدأت هذه الوردية بالعدّاد. وبدون القراءة التي انتهيت عندها تُحفَظ هذه الأميال كتقدير — ولا يمكن تغيير ذلك لاحقاً، لأن رقماً يُدخَل بعد انتهاء القيادة ليس قراءة. أدخلها الآن إن كانت السيارة ما زالت حيث أوقفتها.',
+  'Save as an estimate':
+    'احفظ كتقدير',
   'All entries fall inside the tax year':
     'كل المُدخلات تقع داخل السنة الضريبية',
   'No expenses recorded':
