@@ -92,7 +92,11 @@ export function openEarningsForm(existing = null, opts = {}) {
     form.append(field('Station', stationSel), stationHint);
   }
   if (vehicleSel) form.append(field('Vehicle', vehicleSel, 'Each vehicle has its own first 10,000 business miles at the higher rate.'));
-  form.append(
+  // Filtered, because Node.append() stringifies anything that is not a node:
+  // a conditional branch yielding null is appended as the literal text "null".
+  // el() has always dropped nulls from its children, which is why the habit
+  // looks safe until it is used on a raw append.
+  form.append(...[
     field('Earnings (before tips)', amount, 'What the app/platform paid you for the work.'),
     field('Tips', tips, 'Tips are taxable income — kept separate for your records.'),
     el('div', { class: 'grid-2' }, [
@@ -110,7 +114,7 @@ export function openEarningsForm(existing = null, opts = {}) {
     ]) : null,
     hasOdo ? el('div', { class: 'hint', style: 'margin:-6px 0 12px', text: 'The readings this shift was measured from. Correct a mistyped one and the miles follow; they are what your report shows as evidence, so leave them as the dashboard read.' }) : null,
     field('Note', notes),
-  );
+  ].filter(Boolean));
 
   const save = async () => {
     const rec = {

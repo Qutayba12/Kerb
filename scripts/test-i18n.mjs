@@ -95,9 +95,11 @@ const run = async () => {
   // three, and the default seed shows the "nothing measured" one of each —
   // so the rest would ship in English without anyone noticing. Re-render the
   // screen under each state instead.
-  const sweepView = `
+  const sweepRoot = (sel) => `
     const out = [];
-    const w = document.createTreeWalker(document.getElementById('view'), NodeFilter.SHOW_TEXT, null);
+    const root = document.querySelector(${JSON.stringify(sel)});
+    if (!root) return ['(nothing rendered at ${sel})'];
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     while (w.nextNode()) {
       const t = w.currentNode.nodeValue.trim();
       if (!t || /[\\u0600-\\u06FF]/.test(t) || !/[A-Za-z]{2}/.test(t)) continue;
@@ -107,6 +109,7 @@ const run = async () => {
       out.push(t);
     }
     return [...new Set(out)];`;
+  const sweepView = sweepRoot('#view');
   const TWO = `[{ id: 'sheff', label: 'Amazon Logistics (S4 8AL)', baseMiles: 2.3, typicalMiles: 19 },
                { id: 'donny', label: 'Amazon Logistics (DN11 0BF)', baseMiles: 21.5, typicalMiles: 0 }]`;
   const VARIANTS = [
@@ -206,6 +209,64 @@ const run = async () => {
       for (const e of all) await db.earnings.save({ ...e, miles: 21, milesSource: 'odometer' });
       return true;`],
   ];
+  // --- the sheets: every dialog and every form ---
+  // Sheets are mounted in #sheet-root, and every sweep until now walked #view
+  // alone. So no confirmation dialog and no entry form had ever been checked
+  // — including the ones that warn a wipe cannot be undone, which is exactly
+  // where a driver needs to understand what they are agreeing to.
+  const SHEETS = [
+    ['sheet · add a shift', 'income', `(await import('/js/ui/forms.js')).openEarningsForm(); return true;`],
+    ['sheet · edit a shift', 'income', `
+      const db = await import('/js/db.js');
+      const f = await import('/js/ui/forms.js');
+      const rec = (await db.earnings.all()).find(e => e.milesSource === 'odometer') || (await db.earnings.all())[0];
+      f.openEarningsForm(rec); return true;`],
+    ['sheet · add an expense', 'expenses', `(await import('/js/ui/forms.js')).openExpenseForm(); return true;`],
+    ['sheet · add a bill', 'expenses', `(await import('/js/ui/forms.js')).openBillForm(); return true;`],
+    ['sheet · discard a running shift', 'shift', `
+      const sh = await import('/js/shift.js');
+      sh.startShift({ platform: 'amazonflex', gps: false, milesMode: 'manual' });
+      const sd = await import('/js/ui/shared.js');
+      sd.confirmDialog({ title: 'Discard this shift?', message: 'Time and miles tracked will be lost.', confirmText: 'Discard', danger: true });
+      return true;`],
+    ['sheet · wipe every record', 'settings', `
+      const sd = await import('/js/ui/shared.js');
+      sd.confirmDialog({ title: 'Delete all records?',
+        message: 'All shifts, expenses and bills will be permanently removed from this device. Settings are kept.',
+        confirmText: 'Delete everything', danger: true });
+      return true;`],
+    ['sheet · restore a backup over this device', 'settings', `
+      const sd = await import('/js/ui/shared.js');
+      sd.confirmDialog({ title: 'Restore this backup?', message: 'This replaces all current data on this device.',
+        confirmText: 'Restore', danger: true });
+      return true;`],
+    ['sheet · set a PIN', 'settings', `(await import('/js/lock.js')).openPinSetup(); return true;`],
+  ];
+  for (const [name, route, setup] of SHEETS) {
+    b.clearErrors();
+    await b.goto('#/' + route);
+    await b.eval(setup);
+    await b.eval('await new Promise(r => setTimeout(r, 400)); return true;');
+    // A sweep is only worth its pass if it looked at the thing it names. #view
+    // is always present and always clean, so a sheet sweep aimed at it would
+    // report every dialog in the app as fine without opening one.
+    const open = await b.eval(`
+      const s = document.querySelector('.sheet');
+      return { found: !!s, words: s ? (s.textContent.match(/[A-Za-z\\u0600-\\u06FF]{2,}/g) || []).length : 0 };`);
+    if (!open.found || open.words < 3) {
+      results.push({ route: name, status: 'LEAK', leaks: [`the sheet never opened (found=${open.found}, words=${open.words})`], errs: [] });
+      totalErrors++;
+      await b.eval(`(await import('/js/ui/shared.js')).closeSheet(); return true;`);
+      continue;
+    }
+    const leaks = (await b.eval(sweepRoot('.sheet'))).filter((t) => !ALLOW.some((re) => re.test(t)));
+    const errs = b.errors();
+    totalLeaks += leaks.length;
+    totalErrors += errs.length;
+    results.push({ route: name, status: leaks.length || errs.length ? 'LEAK' : 'ok', leaks, errs });
+    await b.eval(`(await import('/js/ui/shared.js')).closeSheet(); (await import('/js/shift.js')).stopShift(); return true;`);
+  }
+
   for (const [name, route, setup] of VARIANTS) {
     b.clearErrors();
     await b.eval(setup);
