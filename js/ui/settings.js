@@ -42,6 +42,15 @@ export async function render() {
     field('Vehicle', bindSelect('vehicle', Object.entries(VEHICLE_LABELS).map(([v, l]) => ({ value: v, label: l })), true)),
     field('Expense method', bindSelect('expenseMethod', [{ value: 'mileage', label: 'Simplified mileage' }, { value: 'actual', label: 'Actual costs' }], true),
       s.expenseMethod === 'mileage' ? 'Claim a flat rate per business mile.' : 'Claim the business share of real vehicle costs.'),
+    s.expenseMethod === 'mileage'
+      ? field('Did you claim a vehicle\'s purchase price as an expense?',
+        bindSelect('vehicleCostClaimed', [
+          { value: '', label: '— not answered —' },
+          { value: 'no', label: 'No' },
+          { value: 'yes', label: 'Yes — I deducted the cost of buying one' },
+        ], true),
+        'On the cash basis you cannot claim simplified mileage for a vehicle whose purchase cost you already deducted. Kerb cannot tell from your records, so it asks.')
+      : null,
     field('Working tax year', bindSelect('taxYear', availableYears().map(y => ({ value: y, label: y })), true)),
     lossReliefRow(),
     field('Self-employment start date', bindDate('seStartDate'), 'Used for your HMRC registration reminder.'),
@@ -179,7 +188,18 @@ function claudeCard(s) {
   const modelSel = selectInput(MODELS, s.claudeModel);
   modelSel.addEventListener('change', () => saveSettings({ claudeModel: modelSel.value }));
 
+  // The shared endpoint reports whether its counters are backed by a shared
+  // store. Without one they sit in a serverless instance's memory and are
+  // lost on every cold start, so the free allowance and the rate limits do
+  // not hold and the deployment's own key pays for whatever is sent. Only
+  // shown once a scan has actually come back saying so.
+  const quotaWarning = s.sharedQuotaOff && !s.apiKey
+    ? el('div', { class: 'callout callout--warn', style: 'margin:0 0 12px',
+      html: `${icon('warn')}<div><b>Free scanning on this deployment has no working limits.</b> Its counters are not backed by a shared store, so the monthly allowance and the rate limits are not enforced and whoever runs it pays for every scan. Add your own key below to stop using it. If this deployment is yours, configure a KV store for it.</div>` })
+    : null;
+
   return card([
+    quotaWarning,
     field('Anthropic API key', el('div', {}, [keyInput, el('div', { class: 'row', style: 'gap:8px;margin-top:8px' }, [saveBtn, testBtn, clearBtn, show])]),
       'Get a key at <b>console.anthropic.com</b> → API keys, and add a little credit. Stored only on this device; sent only to Anthropic.'),
     status,
@@ -568,7 +588,12 @@ function openVehicleForm() {
     // The first explicit vehicle keeps the existing default as vehicle #1, so
     // shifts already logged stay attached to the same vehicle.
     if (!list.length) list.push({ id: 'default', label: VEHICLE_LABELS[cur.vehicle] || 'Vehicle', type: cur.vehicle || 'car' });
-    list.push({ id: 'v' + Date.now().toString(36), label: label.value.trim() || (VEHICLE_LABELS[type.value] || 'Vehicle'), type: type.value });
+    // Angle brackets out at the door, as the backup importer already does.
+    // saveSettings stores what it is given, so a name typed here reaches
+    // every screen unfiltered; the render escapes too, but clean data is
+    // the better place to stop it.
+    const typed = label.value.trim().replace(/[<>]/g, '');
+    list.push({ id: 'v' + Date.now().toString(36), label: typed || (VEHICLE_LABELS[type.value] || 'Vehicle'), type: type.value });
     saveSettings({ vehicles: list });
     closeSheet(); toast('Vehicle added', 'ok'); bus.refresh();
   };

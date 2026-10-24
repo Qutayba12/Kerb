@@ -141,6 +141,21 @@ const run = async () => {
     // Neither the basis note nor the home-to-station split appears unless the
     // driver has written a note and logged shifts against a station — which
     // the default seed does not, so both shipped in English unnoticed.
+    // The cash-basis question has three states and the quota warning only
+    // shows after a scan reported unenforced limits — none of them reachable
+    // from the default seed.
+    ['review · the vehicle-cost question unanswered', 'review', `
+      const st = await import('/js/store.js');
+      st.saveSettings({ expenseMethod: 'mileage', vehicleCostClaimed: '' }); return true;`],
+    ['review · a vehicle cost was claimed', 'review', `
+      const st = await import('/js/store.js');
+      st.saveSettings({ vehicleCostClaimed: 'yes' }); return true;`],
+    ['review · no vehicle cost claimed', 'review', `
+      const st = await import('/js/store.js');
+      st.saveSettings({ vehicleCostClaimed: 'no' }); return true;`],
+    ['settings · shared scanning with no working limits', 'settings', `
+      const st = await import('/js/store.js');
+      st.saveSettings({ apiKey: '', sharedQuotaOff: true }); return true;`],
     ['report · a basis note and a station split', 'report', `
       const db = await import('/js/db.js'); const st = await import('/js/store.js');
       st.saveSettings({ stations: ${TWO},

@@ -144,6 +144,8 @@ const DEFAULTS = {
   // would overstate the near ones and understate the far ones.
   stations: [],                  // [{id,label,baseMiles,typicalMiles}]
   mileageBasis: '',              // how the distances were worked out — shown on the report
+  sharedQuotaOff: false,         // the shared scan endpoint reported unenforced limits
+  vehicleCostClaimed: '',        // '' unanswered | 'no' | 'yes' — was a vehicle's purchase price deducted as an expense
   expenseMethod: 'mileage',      // 'mileage' | 'actual'
   lossRelief: true,              // carry a trading loss forward against later profits
   hmrcPayments: [],              // [{id,taxYear,date,amount,note}] money actually sent to HMRC
@@ -258,6 +260,8 @@ export function sanitiseSettings(raw) {
     }));
   }
   put('mileageBasis', sText(raw.mileageBasis, MILEAGE_BASIS_MAX));
+  put('sharedQuotaOff', !!raw.sharedQuotaOff);
+  put('vehicleCostClaimed', ['', 'no', 'yes'].includes(raw.vehicleCostClaimed) ? raw.vehicleCostClaimed : '');
   if (Array.isArray(raw.hmrcPayments)) {
     out.hmrcPayments = raw.hmrcPayments.slice(0, 500).filter(p => p && typeof p === 'object').map(p => ({
       id: sText(p.id, 40) || 'h' + Math.random().toString(36).slice(2, 8),

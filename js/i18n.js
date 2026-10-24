@@ -604,6 +604,32 @@ const AR = {
     'ابدأ وردية متتبَّعة',
   'How the mileage was worked out:':
     'كيف حُسبت المسافة:',
+  'Your mileage claim may not be allowed':
+    'قد لا تكون مطالبة الأميال مسموحة',
+  'You have said you deducted a vehicle\u2019s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle \u2014 you claim one or the other. This is the biggest figure on your return, so settle it with an accountant before you file, or switch to the actual-costs method.':
+    'ذكرت أنك خصمت ثمن شراء مركبة كمصروف. وتحت الأساس النقدي لا تسمح HMRC بمعدّل المسافة المبسّط للمركبة نفسها — فإما هذا أو ذاك. وهذا أكبر رقم في إقرارك، فاحسمه مع محاسب قبل التقديم، أو انتقل إلى طريقة التكاليف الفعلية.',
+  'One question still decides whether your mileage claim stands':
+    'سؤال واحد ما زال يحدّد هل تصمد مطالبة الأميال',
+  'On the cash basis you cannot claim simplified mileage for a vehicle whose purchase price you already deducted as an expense. Kerb cannot tell from your records which it was. Answer it once in Settings and this goes.':
+    'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت ثمن شرائها كمصروف. ولا يستطيع Kerb معرفة ذلك من سجلاتك. أجب عنه مرة واحدة في الإعدادات ويختفي هذا.',
+  'No vehicle purchase was claimed against this mileage':
+    'لم يُطالَب بثمن شراء مركبة مقابل هذه الأميال',
+  'It beats your recorded expenses this year, so Kerb claims it instead. You cannot claim both — if you have costs you have not logged yet, add them and this may flip.':
+    'إنه يتجاوز مصاريفك المسجّلة هذه السنة، فيطالب به Kerb بدلاً منها. ولا يمكنك المطالبة بالاثنين — فإن كانت لديك تكاليف لم تسجّلها بعد، أضفها وقد ينقلب هذا.',
+  'Declare this in the losses section of your return so HMRC carries it into future years. If you miss it, you lose the relief.':
+    'أعلن هذا في قسم الخسائر من إقرارك ليُرحّله HMRC إلى السنوات القادمة. وإن أغفلته فقدت الإعفاء.',
+  'Answer it':
+    'أجب عنه',
+  'Did you claim a vehicle\'s purchase price as an expense?':
+    'هل طالبت بثمن شراء مركبة كمصروف؟',
+  'On the cash basis you cannot claim simplified mileage for a vehicle whose purchase cost you already deducted. Kerb cannot tell from your records, so it asks.':
+    'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت تكلفتها من قبل. ولا يستطيع Kerb معرفة ذلك من سجلاتك، لذلك يسأل.',
+  '\u2014 not answered \u2014':
+    '— بلا إجابة —',
+  'Yes \u2014 I deducted the cost of buying one':
+    'نعم — خصمت تكلفة شراء واحدة',
+  'No':
+    'لا',
   'That is one shift, so it is one route rather than a typical distance. Use it only if that block was an ordinary one, and check the miles against the drive you actually made each time. A second reading will show the spread.':
     'هذه وردية واحدة، فهي مسار واحد لا مسافة معتادة. استخدمها فقط إن كان ذلك البلوك عادياً، وراجع الأميال في كل مرة مقابل المسافة التي قطعتها فعلاً. والقراءة الثانية ستُظهر لك المدى.',
 };
@@ -797,6 +823,10 @@ const AR_PAT = {
     'لم تُقرأ أميال أي من الورديات الـ{0} المطالَب بها هذه السنة من عدّاد السيارة ولم تُتبَّع؛ فكل رقم فيها تقدير تم التوصل إليه بالطريقة الموضّحة أعلاه.',
   'All {0} shifts claimed this year had their mileage read from an odometer or tracked at the time.':
     'كل الورديات الـ{0} المطالَب بها هذه السنة قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها.',
+  'The {0} trading allowance is being used':
+    'يُستخدَم بدل الدخل التجاري {0}',
+  '{0} of losses carried forward':
+    '{0} من الخسائر مُرحَّلة',
   'Of {0} business miles, {1} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.':
     'من أصل {0} ميل عمل، {1} ميل هي رحلة الذهاب من البيت إلى محطة الاستلام، عبر محطات متفاوتة البُعد. أما رحلات العودة فتبدأ من نقطة التسليم الأخيرة وهي غير داخلة في هذا الرقم.',
   'Of the {0} shifts claimed this year, {1} had their mileage read from an odometer or tracked at the time ({2} miles); the remaining {3} miles are estimates arrived at as described above.':
@@ -900,6 +930,8 @@ const AR_HTML = {
     'إجمالي مصاريف العمل القابلة للخصم <span class="report__box">خانة {0}</span>',
   'Net profit <span class="report__box">Box {0}</span>':
     'صافي الربح <span class="report__box">خانة {0}</span>',
+  '<b>Free scanning on this deployment has no working limits.</b> Its counters are not backed by a shared store, so the monthly allowance and the rate limits are not enforced and whoever runs it pays for every scan. Add your own key below to stop using it. If this deployment is yours, configure a KV store for it.':
+    '<b>المسح المجاني على هذا النشر بلا حدود فعّالة.</b> عدّاداته لا تستند إلى مخزن مشترك، فالحصة الشهرية وحدود المعدّل غير مطبَّقة، ومن يشغّله يدفع ثمن كل عملية مسح. أضف مفتاحك الخاص أدناه لتتوقف عن استخدامه. وإن كان هذا النشر نشرك، فاضبط له مخزن KV.',
   'Loss brought forward, set against this year <span class="report__box">losses section</span>':
     'خسارة مُرحّلة، تُخصم من هذه السنة <span class="report__box">قسم الخسائر</span>',
   'Total loss to carry forward <span class="report__box">losses section</span>':
