@@ -31,10 +31,14 @@ export function openEarningsForm(existing = null, opts = {}) {
   const platformSel = selectInput(allPlatforms().map(p => ({ value: p.id, label: p.name })), e.platform);
   const amount = moneyInput({ value: e.amount, placeholder: '0.00' });
   const tips = moneyInput({ value: e.tips, placeholder: '0.00' });
-  const hours = el('input', { class: 'input', type: 'number', step: '0.25', min: '0', inputMode: 'decimal', value: e.hours, placeholder: 'e.g. 4' });
-  const hoursActual = el('input', { class: 'input', type: 'number', step: '0.25', min: '0', inputMode: 'decimal', value: e.hoursActual, placeholder: 'e.g. 5.5' });
+  // step is the spinner's increment, not a rule about what is true. Used as
+  // one it rejects any figure that falls between the notches — 5.4 hours on a
+  // quarter-hour step — and the browser refuses the save with a tooltip that
+  // is easy to miss. These record what happened, so they take what happened.
+  const hours = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.hours, placeholder: 'e.g. 4' });
+  const hoursActual = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.hoursActual, placeholder: 'e.g. 5.4' });
   const deliveries = el('input', { class: 'input', type: 'number', step: '1', min: '0', inputMode: 'numeric', value: e.deliveries, placeholder: 'e.g. 12' });
-  const miles = el('input', { class: 'input', type: 'number', step: '0.1', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
+  const miles = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
   const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
 
   // Picking the station fills the miles in, because stations sit at very

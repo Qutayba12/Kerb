@@ -146,6 +146,21 @@ function lockZoom() {
   }, { passive: false });
   // Block ctrl/⌘ + wheel zoom on desktop.
   document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+
+  // A form the browser judges invalid never fires submit, so the save handler
+  // never runs and nothing is written — in silence, because the tooltip the
+  // browser shows is easy to miss and gone on the next tap. That is how a
+  // measured 5.4 hours was refused by a field whose step was a quarter: the
+  // button simply did nothing. 'invalid' does not bubble, so this listens in
+  // the capture phase, and it covers every form in the app rather than the one
+  // that happened to be found.
+  document.addEventListener('invalid', (ev) => {
+    const f = ev.target;
+    if (!f || !f.validationMessage) return;
+    const label = f.closest('.field')?.querySelector('label')?.textContent;
+    toast(label ? `${label}: ${f.validationMessage}` : f.validationMessage, 'err');
+    try { f.focus({ preventScroll: false }); } catch {}
+  }, true);
 }
 
 // ---------- service worker ----------

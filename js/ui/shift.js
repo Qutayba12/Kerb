@@ -32,7 +32,7 @@ function startPanel() {
     { id: 'none', label: 'Add later', sub: 'Enter miles when you finish' },
   ];
   const chips = el('div', { class: 'seg' });
-  const odoStartInput = el('input', { class: 'input', type: 'number', min: '0', step: '1', inputMode: 'decimal', placeholder: 'e.g. 84213' });
+  const odoStartInput = el('input', { class: 'input', type: 'number', min: '0', step: 'any', inputMode: 'decimal', placeholder: 'e.g. 84213' });
   const odoWrap = field('Odometer reading now (start)', odoStartInput, 'Read the number on your dashboard. At the end, enter the new reading — Kerb works out the miles.');
   const note = el('div', { class: 'callout callout--info', style: 'margin-top:10px' });
 
@@ -67,7 +67,7 @@ function startPanel() {
     note,
   ]);
   if (stationSel) card.append(field('Station', stationSel, 'Recording it lets Kerb learn what a block from here comes to.'));
-  const booked = el('input', { class: 'input', type: 'number', step: '0.25', min: '0', inputMode: 'decimal', placeholder: 'e.g. 4' });
+  const booked = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', placeholder: 'e.g. 4' });
   card.append(field('Block hours (as booked)', booked, 'What the block was offered as. Kerb times what it actually takes, so you can see the difference later.'));
   root.append(card);
   syncMode();
@@ -136,8 +136,8 @@ function livePanel(ctx) {
   const mode = s0.milesMode || (s0.gps ? 'gps' : (s0.odoStart != null ? 'odometer' : 'manual'));
 
   // odometer inputs (shared)
-  const odoStart = el('input', { class: 'input', type: 'number', min: '0', step: '1', inputMode: 'decimal', value: s0.odoStart ?? '', placeholder: 'start' });
-  const odoEnd = el('input', { class: 'input', type: 'number', min: '0', step: '1', inputMode: 'decimal', value: s0.odoEnd ?? '', placeholder: 'end' });
+  const odoStart = el('input', { class: 'input', type: 'number', min: '0', step: 'any', inputMode: 'decimal', value: s0.odoStart ?? '', placeholder: 'start' });
+  const odoEnd = el('input', { class: 'input', type: 'number', min: '0', step: 'any', inputMode: 'decimal', value: s0.odoEnd ?? '', placeholder: 'end' });
   const onOdo = () => { updateShift({ odoStart: odoStart.value === '' ? null : parseFloat(odoStart.value), odoEnd: odoEnd.value === '' ? null : parseFloat(odoEnd.value) }); refreshMiles(); refreshRates(); };
   odoStart.addEventListener('input', onOdo); odoEnd.addEventListener('input', onOdo);
 
@@ -151,7 +151,7 @@ function livePanel(ctx) {
     milesCard.append(el('div', { class: 'hint', text: 'When you finish, enter the dashboard reading here — miles = end − start. No need to keep the app open in between.' }));
   } else {
     if (!s0.gps) {
-      manualMiles = el('input', { class: 'input', type: 'number', min: '0', step: '0.1', inputMode: 'decimal', value: s0.miles || '', placeholder: 'miles this shift', style: 'margin-top:10px' });
+      manualMiles = el('input', { class: 'input', type: 'number', min: '0', step: 'any', inputMode: 'decimal', value: s0.miles || '', placeholder: 'miles this shift', style: 'margin-top:10px' });
       manualMiles.addEventListener('input', () => { updateShift({ miles: parseFloat(manualMiles.value) || 0 }); refreshMiles(); refreshRates(); });
       milesCard.append(manualMiles);
     }
