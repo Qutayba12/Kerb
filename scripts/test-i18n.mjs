@@ -86,11 +86,12 @@ const run = async () => {
     results.push({ route, status: real.length || errs.length ? 'LEAK' : 'ok', leaks: real, errs });
   }
 
-  // --- the review screen's branching states ---
+  // --- screens whose checks branch ---
   // A single pass over the routes only ever renders one branch of a check.
-  // The mileage-evidence check has three, and the one the default seed shows
-  // is the "nothing measured" warning — so the other two would ship in
-  // English without anyone noticing. Re-render review under each state.
+  // The mileage-evidence check has three and the report's disclosure has
+  // three, and the default seed shows the "nothing measured" one of each —
+  // so the rest would ship in English without anyone noticing. Re-render the
+  // screen under each state instead.
   const sweepView = `
     const out = [];
     const w = document.createTreeWalker(document.getElementById('view'), NodeFilter.SHOW_TEXT, null);
@@ -105,27 +106,52 @@ const run = async () => {
   const TWO = `[{ id: 'sheff', label: 'Amazon Logistics (S4 8AL)', baseMiles: 2.3, typicalMiles: 19 },
                { id: 'donny', label: 'Amazon Logistics (DN11 0BF)', baseMiles: 21.5, typicalMiles: 0 }]`;
   const VARIANTS = [
-    ['review · no stations set up', `
+    ['review · no stations set up', 'review', `
       const st = await import('/js/store.js');
       st.saveSettings({ stations: [] }); return true;`],
-    ['review · one of two measured', `
+    ['review · one of two measured', 'review', `
       const db = await import('/js/db.js'); const st = await import('/js/store.js');
       st.saveSettings({ stations: ${TWO} });
       const all = await db.earnings.all();
       await db.earnings.save({ ...all[0], stationId: 'sheff', miles: 19, milesSource: 'odometer' });
       await db.earnings.save({ ...all[1], stationId: 'donny' });
       return true;`],
-    ['review · every station measured', `
+    ['review · every station measured', 'review', `
       const db = await import('/js/db.js');
       const all = await db.earnings.all();
       await db.earnings.save({ ...all[1], stationId: 'donny', miles: 48, milesSource: 'odometer' });
       return true;`],
+    // One measured reading. The station card must caution that a sample of
+    // one is a route, not a typical distance. Measuring 176 shifts one by one is slow and the
+    // report's disclosure counts them, so the records are trimmed first to a
+    // number small enough to set up exactly.
+    ['settings · a single measured reading', 'settings', `
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      st.saveSettings({ stations: ${TWO} });
+      const everything = await db.earnings.all();
+      for (const e of everything.slice(3)) await db.earnings.remove(e.id);
+      const all = await db.earnings.all();
+      for (const e of all) await db.earnings.save({ ...e, stationId: 'sheff', miles: 40, milesSource: 'manual' });
+      await db.earnings.save({ ...all[0], stationId: 'sheff', miles: 19, milesSource: 'odometer' });
+      return true;`],
+    ['report · some shifts measured, some not', 'report', `
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      await db.earnings.save({ ...all[1], miles: 22, milesSource: 'gps' });
+      return true;`],
+    ['report · every shift measured', 'report', `
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      for (const e of all) await db.earnings.save({ ...e, miles: 21, milesSource: 'odometer' });
+      return true;`],
   ];
-  for (const [name, setup] of VARIANTS) {
+  for (const [name, route, setup] of VARIANTS) {
     b.clearErrors();
     await b.eval(setup);
-    await b.goto('#/income');          // force a real re-render of review
-    await b.goto('#/review');
+    await b.goto('#/income');          // force a real re-render of the target
+    await b.goto('#/' + route);
+    // The station card fills its measured figures in after a DB read.
+    if (route === 'settings') { await b.eval('await new Promise(r => setTimeout(r, 400)); return true;'); }
     const leaks = (await b.eval(sweepView)).filter((t) => !ALLOW.some((re) => re.test(t)));
     const errs = b.errors();
     totalLeaks += leaks.length;

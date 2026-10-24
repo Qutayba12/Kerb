@@ -266,5 +266,43 @@ const pennies=Array.from({length:777},(_,i)=>({id:'p'+i,date:'2026-06-01',platfo
 eq('777 × 1p sums exactly', computeTaxYear(pennies,[],BS).grossIncome, 7.77);
 
 
+// The census printed on the report: how much of the claim is a reading and
+// how much the driver worked out. Only the live tracker sets milesSource, so
+// a figure typed into the form afterwards must never be counted as measured —
+// the whole point of the disclosure is that it cannot claim more than is true.
+console.log('\n--- Mileage evidence census ---');
+const EVS = { region: 'ruk', vehicle: 'car', expenseMethod: 'mileage', taxYear: '2026/27',
+  payeSalary: 0, otherIncome: 0, studentLoanPlan: 'none', taxPotMode: 'auto', homeOfficeHoursPerMonth: 0 };
+const mk = (id, miles, src) => ({ id, date: '2026-06-01', platform: 'amazonflex', amount: 70, tips: 0,
+  hours: 4, miles, ...(src ? { milesSource: src } : {}) });
+const evMixed = computeTaxYear([
+  mk('1', 40, 'odometer'), mk('2', 30, 'gps'),
+  mk('3', 50, 'manual'), mk('4', 20),              // typed in, and a legacy row with no source
+  mk('5', 0, 'odometer'),                           // no miles: not part of a mileage claim
+], [], EVS).evidence;
+eq('shifts with miles claimed', evMixed.shifts, 4);
+eq('of those, measured', evMixed.measuredShifts, 2);
+eq('measured miles', evMixed.measuredMiles, 70);
+eq('estimated miles', evMixed.estimatedMiles, 70);
+eq('census covers every claimed mile', evMixed.measuredMiles + evMixed.estimatedMiles,
+   computeTaxYear([mk('1', 40, 'odometer'), mk('2', 30, 'gps'), mk('3', 50, 'manual'), mk('4', 20)], [], EVS).businessMiles);
+
+const evNone = computeTaxYear([mk('1', 40, 'manual'), mk('2', 30)], [], EVS).evidence;
+eq('nothing measured: count', evNone.measuredShifts, 0);
+eq('nothing measured: miles', evNone.measuredMiles, 0);
+eq('nothing measured: all estimated', evNone.estimatedMiles, 70);
+
+const evAll = computeTaxYear([mk('1', 40, 'odometer'), mk('2', 30, 'odometer')], [], EVS).evidence;
+eq('all measured: count', evAll.measuredShifts, 2);
+eq('all measured: nothing estimated', evAll.estimatedMiles, 0);
+
+// Out-of-year shifts must not inflate the count on this year's report.
+const evYear = computeTaxYear([
+  mk('1', 40, 'odometer'),
+  { id: '2', date: '2025-06-01', platform: 'amazonflex', amount: 70, tips: 0, hours: 4, miles: 99, milesSource: 'odometer' },
+], [], EVS).evidence;
+eq('last year is not counted', evYear.measuredShifts, 1);
+eq('last year does not add miles', evYear.measuredMiles, 40);
+
 console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'} — ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
