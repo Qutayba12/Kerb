@@ -482,7 +482,16 @@ hr.soft { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 [dir="rtl"] .bubble--user { justify-content: flex-start; }
 [dir="rtl"] .bubble--assistant { justify-content: flex-end; }
 [dir="rtl"] .toast { direction: rtl; }
-[dir="rtl"] .brk td:last-child { text-align: left; }
+/* Money is an LTR run whatever the page language. Left to inherit RTL, the
+   leading minus of a negative amount is reordered to the far side of the
+   digits — the DOM holds "−£1,000.00" and the screen shows
+   "£1,000.00−". On a document being filed that is not a typo, it is a
+   figure whose sign has moved. Every element that carries an amount is
+   pinned to LTR; the value cell of a .brk table is always one. */
+[dir="rtl"] .brk td:last-child { text-align: left; direction: ltr; }
+[dir="rtl"] .item__amt,
+[dir="rtl"] .amt-neg,
+[dir="rtl"] .day-head .t { direction: ltr; }
 [dir="rtl"] .hero__value, [dir="rtl"] .tile__v { direction: ltr; text-align: right; } /* keep £ numbers LTR */
 
 /* ---------- Self Assessment report ---------- */

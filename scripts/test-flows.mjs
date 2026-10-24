@@ -798,6 +798,44 @@ const run = async () => {
     return 'label translated, note verbatim, direction its own';
   });
 
+  await check('report — a negative amount keeps its minus on the left in Arabic', async () => {
+    // The DOM is not the evidence here: it holds "−£1,000.00" either way. Left
+    // to inherit the page's RTL direction the browser reorders the leading
+    // minus past the digits, and the report shows "£1,000.00−" — on a document
+    // being filed, a figure whose sign has moved. So measure where it is drawn.
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'ar', taxYear: '2026/27', expenseMethod: 'mileage', traderName: 'T' });
+      await db.earnings.save({ id: 'n1', date: '2026-09-10', platform: 'amazonflex',
+        amount: 1492.71, tips: 0, hours: 4, deliveries: 0, miles: 1536, notes: '' });
+      return true;`);
+    // The direction is set when the app boots, so Arabic needs a reload to
+    // take hold — without it the page is still LTR and proves nothing.
+    await b.open('/');
+    await b.ready();
+    await b.goto('#/report');
+    const out = await b.eval(`
+      const cells = [...document.querySelectorAll('#view td')].filter(td => /^[−-]/.test(td.textContent.trim()));
+      if (!cells.length) return { error: 'no negative amount on the report to check' };
+      const td = cells[0];
+      const t = [...td.childNodes].find(n => n.nodeType === 3);
+      const r = document.createRange();
+      r.setStart(t, 0); r.setEnd(t, 1);
+      const minus = r.getBoundingClientRect().left;
+      r.setStart(t, t.nodeValue.length - 1); r.setEnd(t, t.nodeValue.length);
+      const last = r.getBoundingClientRect().left;
+      return { txt: td.textContent.trim(), rtlPage: document.documentElement.getAttribute('dir') === 'rtl',
+               minusLeftOfDigits: minus < last };`);
+    if (out.error) throw new Error(out.error);
+    if (!out.rtlPage) throw new Error('the page is not RTL, so this proves nothing');
+    if (!out.minusLeftOfDigits) throw new Error(`the minus is drawn to the right of the digits: ${out.txt} renders reversed`);
+    await b.eval(`(await import('/js/store.js')).saveSettings({ lang: 'en' }); return true;`);
+    await b.open('/');
+    await b.ready();
+    return 'the sign stays where it belongs on an RTL page';
+  });
+
   // ---------------- the mileage-basis note ----------------
   // The note is the stated basis for the biggest deduction on the return, so
   // what the field accepts is a correctness question, not a cosmetic one: a
