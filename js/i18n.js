@@ -614,6 +614,18 @@ const AR = {
     'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت ثمن شرائها كمصروف. ولا يستطيع Kerb معرفة ذلك من سجلاتك. أجب عنه مرة واحدة في الإعدادات ويختفي هذا.',
   'No vehicle purchase was claimed against this mileage':
     'لم يُطالَب بثمن شراء مركبة مقابل هذه الأميال',
+  'All entries fall inside the tax year':
+    'كل المُدخلات تقع داخل السنة الضريبية',
+  'No expenses recorded':
+    'لا مصاريف مسجّلة',
+  'Almost every driver has costs — phone, insurance, repairs, parking, bags. Without them you may pay more tax than you need to.':
+    'لكل سائق تقريباً تكاليف — الهاتف والتأمين والإصلاحات ومواقف السيارات والحقائب. وبدونها قد تدفع ضريبة أكثر مما يلزم.',
+  'Add an expense':
+    'أضف مصروفاً',
+  'Your mileage will not be claimable when it overtakes the allowance':
+    'لن تكون أميالك قابلة للمطالبة حين تتجاوز البدل',
+  'One question will decide your mileage claim once it overtakes the allowance':
+    'سؤال واحد سيحدّد مطالبة الأميال حين تتجاوز البدل',
   'It beats your recorded expenses this year, so Kerb claims it instead. You cannot claim both — if you have costs you have not logged yet, add them and this may flip.':
     'إنه يتجاوز مصاريفك المسجّلة هذه السنة، فيطالب به Kerb بدلاً منها. ولا يمكنك المطالبة بالاثنين — فإن كانت لديك تكاليف لم تسجّلها بعد، أضفها وقد ينقلب هذا.',
   'Declare this in the losses section of your return so HMRC carries it into future years. If you miss it, you lose the relief.':
@@ -825,6 +837,8 @@ const AR_PAT = {
     'كل الورديات الـ{0} المطالَب بها هذه السنة قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها.',
   'The {0} trading allowance is being used':
     'يُستخدَم بدل الدخل التجاري {0}',
+  'You have said you deducted a vehicle’s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle — you claim one or the other. The {0} trading allowance is still ahead of your mileage, so nothing is at risk this moment — but once your miles pass it, this becomes the largest figure on your return. Settle it with an accountant before then.':
+    'ذكرت أنك خصمت ثمن شراء مركبة كمصروف. وتحت الأساس النقدي لا تسمح HMRC بمعدّل المسافة المبسّط للمركبة نفسها — فإما هذا أو ذاك. وبدل الدخل التجاري {0} ما زال متقدّماً على أميالك، فلا شيء في خطر هذه اللحظة — لكن حين تتجاوزه أميالك يصبح هذا أكبر رقم في إقرارك. احسمه مع محاسب قبل ذلك.',
   '{0} of losses carried forward':
     '{0} من الخسائر مُرحَّلة',
   'Of {0} business miles, {1} are the outbound drive from home to a pickup station, across stations at differing distances. Return journeys begin at the final delivery point and are not included in that figure.':

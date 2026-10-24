@@ -147,6 +147,20 @@ const run = async () => {
     ['review · the vehicle-cost question unanswered', 'review', `
       const st = await import('/js/store.js');
       st.saveSettings({ expenseMethod: 'mileage', vehicleCostClaimed: '' }); return true;`],
+    // Under the trading allowance the same question is put as a future one.
+    ['review · the allowance still beats the mileage', 'review', `
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ expenseMethod: 'mileage', vehicleCostClaimed: '', stations: [] });
+      // Two records, not one: a later variant addresses all[1].
+      await db.earnings.save({ id: 'ta1', date: '2026-09-10', platform: 'amazonflex',
+        amount: 746.35, tips: 0, hours: 30, deliveries: 0, miles: 768, notes: '' });
+      await db.earnings.save({ id: 'ta2', date: '2026-09-11', platform: 'amazonflex',
+        amount: 746.36, tips: 0, hours: 30, deliveries: 0, miles: 768, notes: '' });
+      return true;`],
+    ['review · a vehicle cost claimed under the allowance', 'review', `
+      const st = await import('/js/store.js');
+      st.saveSettings({ vehicleCostClaimed: 'yes' }); return true;`],
     ['review · a vehicle cost was claimed', 'review', `
       const st = await import('/js/store.js');
       st.saveSettings({ vehicleCostClaimed: 'yes' }); return true;`],

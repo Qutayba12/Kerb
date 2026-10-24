@@ -914,6 +914,44 @@ const run = async () => {
     return 'asked, then warns on yes and clears on no';
   });
 
+  await check('review — the question is put as a future one while the allowance wins', async () => {
+    // With the trading allowance ahead of the mileage, no mileage is being
+    // claimed, so nothing is at risk yet. Saying "your claim may not be
+    // allowed" beside "the allowance is being used" would be two screens
+    // contradicting each other.
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage',
+        vehicles: [], stations: [], vehicleCostClaimed: '' });
+      // 1,536 miles = £844.80 of mileage, under the £1,000 allowance.
+      await db.earnings.save({ id: 'ta1', date: '2026-09-10', platform: 'amazonflex',
+        amount: 1492.71, tips: 0, hours: 60, deliveries: 0, miles: 1536, notes: '' });
+      return true;`);
+    await b.goto('#/review');
+    const low = await b.eval(`document.getElementById('view').textContent`);
+    if (!/trading allowance is being used/.test(low)) throw new Error('setup wrong: the allowance is not winning');
+    if (/One question still decides whether your mileage claim stands/.test(low)) {
+      throw new Error('claims the mileage is at risk while the allowance is what is being claimed');
+    }
+    if (!/One question will decide your mileage claim once it overtakes the allowance/.test(low)) {
+      throw new Error('the question is not asked at all: ' + low.slice(0, 300));
+    }
+    // Past the crossover (~1,819 miles) it becomes this year's problem.
+    await b.eval(`
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      await db.earnings.save({ ...all[0], miles: 2000 });
+      return true;`);
+    await b.goto('#/income');
+    await b.goto('#/review');
+    const high = await b.eval(`document.getElementById('view').textContent`);
+    if (!/One question still decides whether your mileage claim stands/.test(high)) {
+      throw new Error('past the crossover it is still put as a future question');
+    }
+    return 'future question under the allowance, live one above it';
+  });
+
   await check('review — the question is not asked on the actual-costs method', async () => {
     await b.eval(`(await import('/js/store.js')).saveSettings({ expenseMethod: 'actual', vehicleCostClaimed: '' }); return true;`);
     await b.goto('#/review');

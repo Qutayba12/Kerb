@@ -149,13 +149,26 @@ function buildChecks({ s, sum, ty, E, X, allE, allX }) {
   // Settings and only the driver's own answer is acted on. Silence here would
   // leave the largest deduction on the return resting on a condition nobody
   // checked.
+  //
+  // While the trading allowance beats the mileage, no mileage is being
+  // claimed, so nothing is at risk yet — but it will be the moment the miles
+  // overtake the allowance, which is a handful of shifts away for anyone
+  // still driving. Saying "your claim may not be allowed" beside "the
+  // allowance is being used" would be two screens contradicting each other,
+  // so the same question is put as the future one it actually is.
   if (s.expenseMethod === 'mileage' && sum.businessMiles > 0) {
+    const inUse = !sum.usedTradingAllowance;
     if (s.vehicleCostClaimed === 'yes') {
-      add('bad', 'Your mileage claim may not be allowed',
-        'You have said you deducted a vehicle’s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle — you claim one or the other. This is the biggest figure on your return, so settle it with an accountant before you file, or switch to the actual-costs method.',
+      add(inUse ? 'bad' : 'warn',
+        inUse ? 'Your mileage claim may not be allowed' : 'Your mileage will not be claimable when it overtakes the allowance',
+        'You have said you deducted a vehicle’s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle — you claim one or the other. '
+        + (inUse
+          ? 'This is the biggest figure on your return, so settle it with an accountant before you file, or switch to the actual-costs method.'
+          : 'The £1,000 trading allowance is still ahead of your mileage, so nothing is at risk this moment — but once your miles pass it, this becomes the largest figure on your return. Settle it with an accountant before then.'),
         { label: 'Open Settings', run: () => bus.navigate('settings') });
     } else if (!s.vehicleCostClaimed) {
-      add('warn', 'One question still decides whether your mileage claim stands',
+      add(inUse ? 'warn' : 'info',
+        inUse ? 'One question still decides whether your mileage claim stands' : 'One question will decide your mileage claim once it overtakes the allowance',
         'On the cash basis you cannot claim simplified mileage for a vehicle whose purchase price you already deducted as an expense. Kerb cannot tell from your records which it was. Answer it once in Settings and this goes.',
         { label: 'Answer it', run: () => bus.navigate('settings') });
     } else add('ok', 'No vehicle purchase was claimed against this mileage', '');
