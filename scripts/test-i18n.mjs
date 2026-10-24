@@ -188,6 +188,13 @@ const run = async () => {
       const all = await db.earnings.all();
       for (const e of all) await db.earnings.save({ ...e, stationId: 'sheff', miles: 40, milesBase: 2.3 });
       return true;`],
+    // The readings table only exists where a shift carries both numbers.
+    ['report · the odometer readings table', 'report', `
+      const db = await import('/js/db.js');
+      const all = await db.earnings.all();
+      await db.earnings.save({ ...all[0], stationId: 'sheff', miles: 164,
+        milesSource: 'odometer', odoStart: 84213, odoEnd: 84377 });
+      return true;`],
     ['report · some shifts measured, some not', 'report', `
       const db = await import('/js/db.js');
       const all = await db.earnings.all();

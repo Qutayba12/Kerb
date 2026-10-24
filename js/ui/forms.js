@@ -2,7 +2,7 @@
 // ui/forms.js — add/edit sheets for earnings, expenses, bills.
 // Shared by the Add screen and the list edit actions.
 // ============================================================
-import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate, escapeHtml, fmtMiles } from '../util.js';
+import { el, todayISO, parseMoney, uid, fileToResizedDataURL, fmtGBP, fmtNum, taxYearFromLabel, fmtDate, escapeHtml, fmtMiles, round2 } from '../util.js';
 import { earnings, expenses, bills } from '../db.js';
 import { getSettings, allPlatforms, getConfig, allVehicles, allStations, stationById, EXPENSE_CATEGORIES, categoryById, VEHICLE_LABELS } from '../store.js';
 import { openSheet, closeSheet, field, moneyInput, selectInput, toast, icon, confirmDialog, scanCanceller } from './shared.js';
@@ -24,6 +24,7 @@ export function openEarningsForm(existing = null, opts = {}) {
     // sets this, and it is the difference between a mileage claim backed by
     // a reading and one backed by nothing.
     milesSource: b.milesSource || '',
+    odoStart: b.odoStart ?? null, odoEnd: b.odoEnd ?? null,
   };
   const form = el('form', { class: 'kform', autocomplete: 'off' });
 
@@ -37,6 +38,20 @@ export function openEarningsForm(existing = null, opts = {}) {
   // is easy to miss. These record what happened, so they take what happened.
   const hours = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.hours, placeholder: 'e.g. 4' });
   const hoursActual = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.hoursActual, placeholder: 'e.g. 5.4' });
+  // Readings can be CORRECTED here but never ADDED. A number typed into a
+  // record that never had one is not a reading taken at the time, and the
+  // whole point of keeping them is that they were. A shift with none simply
+  // does not show these fields.
+  const hasOdo = e.odoStart != null && e.odoEnd != null;
+  const odoStart = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.odoStart ?? '', placeholder: 'start' });
+  const odoEnd = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.odoEnd ?? '', placeholder: 'end' });
+  // The miles ARE the difference, so correcting a reading corrects them.
+  const syncFromOdo = () => {
+    const a = parseFloat(odoStart.value), z = parseFloat(odoEnd.value);
+    if (Number.isFinite(a) && Number.isFinite(z) && z >= a) miles.value = String(round2(z - a));
+  };
+  odoStart.addEventListener('input', syncFromOdo);
+  odoEnd.addEventListener('input', syncFromOdo);
   const deliveries = el('input', { class: 'input', type: 'number', step: '1', min: '0', inputMode: 'numeric', value: e.deliveries, placeholder: 'e.g. 12' });
   const miles = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
   const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
@@ -89,6 +104,11 @@ export function openEarningsForm(existing = null, opts = {}) {
     field('Business miles driven', miles, s.expenseMethod === 'mileage'
       ? mileageHint(s)
       : `Tracked for your records (you use the actual-costs method).`),
+    hasOdo ? el('div', { class: 'grid-2' }, [
+      field('Odometer at the start', odoStart),
+      field('Odometer at the end', odoEnd),
+    ]) : null,
+    hasOdo ? el('div', { class: 'hint', style: 'margin:-6px 0 12px', text: 'The readings this shift was measured from. Correct a mistyped one and the miles follow; they are what your report shows as evidence, so leave them as the dashboard read.' }) : null,
     field('Note', notes),
   );
 
@@ -116,7 +136,19 @@ export function openEarningsForm(existing = null, opts = {}) {
     // to, threw the reading away whatever was edited: a block driven to be
     // measured came back from a correction to its hours as an estimate, and
     // the report went on reporting nothing measured.
-    if (e.milesSource && Math.abs((Number(e.miles) || 0) - rec.miles) < 0.005) {
+    if (hasOdo) {
+      const a = parseFloat(odoStart.value), z = parseFloat(odoEnd.value);
+      // A pair that still reads as a pair keeps its claim; one broken by the
+      // edit (cleared, or an end below its start) no longer evidences
+      // anything, so the record stops saying it does.
+      if (Number.isFinite(a) && Number.isFinite(z) && z >= a) {
+        rec.odoStart = round2(a); rec.odoEnd = round2(z);
+        if (Math.abs((z - a) - rec.miles) < 0.005) rec.milesSource = 'odometer';
+      } else {
+        rec.odoStart = null; rec.odoEnd = null;
+      }
+    }
+    if (!rec.milesSource && e.milesSource && Math.abs((Number(e.miles) || 0) - rec.miles) < 0.005) {
       rec.milesSource = e.milesSource;
     }
     if (!rec.amount && !rec.tips && !rec.miles) { toast('Enter earnings, tips or miles', 'err'); return; }

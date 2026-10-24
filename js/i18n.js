@@ -614,6 +614,22 @@ const AR = {
     'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت ثمن شرائها كمصروف. ولا يستطيع Kerb معرفة ذلك من سجلاتك. أجب عنه مرة واحدة في الإعدادات ويختفي هذا.',
   'No vehicle purchase was claimed against this mileage':
     'لم يُطالَب بثمن شراء مركبة مقابل هذه الأميال',
+  'Odometer readings behind the measured shifts':
+    'قراءات العدّاد خلف الورديات المقيسة',
+  'Each line is the dashboard reading taken at the start and at the end of that shift. The miles claimed for it are the difference between them.':
+    'كل سطر هو قراءة لوحة العدّادات المأخوذة في بداية تلك الوردية وفي نهايتها. والأميال المطالَب بها هي الفرق بينهما.',
+  'Odometer at the start':
+    'العدّاد في البداية',
+  'Odometer at the end':
+    'العدّاد في النهاية',
+  'The readings this shift was measured from. Correct a mistyped one and the miles follow; they are what your report shows as evidence, so leave them as the dashboard read.':
+    'القراءتان اللتان قيست منهما هذه الوردية. صحّح أي رقم أُدخل خطأً فتتبعه الأميال؛ وهما ما يعرضه تقريرك كدليل، فاتركهما كما قرأتهما لوحة العدّادات.',
+  'Start':
+    'البداية',
+  'End':
+    'النهاية',
+  'Station':
+    'المحطة',
   'The booked block is what the pay was offered against. What it actually took is door to door — the two are rarely the same, and the difference is what tells you whether a block is worth taking.':
     'البلوك المحجوز هو ما عُرض الأجر مقابله. وما استغرقه فعلاً هو من الباب إلى الباب — وقلّما يتطابقان، والفرق بينهما هو ما يخبرك إن كان البلوك يستحق.',
   'What the block was offered as. Kerb times what it actually takes, so you can see the difference later.':

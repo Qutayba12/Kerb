@@ -174,6 +174,10 @@ function cleanEarning(o) {
     // a block routinely answers them differently.
     amount: num(o.amount), tips: num(o.tips), hours: num(o.hours),
     hoursActual: num(o.hoursActual), miles: num(o.miles),
+    // Kept as null rather than 0 when absent: a shift with no readings is
+    // not a shift that started at mile zero.
+    odoStart: o.odoStart == null ? null : num(o.odoStart),
+    odoEnd: o.odoEnd == null ? null : num(o.odoEnd),
     deliveries: Math.round(num(o.deliveries)), notes: str(o.notes, 300) };
 }
 function cleanExpense(o) {
