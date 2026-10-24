@@ -614,6 +614,74 @@ const AR = {
     'تحت الأساس النقدي لا يمكنك المطالبة بمعدّل المسافة المبسّط لمركبة خصمت ثمن شرائها كمصروف. ولا يستطيع Kerb معرفة ذلك من سجلاتك. أجب عنه مرة واحدة في الإعدادات ويختفي هذا.',
   'No vehicle purchase was claimed against this mileage':
     'لم يُطالَب بثمن شراء مركبة مقابل هذه الأميال',
+  'No income recorded for this tax year':
+    'لا دخل مسجّل لهذه السنة الضريبية',
+  'What the app/platform paid you for the work.':
+    'ما دفعه لك التطبيق أو المنصّة مقابل العمل.',
+  'Tips are taxable income — kept separate for your records.':
+    'البقشيش دخل خاضع للضريبة — يُحفَظ منفصلاً لسجلاتك.',
+  '⚠ Covered by the mileage rate — not separately deductible. Tracked for your cash records only.':
+    '⚠ مشمول بمعدّل المسافة — غير قابل للخصم منفصلاً. يُتتبَّع لسجلاتك النقدية فقط.',
+  'Delete all records?':
+    'حذف كل السجلات؟',
+  'Delete everything':
+    'احذف كل شيء',
+  'Discard':
+    'تجاهل',
+  'Restore this backup?':
+    'استعادة هذه النسخة الاحتياطية؟',
+  'Restore':
+    'استعادة',
+  'You\'ll enter this to open Kerb':
+    'ستُدخله لفتح Kerb',
+  'Address':
+    'العنوان',
+  'Area / town':
+    'المنطقة / البلدة',
+  'Postcode':
+    'الرمز البريدي',
+  'Payment method':
+    'طريقة الدفع',
+  'Receipt no.':
+    'رقم الإيصال',
+  'VAT reg number':
+    'رقم تسجيل الضريبة',
+  'Subtotal (before VAT)':
+    'المجموع الفرعي (قبل الضريبة)',
+  'Items':
+    'الأصناف',
+  'Time':
+    'الوقت',
+  'Business use %':
+    'نسبة الاستخدام التجاري %',
+  'e.g. phone 50%':
+    'مثال الهاتف 50%',
+  'There is nothing to file yet. Log your shifts, or import a statement.':
+    'لا شيء لتقديمه بعد. سجّل ورديّاتك، أو استورد كشفاً.',
+  'You claim mileage, but no business miles are logged':
+    'أنت تطالب بالمسافة، لكن لا أميال عمل مسجّلة',
+  'Your biggest deduction is missing. Add the miles to each shift, or switch to the actual-costs method.':
+    'أكبر خصم لديك مفقود. أضف الأميال لكل وردية، أو انتقل إلى طريقة التكاليف الفعلية.',
+  'No self-employment start date set':
+    'لم يُحدَّد تاريخ بدء العمل الحر',
+  'Kerb uses it to work out your HMRC registration deadline and to date your first return correctly.':
+    'يستخدمه Kerb لحساب آخر موعد لتسجيلك لدى HMRC ولتأريخ إقرارك الأول بشكل صحيح.',
+  'Records backed up recently':
+    'السجلات نُسخت احتياطياً مؤخراً',
+  'The filing deadline has passed':
+    'انقضى موعد التقديم',
+  'This replaces all current data on this device.':
+    'هذا يستبدل كل البيانات الحالية على هذا الجهاز.',
+  'All shifts, expenses and bills will be permanently removed from this device. Settings are kept.':
+    'ستُحذف كل الورديات والمصاريف والفواتير نهائياً من هذا الجهاز. وتبقى الإعدادات.',
+  'Shifts logged against it will fall back to your first vehicle.':
+    'الورديات المسجّلة عليها ستعود إلى مركبتك الأولى.',
+  'This cannot be undone.':
+    'لا يمكن التراجع عن هذا.',
+  'Time and miles tracked will be lost.':
+    'سيضيع الوقت والأميال المتتبَّعة.',
+  'It will no longer count towards what you have paid.':
+    'لن يُحتسب بعد ذلك ضمن ما دفعته.',
   'Odometer readings behind the measured shifts':
     'قراءات العدّاد خلف الورديات المقيسة',
   'Each line is the dashboard reading taken at the start and at the end of that shift. The miles claimed for it are the difference between them.':
@@ -681,6 +749,7 @@ const EST_AR = '{0} من خصم هذه السنة يستند إلى {1} ميل �
 const AR_PH = {
   '0.00': '0.00',
   'business miles': 'أميال العمل', 'miles this shift': 'أميال هذه الوردية', 'optional': 'اختياري',
+  'e.g. Sheffield S9': 'مثال شيفيلد S9',
   'e.g. 4': 'مثال 4', 'e.g. 12': 'مثال 12', 'e.g. Shell, EE': 'مثال Shell، EE', 'e.g. phone 50%': 'مثال الهاتف 50%',
   'Ask anything about your earnings…': 'اسأل أي شيء عن دخلك…', 'e.g. Amazon Flex £52, 4 hours, 40 miles': 'مثال Amazon Flex £52، 4 ساعات، 40 ميلاً',
   'sk-ant-…': 'sk-ant-…', 'Add platform (e.g. Stuart)': 'إضافة منصّة (مثل Stuart)',
@@ -863,6 +932,8 @@ const AR_PAT = {
     'كل الورديات الـ{0} المطالَب بها هذه السنة قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها.',
   'The {0} trading allowance is being used':
     'يُستخدَم بدل الدخل التجاري {0}',
+  'Claimed at your mileage rate (car / van: {0}/mile up to {1} then {2}).':
+    'يُطالَب به بمعدّل مسافتك (سيارة / فان: {0} للميل حتى {1} ثم {2}).',
   '{0} booked · {1} actual':
     '{0} محجوزة · {1} فعلية',
   'Your real rate is {0} an hour, not {1}.':

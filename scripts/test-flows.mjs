@@ -960,6 +960,32 @@ const run = async () => {
     return 'corrected to 84,387, miles now 174, still a reading';
   });
 
+  await check('form — a branch that renders nothing renders nothing, not "null"', async () => {
+    // Node.append() stringifies whatever is not a node, so a conditional arm
+    // yielding null is appended as the literal word. el() drops nulls from its
+    // children, which is exactly why the habit looks safe on a raw append —
+    // and the odometer rows, absent on most shifts, printed "null" twice.
+    await b.eval(`
+      const db = await import('/js/db.js');
+      await db.wipeAll();
+      await db.earnings.save({ id: 'plain', date: '2026-10-20', platform: 'amazonflex', amount: 60,
+        tips: 0, hours: 4, deliveries: 0, miles: 50, notes: '' });
+      return true;`);
+    await b.goto('#/income');
+    await b.eval(openFirstShiftForEdit);
+    const out = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      const stray = [];
+      const w = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT, null);
+      while (w.nextNode()) {
+        const t = w.currentNode.nodeValue.trim();
+        if (t === 'null' || t === 'undefined' || t === 'false') stray.push(t);
+      }
+      return stray;`);
+    if (out.length) throw new Error(`the form printed ${out.length} stray ${JSON.stringify(out)} where a branch rendered nothing`);
+    return 'empty branches leave no text behind';
+  });
+
   await check('edit — a reading cannot be invented on a shift that never had one', async () => {
     // The point of keeping them is that they were taken at the time. A record
     // with none does not offer the fields at all.
