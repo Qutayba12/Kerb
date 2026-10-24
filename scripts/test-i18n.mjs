@@ -68,6 +68,9 @@ const run = async () => {
           if (!t) continue;
           if (/[\\u0600-\\u06FF]/.test(t)) continue;         // has Arabic: translated
           if (!/[A-Za-z]{2}/.test(t)) continue;              // no real word
+          // The driver's own account of their mileage is printed word for word
+          // and is in whatever language they wrote it — never a leak.
+          if (w.currentNode.parentElement && w.currentNode.parentElement.closest('.report__verbatim')) continue;
           const st = w.currentNode.parentElement && getComputedStyle(w.currentNode.parentElement);
           if (st && (st.display === 'none' || st.visibility === 'hidden')) continue;
           out.push(t);
@@ -98,6 +101,7 @@ const run = async () => {
     while (w.nextNode()) {
       const t = w.currentNode.nodeValue.trim();
       if (!t || /[\\u0600-\\u06FF]/.test(t) || !/[A-Za-z]{2}/.test(t)) continue;
+      if (w.currentNode.parentElement && w.currentNode.parentElement.closest('.report__verbatim')) continue;
       const st = w.currentNode.parentElement && getComputedStyle(w.currentNode.parentElement);
       if (st && (st.display === 'none' || st.visibility === 'hidden')) continue;
       out.push(t);
@@ -133,6 +137,16 @@ const run = async () => {
       const all = await db.earnings.all();
       for (const e of all) await db.earnings.save({ ...e, stationId: 'sheff', miles: 40, milesSource: 'manual' });
       await db.earnings.save({ ...all[0], stationId: 'sheff', miles: 19, milesSource: 'odometer' });
+      return true;`],
+    // Neither the basis note nor the home-to-station split appears unless the
+    // driver has written a note and logged shifts against a station — which
+    // the default seed does not, so both shipped in English unnoticed.
+    ['report · a basis note and a station split', 'report', `
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      st.saveSettings({ stations: ${TWO},
+        mileageBasis: 'Measured postcode to postcode on Google Maps. These are estimates, not odometer readings.' });
+      const all = await db.earnings.all();
+      for (const e of all) await db.earnings.save({ ...e, stationId: 'sheff', miles: 40, milesBase: 2.3 });
       return true;`],
     ['report · some shifts measured, some not', 'report', `
       const db = await import('/js/db.js');

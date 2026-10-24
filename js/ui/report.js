@@ -131,7 +131,20 @@ export function buildReportSheet(sum, s, { records = false, allE = [], allX = []
     // nothing behind it is a guess. If HMRC asks how the mileage was arrived
     // at, this is the answer, and it belongs on the document itself.
     if ((s.mileageBasis || '').trim()) {
-      sheet.append(el('div', { class: 'report__note', text: `How the mileage was worked out: ${s.mileageBasis.trim()}` }));
+      // The label and the driver's own words are separate elements on purpose.
+      // Joined into one string, the whole thing carries user text, so it can
+      // never match a translation key and the label ships in English however
+      // many languages the app has. Split, the label translates and the note
+      // stays verbatim — which it must, since it is read by HMRC.
+      //
+      // dir="auto" because the note is whatever language the driver wrote it
+      // in. An English paragraph left to inherit an Arabic page's direction
+      // has its full stop dragged to the wrong end of the last line, which on
+      // a document being filed looks like a broken one.
+      sheet.append(el('div', { class: 'report__note' }, [
+        el('span', { text: 'How the mileage was worked out:' }),
+      ]));
+      sheet.append(el('div', { class: 'report__note report__verbatim', dir: 'auto', text: s.mileageBasis.trim() }));
     }
     // A count of what is a reading and what is an estimate. The prose note
     // above states a method; this states the facts behind it, taken from the
