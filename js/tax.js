@@ -162,11 +162,19 @@ export function summariseRange(allEarnings, allExpenses, start, end, settings) {
   const tips = round2(E.reduce((s, e) => s + num(e.tips), 0));
   const miles = round2(E.reduce((s, e) => s + num(e.miles), 0));
   const hours = round2(E.reduce((s, e) => s + num(e.hours), 0));
+  // Only shifts that recorded what they actually took, so the comparison is
+  // like for like: a block with no measured time would otherwise read as
+  // having taken none and flatter the real rate.
+  const timed = E.filter(e => num(e.hoursActual) > 0);
+  const hoursActual = round2(timed.reduce((s, e) => s + num(e.hoursActual), 0));
+  const hoursBookedTimed = round2(timed.reduce((s, e) => s + num(e.hours), 0));
+  const incomeTimed = round2(timed.reduce((s, e) => s + num(e.amount) + num(e.tips), 0));
   const deliveries = E.reduce((s, e) => s + num(e.deliveries), 0);
   const expensesPaid = round2(X.reduce((s, x) => s + num(x.amount), 0));
   const deductible = round2(X.reduce((s, x) => s + deductibleAmount(x, settings), 0));
   const mileageDed = round2(mileageDeduction(miles, settings.vehicle, config));
-  return { income, tips, miles, hours, deliveries, expensesPaid, deductible, mileageDed, count: E.length, expenseCount: X.length };
+  return { income, tips, miles, hours, hoursActual, hoursBookedTimed, incomeTimed, timedCount: timed.length,
+    deliveries, expensesPaid, deductible, mileageDed, count: E.length, expenseCount: X.length };
 }
 
 // The deductible portion of one expense, respecting the vehicle-cost rule

@@ -12,7 +12,14 @@ export function earningItem(e) {
   const p = platformById(e.platform);
   const total = (e.amount || 0) + (e.tips || 0);
   const bits = [];
-  if (e.hours) bits.push(`${fmtNum(e.hours, e.hours % 1 ? 1 : 0)}h`);
+  // Booked, then what it took when that was longer. A block that runs over
+  // is paid the same, so the gap is the part worth seeing at a glance.
+  if (e.hours) {
+    const over = Number(e.hoursActual) > Number(e.hours) + 0.05;
+    bits.push(over
+      ? `${fmtNum(e.hours, e.hours % 1 ? 1 : 0)}h booked · ${fmtNum(e.hoursActual, 1)}h actual`
+      : `${fmtNum(e.hours, e.hours % 1 ? 1 : 0)}h`);
+  }
   if (e.miles) bits.push(`${fmtMiles(e.miles)} mi`);
   if (e.deliveries) bits.push(`${e.deliveries} drops`);
   if (e.tips) bits.push(`${fmtGBP(e.tips)} tips`);

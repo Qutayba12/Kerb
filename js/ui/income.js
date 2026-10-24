@@ -40,6 +40,17 @@ export async function render() {
     miniTile('Tips', fmtGBP(sum.tips)),
   ]));
 
+  // The booked rate is what the work was advertised at; the real one is what
+  // the time actually bought. Shown only once enough shifts have been timed
+  // for the comparison to mean anything, and only when they differ.
+  if (sum.timedCount >= 2 && sum.hoursActual > sum.hoursBookedTimed + 0.05) {
+    const booked = sum.incomeTimed / sum.hoursBookedTimed;
+    const real = sum.incomeTimed / sum.hoursActual;
+    const over = sum.hoursActual - sum.hoursBookedTimed;
+    root.append(el('div', { class: 'callout callout--warn', style: 'margin:-4px 0 14px',
+      html: `${icon('info')}<div><b>Your real rate is ${fmtGBP(real)} an hour, not ${fmtGBP(booked)}.</b> Across ${sum.timedCount} timed shifts the blocks ran ${fmtNum(over, over % 1 ? 1 : 0)} hours past what they were booked as. The pay does not change when a block overruns, so the booked rate is the one being advertised and this is the one you are actually getting.</div>` }));
+  }
+
   if (!periodList.length) {
     root.append(emptyState('route', 'No shifts logged', `Nothing recorded for ${label.toLowerCase()}.`));
     const add = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:10px' });

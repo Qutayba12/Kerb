@@ -148,6 +148,17 @@ const run = async () => {
       const st = await import('/js/store.js');
       st.saveSettings({ expenseMethod: 'mileage', vehicleCostClaimed: '' }); return true;`],
     // Under the trading allowance the same question is put as a future one.
+    // The real-rate comparison needs timed shifts, which the seed has none of.
+    ['income · blocks that ran past their booked hours', 'income', `
+      // Dated into the period the screen opens on, or the comparison has
+      // nothing in range to compare.
+      const db = await import('/js/db.js');
+      const iso = (d) => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+      for (let i = 0; i < 3; i++) {
+        await db.earnings.save({ id: 'timed' + i, date: iso(i), platform: 'amazonflex',
+          amount: 70, tips: 0, hours: 4, hoursActual: 5.4, deliveries: 0, miles: 100, notes: '' });
+      }
+      return true;`],
     ['review · the allowance still beats the mileage', 'review', `
       const db = await import('/js/db.js'); const st = await import('/js/store.js');
       await db.wipeAll();

@@ -1,5 +1,5 @@
 // Quick correctness checks for the tax engine (run with: node scripts/test-tax.mjs)
-import { computeTaxYear, incomeTaxOn, class4On, mileageDeduction, studentLoanOn } from '../js/tax.js';
+import { computeTaxYear, incomeTaxOn, class4On, mileageDeduction, studentLoanOn, summariseRange } from '../js/tax.js';
 import { getConfig } from '../js/store.js';
 
 let pass = 0, fail = 0;
@@ -303,6 +303,31 @@ const evYear = computeTaxYear([
 ], [], EVS).evidence;
 eq('last year is not counted', evYear.measuredShifts, 1);
 eq('last year does not add miles', evYear.measuredMiles, 40);
+
+// Booked hours against what the block actually took. A block that overruns is
+// paid the same, so the two rates are different questions and the app must
+// not quietly answer one with the other.
+console.log('\n--- Booked hours vs actual ---');
+const HS = { region:'ruk', vehicle:'car', expenseMethod:'mileage', taxYear:'2026/27' };
+const hE = [
+  { id:'1', date:'2026-10-24', platform:'amazonflex', amount:70, tips:0, hours:4, hoursActual:5.4, miles:164 },
+  { id:'2', date:'2026-10-20', platform:'amazonflex', amount:70, tips:0, hours:4, hoursActual:4.6, miles:60 },
+  { id:'3', date:'2026-10-18', platform:'amazonflex', amount:65, tips:0, hours:3, miles:40 }, // never timed
+];
+const hs = summariseRange(hE, [], '2026-10-01', '2026-10-31', HS);
+eq('booked hours count every shift', hs.hours, 11);
+eq('only timed shifts are compared', hs.timedCount, 2);
+eq('their booked hours', hs.hoursBookedTimed, 8);
+eq('their actual hours', hs.hoursActual, 10);
+eq('their income', hs.incomeTimed, 140);
+// The untimed shift must not drag the real rate up by contributing pay with
+// no time against it — £205/11h would read as £18.64 and flatter it.
+eq('advertised rate', hs.incomeTimed / hs.hoursBookedTimed, 17.5);
+eq('real rate', hs.incomeTimed / hs.hoursActual, 14);
+
+const none = summariseRange([hE[2]], [], '2026-10-01', '2026-10-31', HS);
+eq('nothing timed: no actual hours', none.hoursActual, 0);
+eq('nothing timed: nothing to compare', none.timedCount, 0);
 
 console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'} — ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
