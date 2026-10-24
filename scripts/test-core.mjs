@@ -172,6 +172,35 @@ const run = async () => {
     return 'app held behind the lock';
   });
 
+  await check('lock — "too many tries" actually stops the confirm sheet', async () => {
+    // This is the sheet Settings opens before changing or removing the PIN —
+    // not the boot lock screen, which always did hold. It counted attempts
+    // and printed the warning without ever disabling the pad, so the limit it
+    // announced did not exist. A limit a person can watch themselves ignore
+    // teaches them there is none.
+    const out = await b.eval(`
+      const lock = await import('/js/lock.js');
+      await lock.setPin('4071');
+      let ran = 0;
+      lock.openPinVerify(() => { ran++; });
+      await new Promise(r => setTimeout(r, 300));
+      const sheet = document.querySelector('.sheet');
+      const keys = () => [...sheet.querySelectorAll('.pin-key')].filter(k => /^[0-9]$/.test(k.textContent));
+      const type = async (pin) => { for (const d of pin) keys().find(k => k.textContent === d).click();
+                                    await new Promise(r => setTimeout(r, 200)); };
+      const msg = () => (sheet.querySelector('.pin-msg') || {}).textContent || '';
+      for (let i = 0; i < 5; i++) await type('0000');
+      const afterFive = msg();
+      // The pad must now be held: even the RIGHT pin must not get through.
+      await type('4071');
+      const heldAgainstCorrect = { ran, sheetOpen: !!document.querySelector('.sheet') };
+      return { afterFive, heldAgainstCorrect };`);
+    if (!/Too many tries/i.test(out.afterFive)) throw new Error('no limit message after five wrong tries: ' + out.afterFive);
+    if (out.heldAgainstCorrect.ran !== 0) throw new Error('the correct PIN was accepted while the pad was supposed to be held');
+    if (!out.heldAgainstCorrect.sheetOpen) throw new Error('the sheet closed while it was supposed to be held');
+    return 'held after five, and the hold is real';
+  });
+
   await check('lock — turning the lock off clears the stored hash', async () => {
     const out = await b.eval(`
       const lock = await import('/js/lock.js');

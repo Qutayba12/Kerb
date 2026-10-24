@@ -178,7 +178,16 @@ export function openPinVerify(onOk, { title = 'Enter your current PIN' } = {}) {
     title,
     onComplete: async (v) => {
       if (await verifyPin(v)) { closeSheet(); onOk(); }
-      else { attempts++; api.reset(); api.message(attempts >= 5 ? 'Too many tries.' : 'Wrong PIN.', true); }
+      else {
+        attempts++; api.reset();
+        // The unlock gate pauses after five; this one only said so. A message
+        // that announces a limit it does not apply teaches the person it can
+        // be ignored, which is worse than having no limit at all.
+        if (attempts >= 5) {
+          api.disable(true); api.message('Too many tries — wait a few seconds.', true);
+          setTimeout(() => { api.disable(false); api.message('Try again.', false); attempts = 0; }, 4000);
+        } else api.message('Wrong PIN.', true);
+      }
     },
   });
   mount.append(wrap);

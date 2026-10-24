@@ -836,6 +836,95 @@ const run = async () => {
     return 'the sign stays where it belongs on an RTL page';
   });
 
+  // ---------------- a vehicle name is text, not markup ----------------
+  await check('tax — a vehicle named with a tag is shown, not parsed', async () => {
+    // The Tax screen writes this label as HTML because some labels carry
+    // markup. A name is the driver's, and typed into Settings it never meets
+    // the <> strip that only runs on an imported backup. Proven exploitable
+    // before the fix: an <img onerror> element was built in the cell, and with
+    // the page's CSP removed it executed. The DOM is the evidence here, not
+    // the text: assert no element was created from the name.
+    const PAYLOAD = '<img src="http://127.0.0.1:1/x.png" onerror="window.__xss=1">';
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage', vehicleCostClaimed: 'no',
+        vehicles: [{ id: 'default', label: 'Car', type: 'car' },
+                   { id: 'v2', label: ${JSON.stringify(PAYLOAD)}, type: 'car' }] });
+      await db.earnings.save({ id: 'x1', date: '2026-09-10', platform: 'amazonflex', amount: 9000,
+        tips: 0, hours: 8, deliveries: 0, miles: 1200, vehicleId: 'default', notes: '' });
+      await db.earnings.save({ id: 'x2', date: '2026-09-11', platform: 'amazonflex', amount: 9000,
+        tips: 0, hours: 8, deliveries: 0, miles: 2000, vehicleId: 'v2', notes: '' });
+      return true;`);
+    await b.goto('#/tax');
+    await b.eval('await new Promise(r => setTimeout(r, 400)); return true;');
+    const out = await b.eval(`({
+      injected: document.querySelectorAll('#view img[onerror], #view svg[onload]').length,
+      executed: !!window.__xss,
+      shownAsText: [...document.querySelectorAll('#view td')].some(t => t.textContent.includes('onerror=')) })`);
+    if (out.injected) throw new Error('the name was parsed as markup — an element was built from it');
+    if (out.executed) throw new Error('the name executed');
+    if (!out.shownAsText) throw new Error('the name is not shown as text either — it vanished');
+    return 'rendered as text, no element, nothing ran';
+  });
+
+  await check('settings — angle brackets are stripped from a vehicle name on the way in', async () => {
+    await b.goto('#/settings');
+    const stored = await b.eval(`
+      const st = await import('/js/store.js');
+      st.saveSettings({ vehicles: [] });
+      const btn = [...document.querySelectorAll('#view button')].find(x => /Add a vehicle|Add vehicle/.test(x.textContent));
+      btn.click();
+      await new Promise(r => setTimeout(r, 250));
+      const input = document.querySelector('.sheet input[type=text]');
+      input.value = '<b>Corsa</b>';
+      const form = input.closest('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 300));
+      return (st.getSettings().vehicles || []).map(v => v.label);`);
+    if (!stored.some(l => l === 'bCorsa/b')) throw new Error('brackets were not stripped at input: ' + JSON.stringify(stored));
+    return 'stored as bCorsa/b — no markup kept';
+  });
+
+  // ---------------- the cash-basis vehicle question ----------------
+  await check('review — asks the one question that decides the mileage claim', async () => {
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage', vehicles: [],
+        vehicleCostClaimed: '', stations: [] });
+      await db.earnings.save({ id: 'c1', date: '2026-09-10', platform: 'amazonflex', amount: 9000,
+        tips: 0, hours: 8, deliveries: 0, miles: 2000, notes: '' });
+      return true;`);
+    await b.goto('#/review');
+    const unanswered = await b.eval(`document.getElementById('view').textContent`);
+    if (!/One question still decides whether your mileage claim stands/.test(unanswered)) {
+      throw new Error('the question is never asked');
+    }
+    await b.eval(`(await import('/js/store.js')).saveSettings({ vehicleCostClaimed: 'yes' }); return true;`);
+    await b.goto('#/review');
+    const yes = await b.eval(`document.getElementById('view').textContent`);
+    if (!/Your mileage claim may not be allowed/.test(yes)) throw new Error('answering yes raises no warning');
+    if (!/you claim one or the other/.test(yes)) throw new Error('does not say why');
+    await b.eval(`(await import('/js/store.js')).saveSettings({ vehicleCostClaimed: 'no' }); return true;`);
+    await b.goto('#/review');
+    const no = await b.eval(`document.getElementById('view').textContent`);
+    if (/may not be allowed|One question still decides/.test(no)) throw new Error('still flagged after answering no');
+    if (!/No vehicle purchase was claimed against this mileage/.test(no)) throw new Error('no confirmation after answering no');
+    return 'asked, then warns on yes and clears on no';
+  });
+
+  await check('review — the question is not asked on the actual-costs method', async () => {
+    await b.eval(`(await import('/js/store.js')).saveSettings({ expenseMethod: 'actual', vehicleCostClaimed: '' }); return true;`);
+    await b.goto('#/review');
+    const txt = await b.eval(`document.getElementById('view').textContent`);
+    if (/One question still decides|mileage claim may not be allowed/.test(txt)) {
+      throw new Error('asked about mileage while claiming actual costs');
+    }
+    await b.eval(`(await import('/js/store.js')).saveSettings({ expenseMethod: 'mileage', vehicleCostClaimed: 'no' }); return true;`);
+    return 'irrelevant on actual costs, so silent';
+  });
+
   // ---------------- the mileage-basis note ----------------
   // The note is the stated basis for the biggest deduction on the return, so
   // what the field accepts is a correctness question, not a cosmetic one: a

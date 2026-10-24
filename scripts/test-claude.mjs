@@ -420,8 +420,54 @@ const run = async () => {
     return 'points at adding your own key';
   });
 
-  await b.close();
 
+  // ---------------- the quota signal the app never read ----------------
+  // The shared endpoint reports whether its counters are backed by a shared
+  // store. Without one they live in a serverless instance's memory and are
+  // lost on every cold start, so the allowance and the rate limits are not
+  // loose but absent, and the deployment's key pays for whatever is sent.
+  // The header was always there; nothing looked at it.
+  const replyWithQuota = (shared) => `
+    window.fetch = async () => new Response(JSON.stringify({
+      content: [{ type: 'text', text: '{}' }], usage: {}, stop_reason: 'end_turn' }),
+      { status: 200, headers: { 'content-type': 'application/json', 'x-kerb-quota-shared': '${shared}' } });
+    return true;`;
+
+  await check('shared endpoint — an unenforced quota is recorded, not ignored', async () => {
+    await b.eval(`(await import('/js/store.js')).saveSettings({ apiKey: '', sharedQuotaOff: false }); return true;`);
+    await b.eval(replyWithQuota('0'));
+    await b.eval(`
+      const c = await import('/js/claude.js');
+      try { await c.extractReceipt(${JSON.stringify(PNG)}, (await import('/js/store.js')).getSettings()); } catch {}
+      return true;`);
+    const off = await b.eval(`(await import('/js/store.js')).getSettings().sharedQuotaOff`);
+    if (off !== true) throw new Error('the endpoint said its limits are off and nothing recorded it');
+    // And it clears again when a deployment is configured properly.
+    await b.eval(replyWithQuota('1'));
+    await b.eval(`
+      const c = await import('/js/claude.js');
+      try { await c.extractReceipt(${JSON.stringify(PNG)}, (await import('/js/store.js')).getSettings()); } catch {}
+      return true;`);
+    const on = await b.eval(`(await import('/js/store.js')).getSettings().sharedQuotaOff`);
+    if (on !== false) throw new Error('a working store did not clear the warning');
+    return 'recorded when off, cleared when on';
+  });
+
+  await check('shared endpoint — scanning with your own key records nothing', async () => {
+    // The header only describes the shared endpoint. A driver using their own
+    // key never touches it, so their setting must not be moved by a reply.
+    await b.eval(`(await import('/js/store.js')).saveSettings({ apiKey: 'sk-ant-test-key', sharedQuotaOff: false }); return true;`);
+    await b.eval(replyWithQuota('0'));
+    await b.eval(`
+      const c = await import('/js/claude.js');
+      try { await c.extractReceipt(${JSON.stringify(PNG)}, (await import('/js/store.js')).getSettings()); } catch {}
+      return true;`);
+    const off = await b.eval(`(await import('/js/store.js')).getSettings().sharedQuotaOff`);
+    if (off !== false) throw new Error('a direct Anthropic reply moved the shared-endpoint setting');
+    return 'own key, own path, setting untouched';
+  });
+
+  await b.close();
   const passed = results.filter(Boolean).length;
   console.log(`\n${passed}/${results.length} scanning checks passed`);
   if (passed !== results.length) process.exit(1);

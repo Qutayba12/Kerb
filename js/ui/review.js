@@ -140,6 +140,27 @@ function buildChecks({ s, sum, ty, E, X, allE, allX }) {
     }
   }
 
+  // 5d) simplified mileage on a vehicle whose purchase price was expensed.
+  //
+  // Kerb reports on the cash basis, and HMRC's own SA103F notes say flat-rate
+  // mileage cannot be used for a vehicle whose cost was deducted as an expense
+  // under it. Nothing in the records settles this — a car bought years ago may
+  // have been claimed on a return Kerb never saw — so the question is asked in
+  // Settings and only the driver's own answer is acted on. Silence here would
+  // leave the largest deduction on the return resting on a condition nobody
+  // checked.
+  if (s.expenseMethod === 'mileage' && sum.businessMiles > 0) {
+    if (s.vehicleCostClaimed === 'yes') {
+      add('bad', 'Your mileage claim may not be allowed',
+        'You have said you deducted a vehicle’s purchase price as an expense. Under the cash basis HMRC does not allow simplified mileage for that same vehicle — you claim one or the other. This is the biggest figure on your return, so settle it with an accountant before you file, or switch to the actual-costs method.',
+        { label: 'Open Settings', run: () => bus.navigate('settings') });
+    } else if (!s.vehicleCostClaimed) {
+      add('warn', 'One question still decides whether your mileage claim stands',
+        'On the cash basis you cannot claim simplified mileage for a vehicle whose purchase price you already deducted as an expense. Kerb cannot tell from your records which it was. Answer it once in Settings and this goes.',
+        { label: 'Answer it', run: () => bus.navigate('settings') });
+    } else add('ok', 'No vehicle purchase was claimed against this mileage', '');
+  }
+
   // 5c) a weekly payout recorded alongside the blocks it pays for.
   // The check above cannot see this one: the payout has its own date and a
   // different amount, so nothing matches. It only shows up as one entry that

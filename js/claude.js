@@ -4,7 +4,7 @@
 // straight to api.anthropic.com (never to any Kerb server —
 // there isn't one). Uses the browser-direct access header.
 // ============================================================
-import { EXPENSE_CATEGORIES, DEFAULT_MODEL } from './store.js';
+import { EXPENSE_CATEGORIES, DEFAULT_MODEL, getSettings, saveSettings } from './store.js';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -94,6 +94,23 @@ async function callApi(body, settings, { timeoutMs = DEFAULT_TIMEOUT_MS, signal 
   } finally {
     clearTimeout(timer);
     if (signal) signal.removeEventListener('abort', onAbort);
+  }
+
+  // The shared endpoint says whether its counters are backed by a shared store.
+  // Without one they live in a serverless instance's memory and vanish on every
+  // cold start, so the free allowance, the daily cap and the rate limits are not
+  // merely loose — they are off, and the deployment's own API key pays for
+  // whatever anyone sends it. The endpoint has always reported this; nothing
+  // read it. Recorded here so Settings can say so.
+  if (!ownKey) {
+    const flag = response.headers.get('x-kerb-quota-shared');
+    if (flag === '0' || flag === '1') {
+      try {
+        const s = getSettings();
+        const off = flag === '0';
+        if (s.sharedQuotaOff !== off) saveSettings({ sharedQuotaOff: off });
+      } catch {}
+    }
   }
 
   if (!response.ok) {

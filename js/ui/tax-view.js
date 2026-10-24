@@ -1,7 +1,7 @@
 // ============================================================
 // ui/tax-view.js — full Self Assessment breakdown for the year.
 // ============================================================
-import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline, round2, uid, parseMoney, fmtMiles } from '../util.js';
+import { el, fmtGBP, fmtNum, fmtPct, fmtDate, humanUntil, todayISO, daysBetween, registrationDeadline, round2, uid, parseMoney, fmtMiles, escapeHtml } from '../util.js';
 import { earnings, expenses, payslips } from '../db.js';
 import { getSettings, saveSettings, availableYears, VEHICLE_LABELS, REGION_LABELS } from '../store.js';
 import { computeTaxYear, quarterlySummary } from '../tax.js';
@@ -56,7 +56,12 @@ export async function render() {
   } else {
     // With more than one vehicle, show each one — each has its own 10k band.
     if (sum.mileageDed && (sum.mileageRows || []).length > 1) {
-      sum.mileageRows.forEach(r => trow(`Less: mileage — ${r.label} (${fmtMiles(r.miles)} mi)`, '−' + fmtGBP(r.amount)));
+      // trow writes its label as HTML, because some labels carry markup of
+      // their own. A vehicle's name is the driver's, so it is escaped here:
+      // typed into Settings it never passes the <> strip that only runs on
+      // an imported backup, and a name holding a tag would otherwise be
+      // parsed as markup on the screen that works out what they owe.
+      sum.mileageRows.forEach(r => trow(`Less: mileage — ${escapeHtml(r.label)} (${fmtMiles(r.miles)} mi)`, '−' + fmtGBP(r.amount)));
     } else if (sum.mileageDed) {
       trow(`Less: mileage (${fmtNum(sum.businessMiles)} mi)`, '−' + fmtGBP(sum.mileageDed));
     }
