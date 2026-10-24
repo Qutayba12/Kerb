@@ -302,7 +302,9 @@ const run = async () => {
     await b.eval(fillByLabel('Earnings (before tips)', '73.40'));
     await b.eval(fillByLabel('Tips', '6.10'));
     await b.eval(fillByLabel('Block hours (as booked)', '5'));
-    await b.eval(fillByLabel('Hours it actually took', '6.25'));
+    // 5.4, not a tidy quarter: the first version of this test used 6.25 and so
+    // never noticed that the field refused anything off the step.
+    await b.eval(fillByLabel('Hours it actually took', '5.4'));
     await b.eval(fillByLabel('Deliveries', '14'));
     await b.eval(fillByLabel('Business miles driven', '52'));
     await b.eval(clickText('^\s*Save\s*$', '.sheet'));
@@ -312,7 +314,7 @@ const run = async () => {
       const all = await db.earnings.all();
       const hit = all.find(r => r.date === '2026-09-20');
       return hit ? { amount: hit.amount, tips: hit.tips, hours: hit.hours, hoursActual: hit.hoursActual, deliveries: hit.deliveries, miles: hit.miles } : null;`);
-    eq(rec, { amount: 73.4, tips: 6.1, hours: 5, hoursActual: 6.25, deliveries: 14, miles: 52 }, 'saved shift');
+    eq(rec, { amount: 73.4, tips: 6.1, hours: 5, hoursActual: 5.4, deliveries: 14, miles: 52 }, 'saved shift');
     const errs = b.errors();
     if (errs.length) throw new Error('page errors: ' + errs.join(' | '));
     return 'amount, tips, hours, drops and miles all round-trip';
@@ -837,6 +839,70 @@ const run = async () => {
     return 'the sign stays where it belongs on an RTL page';
   });
 
+  const openFirstShiftForEdit = `
+    const rows = [...document.querySelectorAll('#view .item')];
+    const row = rows.find(r => /Amazon Flex/i.test(r.textContent)) || rows[0];
+    row.click();
+    await new Promise(r => setTimeout(r, 400));
+    return !!document.querySelector('.sheet');`;
+
+  await check('form — a measured figure is never refused for falling between the notches', async () => {
+    // step is the spinner's increment, not a rule about what is true. Used as
+    // one, the browser refuses the whole save and fires no submit event, so
+    // nothing runs and nothing is written. A real 5.4-hour block was turned
+    // away by a quarter-hour step exactly this way.
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage', stations: [] });
+      await db.earnings.save({ id: 'step1', date: '2026-10-24', platform: 'amazonflex', amount: 70,
+        tips: 0, hours: 4, deliveries: 0, miles: 164, notes: 'Live shift' });
+      return true;`);
+    await b.goto('#/income');
+    await b.eval(openFirstShiftForEdit);
+    const out = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      const awkward = { 'e.g. 5.4': '5.4', 'business miles': '164.35' };
+      const checked = {};
+      for (const [ph, v] of Object.entries(awkward)) {
+        const inp = [...sheet.querySelectorAll('input[type=number]')].find(i => i.placeholder === ph);
+        if (!inp) return { error: 'field not found for placeholder ' + ph };
+        inp.value = v;
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        checked[ph] = { valid: inp.checkValidity(), msg: inp.validationMessage };
+      }
+      return { checked, formValid: sheet.querySelector('form').checkValidity() };`);
+    if (out.error) throw new Error(out.error);
+    for (const [ph, r] of Object.entries(out.checked)) {
+      if (!r.valid) throw new Error(`"${ph}" refused its own measurement: ${r.msg}`);
+    }
+    if (!out.formValid) throw new Error('the form as a whole is still invalid, so the save would do nothing');
+    return 'awkward figures accepted, so the save goes through';
+  });
+
+  await check('form — a save the browser blocks says so instead of doing nothing', async () => {
+    // Whatever rule a field carries, failing it must be visible. Deliveries
+    // are counted, so a fraction is genuinely wrong — and must be told, not
+    // swallowed.
+    await b.goto('#/income');
+    await b.eval(openFirstShiftForEdit);
+    const out = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      const drops = [...sheet.querySelectorAll('input[type=number]')].find(i => i.placeholder === 'e.g. 12');
+      if (!drops) return { error: 'deliveries field not found' };
+      drops.value = '12.5';
+      drops.dispatchEvent(new Event('input', { bubbles: true }));
+      const saveBtn = [...sheet.querySelectorAll('button')].find(x => /^\s*Save\s*$/.test(x.textContent));
+      saveBtn.click();
+      await new Promise(r => setTimeout(r, 400));
+      const t = document.querySelector('.toast');
+      return { toast: t ? t.textContent : null };`);
+    if (out.error) throw new Error(out.error);
+    if (!out.toast) throw new Error('the save was blocked and the app said nothing at all');
+    if (!/Deliveries/i.test(out.toast)) throw new Error('the message does not name the field: ' + out.toast);
+    return 'blocked saves now name the field and the reason';
+  });
+
   // ---------------- booked hours against what it took ----------------
   await check('shift — the booked block is kept and the clock measures the rest', async () => {
     const out = await b.eval(`
@@ -924,13 +990,6 @@ const run = async () => {
   });
 
   // ---------------- editing must not destroy a measurement ----------------
-  const openFirstShiftForEdit = `
-    const rows = [...document.querySelectorAll('#view .item')];
-    const row = rows.find(r => /Amazon Flex/i.test(r.textContent)) || rows[0];
-    row.click();
-    await new Promise(r => setTimeout(r, 400));
-    return !!document.querySelector('.sheet');`;
-
   await check('edit — correcting the hours keeps an odometer reading', async () => {
     // This happened on real records: a block was driven specifically to be
     // measured, the live timer had overrun the booked block, the hours were
