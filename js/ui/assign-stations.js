@@ -65,7 +65,7 @@ export async function render() {
   const applyBtn = el('button', { class: 'btn btn--primary btn--block', type: 'button', style: 'margin-top:10px' });
 
   const milesRow = el('label', { class: 'switch-row' }, [
-    el('span', { text: 'Also set the miles from that station' }),
+    el('span', { text: 'Also overwrite their miles with that station\u2019s reference' }),
     el('span', { class: 'switch' }, [alsoMiles, el('span', { class: 'track' })]),
   ]);
   const milesHint = el('div', { class: 'hint' });

@@ -468,11 +468,14 @@ function stationsCard() {
         el('span', { class: 'muted', text: `Measured over ${sug.n} shift${sug.n === 1 ? '' : 's'}: ${fmtMiles(sug.average)} mi a block${sug.n > 1 ? ` (${fmtMiles(sug.lowest)}–${fmtMiles(sug.highest)})` : ''}. ` }),
       ]));
       if (!same) {
-        const use = el('button', { class: 'link tiny', type: 'button', text: 'Use this' });
+        // It no longer fills anything in — the figure is what the entry form
+        // shows beside the miles field, for reference. So the button records
+        // the reference; it does not apply a default.
+        const use = el('button', { class: 'link tiny', type: 'button', text: 'Keep as this station\'s reference' });
         use.onclick = () => {
           const next = (getSettings().stations || []).map(x => (x.id === v.id ? { ...x, typicalMiles: sug.average } : x));
           saveSettings({ stations: next });
-          toast('Updated from your measured shifts', 'ok'); bus.refresh();
+          toast('Reference updated from your measured shifts', 'ok'); bus.refresh();
         };
         slot.firstChild.append(use);
       }
@@ -483,7 +486,7 @@ function stationsCard() {
       // problem with HMRC, so say so while n is 1 rather than after.
       if (sug.n === 1) {
         slot.append(el('div', { class: 'tiny', style: 'margin-top:4px;color:var(--warn)',
-          text: 'That is one shift, so it is one route rather than a typical distance. Use it only if that block was an ordinary one, and check the miles against the drive you actually made each time. A second reading will show the spread.' }));
+          text: 'That is one shift, so it is one route rather than a typical distance. Kerb fills it into nothing — it is shown beside the miles field for reference, and every shift is still measured on its own. A second reading will show the spread.' }));
       }
     });
   }).catch(() => {});

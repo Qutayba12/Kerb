@@ -616,6 +616,16 @@ const AR = {
     'لم يُطالَب بثمن شراء مركبة مقابل هذه الأميال',
   'No income recorded for this tax year':
     'لا دخل مسجّل لهذه السنة الضريبية',
+  'Records which pickup point this shift ran from.':
+    'يسجّل نقطة الاستلام التي انطلقت منها هذه الوردية.',
+  'Keep as this station’s reference':
+    'احفظه كمرجع هذه المحطة',
+  'Reference updated from your measured shifts':
+    'حُدّث المرجع من ورديّاتك المقيسة',
+  'That is one shift, so it is one route rather than a typical distance. Kerb fills it into nothing — it is shown beside the miles field for reference, and every shift is still measured on its own. A second reading will show the spread.':
+    'هذه وردية واحدة، فهي مسار واحد لا مسافة معتادة. ولا يملأ Kerb بها أي حقل — تُعرض بجانب حقل الأميال كمرجع فقط، وتبقى كل وردية تُقاس وحدها. والقراءة الثانية ستُظهر المدى.',
+  'Also overwrite their miles with that station’s reference':
+    'واستبدل أميالها أيضاً بمرجع تلك المحطة',
   'What the app/platform paid you for the work.':
     'ما دفعه لك التطبيق أو المنصّة مقابل العمل.',
   'Tips are taxable income — kept separate for your records.':
@@ -932,6 +942,8 @@ const AR_PAT = {
     'كل الورديات الـ{0} المطالَب بها هذه السنة قُرئت أميالها من عدّاد السيارة أو تُتبِّعت وقتها.',
   'The {0} trading allowance is being used':
     'يُستخدَم بدل الدخل التجاري {0}',
+  'Blocks from here have come to about {0} mi, {1} mi of it getting there — enter what this one actually was.':
+    'بلغت البلوكات من هنا نحو {0} ميل، منها {1} ميل للوصول — أدخل ما كانت عليه هذه فعلاً.',
   'Claimed at your mileage rate (car / van: {0}/mile up to {1} then {2}).':
     'يُطالَب به بمعدّل مسافتك (سيارة / فان: {0} للميل حتى {1} ثم {2}).',
   '{0} booked · {1} actual':

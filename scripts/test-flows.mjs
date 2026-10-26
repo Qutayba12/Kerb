@@ -903,6 +903,38 @@ const run = async () => {
     return 'blocked saves now name the field and the reason';
   });
 
+  // ---------------- no station ever fills the miles in ----------------
+  await check('form — picking a station does not put a number in the miles field', async () => {
+    // Two blocks from one station are never the same distance: the way home
+    // starts wherever the last drop was. A typical figure dropped into the
+    // field is a guess dressed as a record, and the likeliest thing to happen
+    // to it is that it is accepted unread.
+    await b.eval(`
+      const db = await import('/js/db.js'); const st = await import('/js/store.js');
+      await db.wipeAll();
+      st.saveSettings({ lang: 'en', taxYear: '2026/27', expenseMethod: 'mileage',
+        stations: [{ id: 'sheff', label: 'Sheffield (DXS1)', baseMiles: 2.3, typicalMiles: 59 }] });
+      return true;`);
+    await b.goto('#/income');
+    await b.eval(`(await import('/js/ui/forms.js')).openEarningsForm(); await new Promise(r => setTimeout(r, 350)); return true;`);
+    const out = await b.eval(`
+      const sheet = document.querySelector('.sheet');
+      const miles = [...sheet.querySelectorAll('input[type=number]')].find(i => i.placeholder === 'business miles');
+      const sel = [...sheet.querySelectorAll('select')].find(s => [...s.options].some(o => /Sheffield/.test(o.textContent)));
+      if (!miles || !sel) return { error: 'form did not render the station picker and miles field' };
+      sel.value = 'sheff';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 200));
+      const hint = [...sheet.querySelectorAll('.hint')].map(h => h.textContent).join(' | ');
+      return { miles: miles.value, optionText: [...sel.options].find(o => o.value === 'sheff').textContent, hint };`);
+    if (out.error) throw new Error(out.error);
+    if (out.miles !== '') throw new Error(`the miles field was filled with "${out.miles}" just for picking a station`);
+    if (/59/.test(out.optionText)) throw new Error('the picker itself still offers the figure as part of the choice: ' + out.optionText);
+    if (!/59 mi/.test(out.hint)) throw new Error('the station knows 59 mi but says nothing: ' + out.hint);
+    if (!/what this one actually was/.test(out.hint)) throw new Error('the hint does not ask for this shift’s own figure: ' + out.hint);
+    return 'field left empty, figure offered as information';
+  });
+
   // ---------------- the readings, not just the word ----------------
   await check('shift — the two readings are kept, not just the fact there were some', async () => {
     await b.eval(`

@@ -56,14 +56,20 @@ export function openEarningsForm(existing = null, opts = {}) {
   const miles = el('input', { class: 'input', type: 'number', step: 'any', min: '0', inputMode: 'decimal', value: e.miles, placeholder: 'business miles' });
   const notes = el('input', { class: 'input', type: 'text', value: e.notes, placeholder: 'optional' });
 
-  // Picking the station fills the miles in, because stations sit at very
-  // different distances. The two legs are stored separately: whether the
-  // home-to-station leg is deductible turns on where the base of operations
-  // is, and keeping them apart means that can be revisited by changing one
-  // number rather than re-entering every shift.
+  // Picking a station does NOT fill the miles in. No two blocks from the same
+  // station come to the same distance — the way home starts wherever the last
+  // drop was — so a typical figure dropped into the field is a guess wearing
+  // the clothes of a record, and the likeliest thing to happen to it is that
+  // it is accepted unread. What the station knows is shown beside the field
+  // instead, where it informs without claiming.
+  //
+  // The two legs are still stored separately: whether the home-to-station leg
+  // is deductible turns on where the base of operations is, and keeping them
+  // apart means that can be revisited by changing one number rather than
+  // re-entering every shift.
   const stations = allStations();
   const stationSel = stations.length
-    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: v.typicalMiles ? `${v.label} · ${fmtMiles(v.typicalMiles)} mi` : v.label }))], e.stationId)
+    ? selectInput([{ value: '', label: '— not set —' }, ...stations.map(v => ({ value: v.id, label: v.label }))], e.stationId)
     : null;
 
   // Only ask which vehicle when the driver actually has more than one.
@@ -79,15 +85,11 @@ export function openEarningsForm(existing = null, opts = {}) {
       const st = stationById(stationSel.value);
       stationHint.textContent = st
         ? (st.typicalMiles
-          ? `Usually ${fmtMiles(st.typicalMiles)} mi a block, ${fmtMiles(st.baseMiles)} mi of it getting there.`
+          ? `Blocks from here have come to about ${fmtMiles(st.typicalMiles)} mi, ${fmtMiles(st.baseMiles)} mi of it getting there — enter what this one actually was.`
           : `${fmtMiles(st.baseMiles)} mi to get there. Log a shift by odometer and Kerb learns what a block comes to.`)
-        : 'Pick one to fill the miles in automatically.';
+        : 'Records which pickup point this shift ran from.';
     };
-    stationSel.addEventListener('change', () => {
-      const st = stationById(stationSel.value);
-      if (st && st.typicalMiles) { miles.value = String(st.typicalMiles); }
-      describe();
-    });
+    stationSel.addEventListener('change', describe);
     describe();
     form.append(field('Station', stationSel), stationHint);
   }
